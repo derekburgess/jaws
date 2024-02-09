@@ -9,7 +9,7 @@ UPDATE 2/9/2024: Refactored everything into a new workflow using Neo4j, OpenAI, 
 
 `util/chum.py` -- This script in conjunctuon with `listner.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `ip address`, will label the data accordingly... eiter `BASE` pr `CHUM`...
 
-`transform.py` -- Takes "round trip" packets and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the neo db.
+`transform.py` -- Takes "round trip" packets and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the neo db. Uses concurrent batch processing to keep pace with `neosea`, not a ton of testing here, the current settings typically hit 90-95% CPU for my setup.
 
 `neojaws.py` -- Very different from the original 4 scripts, but more insightful in some ways... This takes the packet embeddings and performs PCA(and DBSCAN), returning a 2D scatter plot labeled with `ip`, `dns`, `org`, and `loc` from IPInfo.
 
