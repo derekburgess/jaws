@@ -85,6 +85,7 @@ plt.savefig("./data/k-distance_plot.png")
 eps_value = float(input("Enter an EPS value for DBSCAN based on the k-distance plot: "))
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(embeddings_scaled)
+update_clusters_in_neo4j(src_ips, clusters, driver)
 
 print("Plotting results...")
 fig2 = plt.figure(num='DBSCAN', figsize=(12, 12))
