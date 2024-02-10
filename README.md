@@ -9,9 +9,11 @@ UPDATE 2/9/2024: Refactored everything into a new workflow using Neo4j, OpenAI, 
 
 `util/chum.py` -- This script in conjunctuon with `listner.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `ip address`, will label the data accordingly... eiter `BASE` pr `CHUM`...
 
-`transform.py` -- Takes "round trip" packets and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the neo db. Uses concurrent batch processing to keep pace with `neosea`, not a ton of testing here, the current settings typically hit 90-95% CPU for my setup.
+`transform.py` -- Takes "round trip" packets and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the neo db. Uses concurrent batch processing to keep pace with `neosea`, not a ton of testing here, the current settings typically hit ~80% CPU for my setup.
 
-`neojaws.py` -- Very different from the original 4 scripts, but more insightful in some ways... This takes the packet embeddings and performs PCA(and DBSCAN), returning a 2D scatter plot labeled with `ip`, `dns`, `org`, and `loc` from IPInfo.
+`util/neojaws.py` -- Very different from the original 4 scripts, but more insightful in some ways... This takes the packet embeddings and performs PCA, returning a 2D scatter plot labeled with `ip`, `dns`, `org`, and `loc` from IPInfo.
+
+`neojawsx.py` -- Same as neojaws, but performs k-distance with plot, requests EPS, then plots DBSCAN using the specififed EPS. Returing a scatter plot with outliers called out as red o markers.
 
 `util/_neofinder.py` -- Neo4j version of the original finder script. Simple 2D scatter showing `port` and `size`.
 
@@ -34,3 +36,7 @@ In the `csv` directory:
 `timeseries.py` -- For a given `ip address`, returns packet size over time.
 
 `report.py` -- For a given `ip address`, returns OSINT...
+
+Screenshot:
+
+![hehe](/assets/screenshot.png)

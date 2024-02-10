@@ -4,20 +4,19 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
 import requests
 
-uri = "bolt://localhost:7687"  # Update as needed...
+uri = "bolt://localhost:7687"  # Update as needed
 username = "neo4j"  # Local Neo4j username
 password = "testtest"  # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
-api_key = 'IPINFO KEY'  # Replace with your ipinfo API key
+api_key = 'KEY'  # Replace with your ipinfo API key
 
 def get_general_ip_info(ip_address, api_key):
     url = f"https://ipinfo.io/{ip_address}/json"
-    headers = {
-        'Authorization': f'Bearer {api_key}'
-    }
+    headers = {'Authorization': f'Bearer {api_key}'}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.json()
@@ -32,25 +31,23 @@ def fetch_embeddings_and_src_ip(api_key):
     """
     with driver.session() as session:
         result = session.run(query)
-        src_ips = []
-        embeddings = []
-        orgs = []
-        hostnames = []
-        locations = []
+        src_ips, embeddings, orgs, hostnames, locations = [], [], [], [], []
         for record in result:
             embedding = np.array(record['embedding'])
             embeddings.append(embedding)
             src_ip = record['src_ip']
             src_ips.append(src_ip)
             ip_info = get_general_ip_info(src_ip, api_key)
-            org = ip_info.get('org', 'N/A') if ip_info else 'N/A'
-            hostname = ip_info.get('hostname', 'N/A') if ip_info else 'N/A'
-            loc = ip_info.get('loc', 'N/A') if ip_info else 'N/A'
-            orgs.append(org)
-            hostnames.append(hostname)
-            locations.append(loc)
+            if ip_info:
+                orgs.append(ip_info.get('org', 'N/A'))
+                hostnames.append(ip_info.get('hostname', 'N/A'))
+                locations.append(ip_info.get('loc', 'N/A'))
+            else:
+                orgs.append('N/A')
+                hostnames.append('N/A')
+                locations.append('N/A')
         return np.array(embeddings), src_ips, orgs, hostnames, locations
-    
+
 def update_clusters_in_neo4j(src_ips, clusters, driver):
     update_query = """
     UNWIND $data AS row
@@ -68,15 +65,39 @@ embeddings_scaled = scaler.fit_transform(embeddings)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(embeddings_scaled)
 
-print("Clustering...")
-dbscan = DBSCAN(eps=0.2, min_samples=50)
-clusters = dbscan.fit_predict(embeddings_scaled)
-update_clusters_in_neo4j(src_ips, clusters, driver)
+print("Measuring k-distance...")
+min_samples = 2
+nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
+nearest_neighbors.fit(embeddings_scaled)
+distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
+k_distances = distances[:, min_samples - 1]
+sorted_k_distances = np.sort(k_distances)
 
-print("Plotting...")
-fig = plt.figure(num='finder', figsize=(12, 12))
+plt.figure(figsize=(12, 6))
+plt.plot(sorted_k_distances, marker='^', color='red', linestyle='-', linewidth=0.5, alpha=0.8)
+plt.xlabel('Points sorted by distance to {}-th nearest neighbor'.format(min_samples - 1), fontsize=8)
+plt.ylabel('{}-th nearest neighbor distance'.format(min_samples - 1), fontsize=8)
+plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+plt.xticks(fontsize=8)
+plt.yticks(fontsize=8)
+plt.tight_layout()
+plt.savefig("./data/k-distance_plot.png")
+
+eps_value = float(input("Enter an EPS value for DBSCAN based on the k-distance plot: "))
+dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
+clusters = dbscan.fit_predict(embeddings_scaled)
+
+print("Plotting clustering results...")
+fig = plt.figure(figsize=(12, 12))
 fig.canvas.manager.window.wm_geometry("+50+50")
-scatter = plt.scatter(principal_components[:, 0], principal_components[:, 1], c=clusters, cmap='ocean', alpha=0.8, edgecolors='none', marker='^', s=100)
+clustered_indices = clusters != -1
+scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
+                      c=clusters[clustered_indices], cmap='ocean', alpha=0.4, edgecolors='none', marker='^', s=100)
+
+outlier_indices = clusters == -1
+plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
+            color='red', alpha=0.8, marker='o', s=50, label='Outliers')
+
 for i, txt in enumerate(src_ips):
     annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
     plt.annotate(annotation_text, 
@@ -87,9 +108,10 @@ for i, txt in enumerate(src_ips):
                  verticalalignment='bottom',
                  xytext=(-10,10),
                  textcoords='offset points')
+
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)
 plt.yticks(fontsize=8)
 plt.tight_layout()
 plt.show()
-driver.close()
+

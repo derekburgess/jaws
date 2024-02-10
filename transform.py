@@ -8,7 +8,7 @@ username = "neo4j"
 password = "testtest"
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
-def fetch_data(batch_size=50):
+def fetch_data(batch_size=25):
     print("Fetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -41,7 +41,7 @@ def process_embeddings(df):
     texts_and_ids += [(f"{row['protocol']} {row['tcp_flags']} {row['dst_ip']} {row['dst_port']} {row['dst_mac']} {row['src_ip']} {row['src_port']} {row['src_mac']} {row['size']}", row['dst_id']) for _, row in df.iterrows()]
 
     print("Starting parallel processing for embeddings...")
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
         for future in as_completed(future_to_id):
             node_id = future_to_id[future]
@@ -53,7 +53,7 @@ def process_embeddings(df):
                 update_node_with_embedding(node_id, embedding)
 
 while True:
-    df = fetch_data(50)  # Adjust batch size if needed
+    df = fetch_data(25)  # Adjust batch size if needed
     if df.empty:
         print("No new nodes without embeddings. Terminating script...")
         break
