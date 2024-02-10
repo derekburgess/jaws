@@ -73,10 +73,9 @@ distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
 k_distances = distances[:, min_samples - 1]
 sorted_k_distances = np.sort(k_distances)
 
-plt.figure(figsize=(12, 6))
-plt.plot(sorted_k_distances, marker='^', color='red', linestyle='-', linewidth=0.5, alpha=0.8)
-plt.xlabel('Points sorted by distance to {}-th nearest neighbor'.format(min_samples - 1), fontsize=8)
-plt.ylabel('{}-th nearest neighbor distance'.format(min_samples - 1), fontsize=8)
+fig1 = plt.figure(num='k-distance', figsize=(12, 4))
+fig1.canvas.manager.window.wm_geometry("+1300+50")
+plt.plot(sorted_k_distances, marker='s', color='blue', linestyle='-', linewidth=0.5)
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)
 plt.yticks(fontsize=8)
@@ -87,9 +86,9 @@ eps_value = float(input("Enter an EPS value for DBSCAN based on the k-distance p
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(embeddings_scaled)
 
-print("Plotting clustering results...")
-fig = plt.figure(figsize=(12, 12))
-fig.canvas.manager.window.wm_geometry("+50+50")
+print("Plotting results...")
+fig2 = plt.figure(num='DBSCAN', figsize=(12, 12))
+fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                       c=clusters[clustered_indices], cmap='ocean', alpha=0.4, edgecolors='none', marker='^', s=100)
