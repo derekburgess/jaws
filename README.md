@@ -39,4 +39,4 @@ In the `csv` directory:
 
 Screenshot:
 
-![hehe](/assets/screenshot.png)
+![hehe](/assets/screenshot1.png)
