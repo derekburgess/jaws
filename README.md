@@ -36,7 +36,3 @@ In the `csv` directory:
 `timeseries.py` -- For a given `ip address`, returns packet size over time.
 
 `report.py` -- For a given `ip address`, returns OSINT...
-
-Screenshot:
-
-![hehe](/assets/screenshot1.png)

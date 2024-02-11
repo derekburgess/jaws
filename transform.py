@@ -9,11 +9,11 @@ password = "testtest"
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
 def fetch_data(batch_size=25):
-    print("Fetching data from Neo4j...")
+    print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE (src.embedding IS NULL) OR (dst.embedding IS NULL)
-    RETURN src, dst, p.protocol AS protocol, p.tcp_flags AS tcp_flags, src.address AS src_ip, dst.address AS dst_ip, p.src_port AS src_port, p.dst_port AS dst_port, p.src_mac AS src_mac, p.dst_mac AS dst_mac, p.size AS size, ID(src) AS src_id, ID(dst) AS dst_id
+    RETURN src, dst, p.protocol AS protocol, p.tcp_flags AS tcp_flags, src.address AS src_ip, dst.address AS dst_ip, p.src_port AS src_port, p.dst_port AS dst_port, p.src_mac AS src_mac, p.dst_mac AS dst_mac, p.size AS size, p.payload AS payload, ID(src) AS src_id, ID(dst) AS dst_id
     LIMIT $batch_size
     """
     with driver.session() as session:
@@ -37,10 +37,13 @@ def get_embedding(text):
     return response.data[0].embedding
 
 def process_embeddings(df):
-    texts_and_ids = [(f"{row['protocol']} {row['tcp_flags']} {row['src_ip']} {row['src_port']} {row['src_mac']} {row['dst_ip']} {row['dst_port']} {row['dst_mac']} {row['size']}", row['src_id']) for _, row in df.iterrows()]
-    texts_and_ids += [(f"{row['protocol']} {row['tcp_flags']} {row['dst_ip']} {row['dst_port']} {row['dst_mac']} {row['src_ip']} {row['src_port']} {row['src_mac']} {row['size']}", row['dst_id']) for _, row in df.iterrows()]
+    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['src_id']) for _, row in df.iterrows()]
+    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['dst_id']) for _, row in df.iterrows()]
 
-    print("Starting parallel processing for embeddings...")
+    print("\nStarting parallel processing for embeddings...")
+    example_text, example_id = texts_and_ids[0]
+    print(f"\nExample text for node ID {example_id}: {example_text}") 
+
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
         for future in as_completed(future_to_id):
@@ -59,7 +62,7 @@ while True:
         break
     
     process_embeddings(df)
-    print("Finished processing current batch of nodes.")
+    print("\nFinished processing current batch of nodes.")
 
 driver.close()
 print("Closed connection to Neo4j.")

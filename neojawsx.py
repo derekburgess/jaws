@@ -27,11 +27,11 @@ def fetch_embeddings_and_src_ip(api_key):
     query = """
     MATCH (src:IP)
     WHERE src.embedding IS NOT NULL
-    RETURN src.address AS src_ip, src.embedding AS embedding
+    RETURN src.address AS src_ip, src.embedding AS embedding, src.info AS info
     """
     with driver.session() as session:
         result = session.run(query)
-        src_ips, embeddings, orgs, hostnames, locations = [], [], [], [], []
+        src_ips, embeddings, orgs, hostnames, locations, infos = [], [], [], [], [], []
         for record in result:
             embedding = np.array(record['embedding'])
             embeddings.append(embedding)
@@ -46,7 +46,9 @@ def fetch_embeddings_and_src_ip(api_key):
                 orgs.append('N/A')
                 hostnames.append('N/A')
                 locations.append('N/A')
-        return np.array(embeddings), src_ips, orgs, hostnames, locations
+            infos.append(record['info'])
+        return np.array(embeddings), src_ips, orgs, hostnames, locations, infos
+
 
 def update_clusters_in_neo4j(src_ips, clusters, driver):
     update_query = """
@@ -58,8 +60,8 @@ def update_clusters_in_neo4j(src_ips, clusters, driver):
     with driver.session() as session:
         session.run(update_query, {'data': data})
 
-print("Fetching embeddings and performing PCA...")
-embeddings, src_ips, orgs, hostnames, locations = fetch_embeddings_and_src_ip(api_key)
+print("\nFetching embeddings and performing PCA...")
+embeddings, src_ips, orgs, hostnames, locations, infos = fetch_embeddings_and_src_ip(api_key)
 scaler = StandardScaler()
 embeddings_scaled = scaler.fit_transform(embeddings)
 pca = PCA(n_components=2)
@@ -92,22 +94,39 @@ fig2 = plt.figure(num='DBSCAN', figsize=(12, 12))
 fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                      c=clusters[clustered_indices], cmap='ocean', alpha=0.4, edgecolors='none', marker='^', s=100)
+                      c=clusters[clustered_indices], cmap='ocean', alpha=0.6, edgecolors='none', marker='^', s=100)
 
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
             color='red', alpha=0.8, marker='o', s=50, label='Outliers')
 
 for i, txt in enumerate(src_ips):
-    annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
-    plt.annotate(annotation_text, 
-                 (principal_components[i, 0], principal_components[i, 1]), 
-                 fontsize=6, 
-                 bbox=dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.3),
-                 horizontalalignment='left', 
-                 verticalalignment='bottom',
-                 xytext=(-10,10),
-                 textcoords='offset points')
+    if clusters[i] != -1:
+        annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
+        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
+        plt.annotate(annotation_text, 
+                     (principal_components[i, 0], principal_components[i, 1]), 
+                     fontsize=6,
+                     color='#333333',
+                     bbox=bbox_style,
+                     horizontalalignment='right',
+                     verticalalignment='top',
+                     xytext=(0,-10),
+                     textcoords='offset points')
+
+for i, txt in enumerate(src_ips):
+    if clusters[i] == -1:
+        annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
+        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
+        plt.annotate(annotation_text, 
+                     (principal_components[i, 0], principal_components[i, 1]), 
+                     fontsize=6,
+                     color='white', 
+                     bbox=bbox_style,
+                     horizontalalignment='left',
+                     verticalalignment='bottom',
+                     xytext=(0,10),
+                     textcoords='offset points')
 
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)
