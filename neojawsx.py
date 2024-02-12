@@ -49,7 +49,6 @@ def fetch_embeddings_and_src_ip(api_key):
             infos.append(record['info'])
         return np.array(embeddings), src_ips, orgs, hostnames, locations, infos
 
-
 def update_clusters_in_neo4j(src_ips, clusters, driver):
     update_query = """
     UNWIND $data AS row

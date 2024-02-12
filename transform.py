@@ -33,7 +33,7 @@ def update_node_with_embedding(node_id, embedding):
 
 def get_embedding(text):
     client = OpenAI()
-    response = client.embeddings.create(input=text, model="text-embedding-3-small")
+    response = client.embeddings.create(input=text, model="text-embedding-3-large")
     return response.data[0].embedding
 
 def process_embeddings(df):
