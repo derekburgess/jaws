@@ -89,16 +89,18 @@ clusters = dbscan.fit_predict(embeddings_scaled)
 update_clusters_in_neo4j(src_ips, clusters, driver)
 
 print("Plotting results...")
-fig2 = plt.figure(num='DBSCAN', figsize=(12, 12))
+fig2 = plt.figure(num='DBSCAN', figsize=(10, 10))
 fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                      c=clusters[clustered_indices], cmap='winter', alpha=0.6, edgecolors='none', marker='^', s=100)
+                      c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='^', s=100)
 
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-            color='red', alpha=0.8, marker='o', s=50, label='Outliers')
+            color='red', alpha=0.8, marker='o', s=100, label='Outliers')
 """
+These labels can be useful for digging into the noise, but when using the embeddings from StarCoder, the density of the cluster is too tight and the labels overlap, reducing their usefulness. If using OpenAI for embeddings, I would enable this annotion and adjust the font sizes, marker sizes, and colors as needed.
+
 for i, txt in enumerate(src_ips):
     if clusters[i] != -1:
         annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
@@ -120,10 +122,10 @@ for i, txt in enumerate(src_ips):
         bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
         plt.annotate(annotation_text, 
                      (principal_components[i, 0], principal_components[i, 1]), 
-                     fontsize=6,
+                     fontsize=8,
                      color='white', 
                      bbox=bbox_style,
-                     horizontalalignment='left',
+                     horizontalalignment='right',
                      verticalalignment='bottom',
                      xytext=(0,10),
                      textcoords='offset points')

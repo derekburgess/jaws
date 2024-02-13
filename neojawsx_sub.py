@@ -94,6 +94,7 @@ n_clusters = len(unique_clusters)
 outliers_present = -1 in clusters
 
 fig, axs = plt.subplots(1, n_clusters + outliers_present, figsize=(6 * (n_clusters + outliers_present), 6))
+fig.canvas.manager.window.wm_geometry("+50+50")
 
 for idx, cluster in enumerate(unique_clusters):
     cluster_indices = clusters == cluster
@@ -120,17 +121,17 @@ for idx, cluster in enumerate(unique_clusters):
 if outliers_present:
     outlier_indices = clusters == -1
     axs[-1].scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-                    color='red', alpha=0.8, marker='o', s=50, label='Outliers')
+                    color='red', alpha=0.8, marker='o', s=100, label='Outliers')
     
     for i in outlier_indices.nonzero()[0]:
         annotation_text = f"{src_ips[i]}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
         bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
         axs[-1].annotate(annotation_text, 
                          (principal_components[i, 0], principal_components[i, 1]), 
-                         fontsize=6,
+                         fontsize=8,
                          color='white', 
                          bbox=bbox_style,
-                         horizontalalignment='left',
+                         horizontalalignment='right',
                          verticalalignment='bottom',
                          xytext=(0,10),
                          textcoords='offset points')
