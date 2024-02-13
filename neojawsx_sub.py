@@ -89,48 +89,56 @@ clusters = dbscan.fit_predict(embeddings_scaled)
 update_clusters_in_neo4j(src_ips, clusters, driver)
 
 print("Plotting results...")
-fig2 = plt.figure(num='DBSCAN', figsize=(12, 12))
-fig2.canvas.manager.window.wm_geometry("+50+50")
-clustered_indices = clusters != -1
-scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                      c=clusters[clustered_indices], cmap='winter', alpha=0.6, edgecolors='none', marker='^', s=100)
+unique_clusters = set(clusters) - {-1}
+n_clusters = len(unique_clusters)
+outliers_present = -1 in clusters
 
-outlier_indices = clusters == -1
-plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-            color='red', alpha=0.8, marker='o', s=50, label='Outliers')
-"""
-for i, txt in enumerate(src_ips):
-    if clusters[i] != -1:
-        annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
+fig, axs = plt.subplots(1, n_clusters + outliers_present, figsize=(6 * (n_clusters + outliers_present), 6))
+
+for idx, cluster in enumerate(unique_clusters):
+    cluster_indices = clusters == cluster
+    axs[idx].scatter(principal_components[cluster_indices, 0], principal_components[cluster_indices, 1], 
+                     cmap='winter', alpha=0.6, edgecolors='none', marker='^', s=100)
+    
+    for i in cluster_indices.nonzero()[0]:
+        annotation_text = f"{src_ips[i]}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
         bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
-        plt.annotate(annotation_text, 
-                     (principal_components[i, 0], principal_components[i, 1]), 
-                     fontsize=6,
-                     color='#333333',
-                     bbox=bbox_style,
-                     horizontalalignment='right',
-                     verticalalignment='top',
-                     xytext=(0,-10),
-                     textcoords='offset points')
-"""
-                     
-for i, txt in enumerate(src_ips):
-    if clusters[i] == -1:
-        annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
-        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
-        plt.annotate(annotation_text, 
-                     (principal_components[i, 0], principal_components[i, 1]), 
-                     fontsize=6,
-                     color='white', 
-                     bbox=bbox_style,
-                     horizontalalignment='left',
-                     verticalalignment='bottom',
-                     xytext=(0,10),
-                     textcoords='offset points')
+        axs[idx].annotate(annotation_text, 
+                          (principal_components[i, 0], principal_components[i, 1]), 
+                          fontsize=6,
+                          color='#333333',
+                          bbox=bbox_style,
+                          horizontalalignment='right',
+                          verticalalignment='top',
+                          xytext=(0,-10),
+                          textcoords='offset points')
+    
+    axs[idx].grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    axs[idx].tick_params(axis='x', which='both', bottom=False, labelbottom=False)
+    axs[idx].tick_params(axis='y', which='both', left=False, labelleft=False)
 
-plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
-plt.xticks(fontsize=8)
-plt.yticks(fontsize=8)
+if outliers_present:
+    outlier_indices = clusters == -1
+    axs[-1].scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
+                    color='red', alpha=0.8, marker='o', s=50, label='Outliers')
+    
+    for i in outlier_indices.nonzero()[0]:
+        annotation_text = f"{src_ips[i]}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
+        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
+        axs[-1].annotate(annotation_text, 
+                         (principal_components[i, 0], principal_components[i, 1]), 
+                         fontsize=6,
+                         color='white', 
+                         bbox=bbox_style,
+                         horizontalalignment='left',
+                         verticalalignment='bottom',
+                         xytext=(0,10),
+                         textcoords='offset points')
+
+    axs[-1].grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    axs[-1].tick_params(axis='x', which='both', bottom=False, labelbottom=False)
+    axs[-1].tick_params(axis='y', which='both', left=False, labelleft=False)
+
 plt.tight_layout()
 plt.show()
 

@@ -41,8 +41,8 @@ def process_embeddings(df):
     texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['dst_id']) for _, row in df.iterrows()]
 
     print("\nStarting parallel processing for embeddings...")
-    example_text, example_id = texts_and_ids[0]
-    print(f"\nExample text for node ID {example_id}: {example_text}") 
+    #example_text, example_id = texts_and_ids[0]
+    #print(f"\nExample text for node ID {example_id}: {example_text}") 
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
