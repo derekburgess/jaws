@@ -40,11 +40,16 @@ principal_components = pca.fit_transform(data_scaled)
 print("Using Kneed to set EPS...")
 min_samples = 2
 sorted_k_distances = pca.explained_variance_ratio_
-kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
+kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='concave', direction='increasing')
 eps_value = sorted_k_distances[kneedle.knee]
-
-print("Knee Point/EPS value:", eps_value)
 eps_value = float(eps_value)
+user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or type a new value: ")
+if user_input:
+    try:
+        eps_value = float(user_input)
+    except ValueError:
+        print("Invalid input. Using the original EPS value.")
+        
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(data_scaled)
 end_time = time.time()
