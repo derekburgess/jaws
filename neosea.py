@@ -7,7 +7,7 @@ uri = "bolt://localhost:7687" # Update as needed...
 username = "neo4j" # Local Neo4j username
 password = "testtest" # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
-batch_size = 1000 # CSV batch size, considered a backup, or if you prefer working with CSV... however, use the CSV directory for that.
+batch_size = 100 # CSV batch size, considered a backup, or if you prefer working with CSV... however, use the CSV directory for that.
 chum_addr = 'AWS IP ADDR'  # AWS IP address of the chum server
 df = pd.DataFrame(columns=['packet_id', 'protocol', 'tcp_flags', 'src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'size', 'dns_domain', 'http_url', 'info', 'payload', 'timestamp', 'label'])
 

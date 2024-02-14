@@ -5,14 +5,17 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
+from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import requests
+import random
+import time
 
 uri = "bolt://localhost:7687"  # Update as needed
 username = "neo4j"  # Local Neo4j username
 password = "testtest"  # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
-api_key = 'KEY'  # Replace with your ipinfo API key
+api_key = 'KEY'  # Replace with your IPinfo key
 
 def get_general_ip_info(ip_address, api_key):
     url = f"https://ipinfo.io/{ip_address}/json"
@@ -59,8 +62,36 @@ def update_clusters_in_neo4j(src_ips, clusters, driver):
     with driver.session() as session:
         session.run(update_query, {'data': data})
 
+start_time = time.time()
 print("\nFetching embeddings and performing PCA...")
 embeddings, src_ips, orgs, hostnames, locations, infos = fetch_embeddings_and_src_ip(api_key)
+num_embeddings = len(embeddings)
+scaler = StandardScaler()
+embeddings_scaled = scaler.fit_transform(embeddings)
+pca = PCA(n_components=2)
+principal_components = pca.fit_transform(embeddings_scaled)
+
+print("Using Kneed to set EPS...")
+min_samples = 2
+sorted_k_distances = pca.explained_variance_ratio_
+kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
+eps_value = sorted_k_distances[kneedle.knee]
+
+print("Knee Point/EPS value:", eps_value)
+eps_value = float(eps_value)
+dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
+clusters = dbscan.fit_predict(embeddings_scaled)
+update_clusters_in_neo4j(src_ips, clusters, driver)
+end_time = time.time()
+elapsed_time = end_time - start_time
+
+"""
+Using k-distance nearest neighbors to determine the optimal EPS value for DBSCAN clustering. Returns a plot and expect user-input. Switch out with the Kneed approach above.
+
+start_time = time.time()
+print("\nFetching embeddings and performing PCA...")
+embeddings, src_ips, orgs, hostnames, locations, infos = fetch_embeddings_and_src_ip(api_key)
+num_embeddings = len(embeddings)
 scaler = StandardScaler()
 embeddings_scaled = scaler.fit_transform(embeddings)
 pca = PCA(n_components=2)
@@ -81,54 +112,67 @@ plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)
 plt.yticks(fontsize=8)
 plt.tight_layout()
-plt.savefig("./data/k-distance_plot.png")
+plt.savefig("./data/k-distance.png")
 
-eps_value = float(input("Enter an EPS value for DBSCAN based on the k-distance plot: "))
+eps_value = float(input("Enter an EPS value: "))
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(embeddings_scaled)
 update_clusters_in_neo4j(src_ips, clusters, driver)
+end_time = time.time()
+elapsed_time = end_time - start_time
+"""
 
 print("Plotting results...")
-fig2 = plt.figure(num='DBSCAN', figsize=(10, 10))
+fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings(StarCoder) | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
 fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                      c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='^', s=100)
+                      c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='o', s=300, zorder=2)
 
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-            color='red', alpha=0.8, marker='o', s=100, label='Outliers')
-"""
-These labels can be useful for digging into the noise, but when using the embeddings from StarCoder, the density of the cluster is too tight and the labels overlap, reducing their usefulness. If using OpenAI for embeddings, I would enable this annotion and adjust the font sizes, marker sizes, and colors as needed.
+            color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=3)
+
+position_options = {
+    'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},
+    'bottom': {'offset': (0, -10), 'horizontalalignment': 'center', 'verticalalignment': 'top'},
+    'right': {'offset': (10, 0), 'horizontalalignment': 'left', 'verticalalignment': 'center'},
+    'left': {'offset': (-10, 0), 'horizontalalignment': 'right', 'verticalalignment': 'center'}
+}
 
 for i, txt in enumerate(src_ips):
     if clusters[i] != -1:
         annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
-        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
+        bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.05)
+
+        label_position_key = random.choice(list(position_options.keys()))
+        label_position = position_options[label_position_key]
+        
         plt.annotate(annotation_text, 
                      (principal_components[i, 0], principal_components[i, 1]), 
                      fontsize=6,
-                     color='#333333',
+                     color='#666666',
                      bbox=bbox_style,
-                     horizontalalignment='right',
-                     verticalalignment='top',
-                     xytext=(0,-10),
-                     textcoords='offset points')
-"""
-                     
+                     horizontalalignment=label_position['horizontalalignment'],
+                     verticalalignment=label_position['verticalalignment'],
+                     xytext=label_position['offset'],
+                     textcoords='offset points',
+                     zorder=1)
+            
 for i, txt in enumerate(src_ips):
     if clusters[i] == -1:
         annotation_text = f"{txt}\n{hostnames[i]}\n{orgs[i]}\n{locations[i]}"
-        bbox_style = dict(boxstyle="round,pad=0.4", facecolor='#333333', edgecolor='none', alpha=0.8)
+        bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.8)
         plt.annotate(annotation_text, 
                      (principal_components[i, 0], principal_components[i, 1]), 
-                     fontsize=8,
+                     fontsize=6,
                      color='white', 
                      bbox=bbox_style,
-                     horizontalalignment='right',
+                     horizontalalignment='center',
                      verticalalignment='bottom',
                      xytext=(0,10),
-                     textcoords='offset points')
+                     textcoords='offset points',
+                     zorder=1)
 
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)

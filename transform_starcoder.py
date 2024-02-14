@@ -8,7 +8,6 @@ uri = "bolt://localhost:7687"
 username = "neo4j"
 password = "testtest"
 driver = GraphDatabase.driver(uri, auth=(username, password))
-
 model_name = "bigcode/starcoder"
 tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY')
 model = AutoModel.from_pretrained("bigcode/starcoder", token='KEY').to('cuda')
@@ -52,7 +51,7 @@ def process_embeddings(df):
     #example_text, example_id = texts_and_ids[0]
     #print(f"\nExample text for node ID {example_id}: {example_text}") 
 
-    with ThreadPoolExecutor(max_workers=25) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
         for future in as_completed(future_to_id):
             node_id = future_to_id[future]
@@ -64,7 +63,7 @@ def process_embeddings(df):
                 update_node_with_embedding(node_id, embedding)
 
 while True:
-    df = fetch_data(25)  # Adjust batch size if needed
+    df = fetch_data(1)  # Adjust batch size if needed
     if df.empty:
         print("No new nodes without embeddings. Terminating script...")
         break
