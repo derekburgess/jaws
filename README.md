@@ -9,6 +9,8 @@ UPDATE 14/2/2024: Included example of using StarCoder (Code Gen LLM) over GPT li
 
 HYPOTHESIS: Code gen large language models (Like StarCoder), which are trained and fined-tuned to produce structured, code-like, results- transform packet data into higher fidelity embeddings compared to GPT's like GPT4. In turn, when used with methods like PCA and DBSCAN, decrease data volume requirements and compute speed relative to idenfitying network anolomies.
 
+![hehe](/assets/tests.png)
+
 `neosea.py` -- Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation ip". Also update any packet details you wish to capture.
 
 `transform_openai.py` -- Takes "round trip" packets and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the neo db. Uses concurrent batch processing to keep pace with `neosea`, not a ton of testing here, the current settings typically hit ~80% CPU for my setup.
