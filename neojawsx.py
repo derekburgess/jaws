@@ -71,18 +71,20 @@ embeddings_scaled = scaler.fit_transform(embeddings)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(embeddings_scaled)
 
-print("Using Kneed to set EPS...")
+#See the commented section below- I have opted to try Kneed as a way to determine the optimal EPS value for DBSCAN clustering. Prior to that I was using the k-distance nearest neighbors approach and returning a plot for visual inspection and selection. If you would like that approach these sections are fairly interchangeable.
+
+print("Using Kneed to recommend EPS...")
 min_samples = 2
 sorted_k_distances = pca.explained_variance_ratio_
 kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
 eps_value = sorted_k_distances[kneedle.knee]
 eps_value = float(eps_value)
-user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or type a new value: ")
+user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or enter a specific value: ")
 if user_input:
     try:
         eps_value = float(user_input)
     except ValueError:
-        print("Invalid input. Using the original EPS value.")
+        print("Invalid input. Using the original EPS value...")
         
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(embeddings_scaled)
@@ -137,6 +139,8 @@ scatter = plt.scatter(principal_components[clustered_indices, 0], principal_comp
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
             color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=3)
+
+# Could maybe try another approach here, but helps reduce overlapping...
 
 position_options = {
     'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},

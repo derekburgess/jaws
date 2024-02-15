@@ -3,9 +3,9 @@ import pandas as pd
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-uri = "bolt://localhost:7687"
-username = "neo4j"
-password = "testtest"
+uri = "bolt://localhost:7687"  # Update as needed
+username = "neo4j"  # Local Neo4j username
+password = "testtest"  # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
 def fetch_data(batch_size=25):
@@ -32,7 +32,7 @@ def update_node_with_embedding(node_id, embedding):
         session.run(query, node_id=node_id, embedding=embedding)
 
 def get_embedding(text):
-    client = OpenAI()
+    client = OpenAI() # Unlike the other magic numbers, this requires you setup your env.
     response = client.embeddings.create(input=text, model="text-embedding-3-large")
     return response.data[0].embedding
 
@@ -56,7 +56,7 @@ def process_embeddings(df):
                 update_node_with_embedding(node_id, embedding)
 
 while True:
-    df = fetch_data(25)  # Adjust batch size if needed
+    df = fetch_data(25)  # Adjust batch size if needed -- Unlike the StarCoder script, this works much better in conjuction with ThreadPoolExecutor. The current 25/25 settings are from my testing and consume ~60%-80% CPU using a 12th gen i5.
     if df.empty:
         print("No new nodes without embeddings. Terminating script...")
         break

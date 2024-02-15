@@ -3,9 +3,9 @@ import pandas as pd
 import os
 from neo4j import GraphDatabase
 
-uri = "bolt://localhost:7687" # Update as needed...
-username = "neo4j" # Local Neo4j username
-password = "testtest" # Local Neo4j password
+uri = "bolt://localhost:7687"  # Update as needed
+username = "neo4j"  # Local Neo4j username
+password = "testtest"  # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
 batch_size = 100 # CSV batch size, considered a backup, or if you prefer working with CSV... however, use the CSV directory for that.
 chum_addr = 'AWS IP ADDR'  # AWS IP address of the chum server

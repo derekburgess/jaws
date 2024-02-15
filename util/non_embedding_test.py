@@ -28,7 +28,9 @@ def fetch_data():
 
 start_time = time.time()
 print("\nFetching data and performing one-hot encoding and PCA...")
+sample_fraction = 0.2 #Sample non-embedding data!
 df = fetch_data()
+df = df.sample(frac=sample_fraction)
 src_ips = df['src_ip'].tolist()
 df = pd.get_dummies(df, columns=['protocol', 'tcp_flags', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 'src_mac', 'dst_mac'], drop_first=True)
 total_records = len(df)
@@ -37,19 +39,19 @@ data_scaled = scaler.fit_transform(df)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(data_scaled)
 
-print("Using Kneed to set EPS...")
+print("Using Kneed to recommend EPS...")
 min_samples = 2
 sorted_k_distances = pca.explained_variance_ratio_
-kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='concave', direction='increasing')
+kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing', online=True)
 eps_value = sorted_k_distances[kneedle.knee]
 eps_value = float(eps_value)
-user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or type a new value: ")
+user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or enter a specific value: ")
 if user_input:
     try:
         eps_value = float(user_input)
     except ValueError:
-        print("Invalid input. Using the original EPS value.")
-        
+        print("Invalid input. Using the original EPS value...")
+
 dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
 clusters = dbscan.fit_predict(data_scaled)
 end_time = time.time()

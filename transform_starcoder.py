@@ -4,9 +4,9 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-uri = "bolt://localhost:7687"
-username = "neo4j"
-password = "testtest"
+uri = "bolt://localhost:7687"  # Update as needed
+username = "neo4j"  # Local Neo4j username
+password = "testtest"  # Local Neo4j password
 driver = GraphDatabase.driver(uri, auth=(username, password))
 model_name = "bigcode/starcoder"
 tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY')
@@ -51,6 +51,7 @@ def process_embeddings(df):
     #example_text, example_id = texts_and_ids[0]
     #print(f"\nExample text for node ID {example_id}: {example_text}") 
 
+    # I might be incorrect in my usage here. As I understand it, there is not way to threadpool GPU, no any reason too because of its architecture... However, some of this script still uses CPU and so I decided to keep this intact.
     with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
         for future in as_completed(future_to_id):
@@ -63,7 +64,7 @@ def process_embeddings(df):
                 update_node_with_embedding(node_id, embedding)
 
 while True:
-    df = fetch_data(1)  # Adjust batch size if needed
+    df = fetch_data(1)  # Adjust batch size if needed -- After much testing I found that sending 1 at time most efficient when run on a local GPU. Batches end up taking so long to process that the entire process slows down.
     if df.empty:
         print("No new nodes without embeddings. Terminating script...")
         break
