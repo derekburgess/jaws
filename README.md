@@ -20,3 +20,7 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV 
 `util/chum.py` -- This script in conjunctuon with `listner.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `ip address`, will label the data accordingly... eiter `BASE` pr `CHUM`...
 
 The `data` directory is not included, create or change the path as needed. Only pertains to CSV storage.
+
+![example test using raw data, openai, and starcoder](/assets/test.png)
+
+![diagram of pipeline and neo4j example](/assets/diagram.png)
