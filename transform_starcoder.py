@@ -2,7 +2,6 @@ from neo4j import GraphDatabase
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 uri = "bolt://localhost:7687"  # Update as needed
 username = "neo4j"  # Local Neo4j username
@@ -12,28 +11,47 @@ model_name = "bigcode/starcoder"
 tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY')
 model = AutoModel.from_pretrained("bigcode/starcoder", token='KEY').to('cuda')
 
-def fetch_data(batch_size=25):
+def fetch_data():
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    WHERE (src.embedding IS NULL) OR (dst.embedding IS NULL)
-    RETURN src, dst, p.protocol AS protocol, p.tcp_flags AS tcp_flags, src.address AS src_ip, dst.address AS dst_ip, p.src_port AS src_port, p.dst_port AS dst_port, p.src_mac AS src_mac, p.dst_mac AS dst_mac, p.size AS size, p.payload AS payload, ID(src) AS src_id, ID(dst) AS dst_id
-    LIMIT $batch_size
+    WHERE p.embedding IS NULL
+    WITH src, dst, p
+    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:Organization)
+    OPTIONAL MATCH (dst)-[:OWNERSHIP]->(dst_org:Organization)
+    RETURN src.address AS src_ip, 
+        dst.address AS dst_ip,
+        p.src_port AS src_port, 
+        p.dst_port AS dst_port, 
+        p.src_mac AS src_mac, 
+        p.dst_mac AS dst_mac,  
+        p.protocol AS protocol,
+        p.tcp_flags AS tcp,
+        p.size AS size, 
+        p.payload AS payload, 
+        p.payload_ascii AS ascii,
+        p.http_url AS http, 
+        p.dns_domain AS dns,
+        org.name AS org,
+        org.hostname AS hostname,
+        org.location AS location, 
+        ID(p) AS packet_id
+    LIMIT 1
     """
     with driver.session() as session:
-        result = session.run(query, batch_size=batch_size)
+        result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} records.")
+    print(f"Retrieved {len(df)} record without embeddings.")
     return df
 
-def update_node_with_embedding(node_id, embedding):
+def update_neo4j(packet_id, embedding):
     query = """
-    MATCH (n)
-    WHERE ID(n) = $node_id
-    SET n.embedding = $embedding
+    MATCH (src:IP)-[p:PACKET]->(dst:IP)
+    WHERE ID(p) = $packet_id
+    SET p.embedding = $embedding
     """
     with driver.session() as session:
-        session.run(query, node_id=node_id, embedding=embedding)
+        session.run(query, packet_id=packet_id, embedding=embedding)
 
 def get_embedding(text):
     inputs = tokenizer(text, return_tensors="pt", max_length=512, truncation=True).to('cuda')
@@ -43,34 +61,23 @@ def get_embedding(text):
     return embeddings
 
 def process_embeddings(df):
-    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['src_id']) for _, row in df.iterrows()]
-    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['dst_id']) for _, row in df.iterrows()]
-
-    #print("\nStarting parallel processing for embeddings...")
-    print("\nProcessing embedding(s)...")
-    #example_text, example_id = texts_and_ids[0]
-    #print(f"\nExample text for node ID {example_id}: {example_text}") 
-
-    # I might be incorrect in my usage here. As I understand it, there is not way to threadpool GPU, no any reason too because of its architecture... However, some of this script still uses CPU and so I decided to keep this intact.
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
-        for future in as_completed(future_to_id):
-            node_id = future_to_id[future]
-            try:
-                embedding = future.result()
-            except Exception as exc:
-                print(f'Node ID {node_id} generated an exception: {exc}')
-            else:
-                update_node_with_embedding(node_id, embedding)
+    for _, row in df.iterrows():
+        text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        embedding = get_embedding(text)
+        update_neo4j(row['packet_id'], embedding)
+        
+        # Reverse direction
+        text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        embedding = get_embedding(text)
+        update_neo4j(row['packet_id'], embedding)
 
 while True:
-    df = fetch_data(1)  # Adjust batch size if needed -- After much testing I found that sending 1 at time most efficient when run on a local GPU. Batches end up taking so long to process that the entire process slows down.
+    df = fetch_data()
     if df.empty:
-        print("No new nodes without embeddings. Terminating script...")
+        print("No new node without embeddings. Terminating script...")
         break
     
     process_embeddings(df)
-    #print("\nFinished processing current batch of nodes.")
     print("\nFinished processing embedding(s)...")
 
 driver.close()

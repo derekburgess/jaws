@@ -19,7 +19,25 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 def fetch_data():
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    RETURN p.protocol AS protocol, p.tcp_flags AS tcp_flags, src.address AS src_ip, dst.address AS dst_ip, p.src_port AS src_port, p.dst_port AS dst_port, p.src_mac AS src_mac, p.dst_mac AS dst_mac
+    WITH src, dst, p
+    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:Organization)
+    OPTIONAL MATCH (dst)-[:OWNERSHIP]->(dst_org:Organization)
+    RETURN src.address AS src_ip, 
+        dst.address AS dst_ip,
+        p.src_port AS src_port, 
+        p.dst_port AS dst_port, 
+        p.src_mac AS src_mac, 
+        p.dst_mac AS dst_mac,  
+        p.protocol AS protocol,
+        p.tcp_flags AS tcp,
+        p.size AS size, 
+        p.payload AS payload, 
+        p.payload_ascii AS ascii,
+        p.http_url AS http, 
+        p.dns_domain AS dns,
+        org.name AS org,
+        org.hostname AS hostname,
+        org.location AS location 
     """
     with driver.session() as session:
         result = session.run(query)
@@ -28,11 +46,10 @@ def fetch_data():
 
 start_time = time.time()
 print("\nFetching data and performing one-hot encoding and PCA...")
-sample_fraction = 0.2 #Sample non-embedding data!
+#sample_fraction = 0.2 #Sample non-embedding data!
 df = fetch_data()
-df = df.sample(frac=sample_fraction)
-src_ips = df['src_ip'].tolist()
-df = pd.get_dummies(df, columns=['protocol', 'tcp_flags', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 'src_mac', 'dst_mac'], drop_first=True)
+#df = df.sample(frac=sample_fraction)
+df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'payload', 'ascii', 'http', 'dns', 'org', 'hostname', 'location'], drop_first=True)
 total_records = len(df)
 scaler = StandardScaler()
 data_scaled = scaler.fit_transform(df)
@@ -41,9 +58,11 @@ principal_components = pca.fit_transform(data_scaled)
 
 print("Using Kneed to recommend EPS...")
 min_samples = 2
-sorted_k_distances = pca.explained_variance_ratio_
-kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing', online=True)
-eps_value = sorted_k_distances[kneedle.knee]
+nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
+nearest_neighbors.fit(data_scaled)
+distances, _ = nearest_neighbors.kneighbors(data_scaled)
+kneedle = KneeLocator(range(len(distances)), distances[:, 1], curve='convex', direction='increasing')
+eps_value = distances[kneedle.knee, 1]
 eps_value = float(eps_value)
 user_input = input(f"Knee Point/EPS value is {eps_value}. Press enter to accept, or enter a specific value: ")
 if user_input:

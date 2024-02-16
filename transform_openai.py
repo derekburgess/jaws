@@ -1,5 +1,6 @@
 from neo4j import GraphDatabase
 import pandas as pd
+import openai
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -12,37 +13,70 @@ def fetch_data(batch_size=25):
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    WHERE (src.embedding IS NULL) OR (dst.embedding IS NULL)
-    RETURN src, dst, p.protocol AS protocol, p.tcp_flags AS tcp_flags, src.address AS src_ip, dst.address AS dst_ip, p.src_port AS src_port, p.dst_port AS dst_port, p.src_mac AS src_mac, p.dst_mac AS dst_mac, p.size AS size, p.payload AS payload, ID(src) AS src_id, ID(dst) AS dst_id
+    WHERE p.embedding IS NULL
+    WITH src, dst, p
+    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:Organization)
+    OPTIONAL MATCH (dst)-[:OWNERSHIP]->(dst_org:Organization)
+    RETURN src.address AS src_ip, 
+        dst.address AS dst_ip,
+        p.src_port AS src_port, 
+        p.dst_port AS dst_port, 
+        p.src_mac AS src_mac, 
+        p.dst_mac AS dst_mac,  
+        p.protocol AS protocol,
+        p.tcp_flags AS tcp,
+        p.size AS size, 
+        p.payload AS payload, 
+        p.payload_ascii AS ascii,
+        p.http_url AS http, 
+        p.dns_domain AS dns,
+        org.name AS org,
+        org.hostname AS hostname,
+        org.location AS location, 
+        ID(p) AS packet_id
     LIMIT $batch_size
     """
     with driver.session() as session:
         result = session.run(query, batch_size=batch_size)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} records.")
+    print(f"Retrieved {len(df)} records without embeddings.")
     return df
 
-def update_node_with_embedding(node_id, embedding):
+def update_neo4j(packet_id, embedding):
     query = """
-    MATCH (n)
-    WHERE ID(n) = $node_id
-    SET n.embedding = $embedding
+    MATCH (src:IP)-[p:PACKET]->(dst:IP)
+    WHERE ID(p) = $packet_id
+    SET p.embedding = $embedding
     """
     with driver.session() as session:
-        session.run(query, node_id=node_id, embedding=embedding)
+        session.run(query, packet_id=packet_id, embedding=embedding)
 
 def get_embedding(text):
-    client = OpenAI() # Unlike the other magic numbers, this requires you setup your env.
-    response = client.embeddings.create(input=text, model="text-embedding-3-large")
-    return response.data[0].embedding
+    client = OpenAI()
+    try:
+        response = client.embeddings.create(input=text, model="text-embedding-3-large")
+        return response.data[0].embedding
+    except openai.APIError as e:
+        if e.status_code == 400:
+            print(f"OpenAI API returned a 400 Error: {e}")
+            return "token_string_too_large"
+        else:
+            print(f"OpenAI API returned an API Error: {e}")
+            return None
+    except openai.APIConnectionError as e:
+        print(f"Failed to connect to OpenAI API: {e}")
+        return None
+    except openai.RateLimitError as e:
+        print(f"OpenAI API request exceeded rate limit: {e}")
+        return None
 
 def process_embeddings(df):
-    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['src_id']) for _, row in df.iterrows()]
-    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp_flags']}), sending: {row['size']}({row['payload']})", row['dst_id']) for _, row in df.iterrows()]
-
+    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    
     print("\nStarting parallel processing for embeddings...")
-    #example_text, example_id = texts_and_ids[0]
-    #print(f"\nExample text for node ID {example_id}: {example_text}") 
+    #for text, id in texts_and_ids:
+        #print(f"\nText for node ID {id}: {text}")
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}
@@ -50,10 +84,10 @@ def process_embeddings(df):
             node_id = future_to_id[future]
             try:
                 embedding = future.result()
+                if embedding is not None:
+                    update_neo4j(node_id, embedding)
             except Exception as exc:
                 print(f'Node ID {node_id} generated an exception: {exc}')
-            else:
-                update_node_with_embedding(node_id, embedding)
 
 while True:
     df = fetch_data(25)  # Adjust batch size if needed -- Unlike the StarCoder script, this works much better in conjuction with ThreadPoolExecutor. The current 25/25 settings are from my testing and consume ~60%-80% CPU using a 12th gen i5.

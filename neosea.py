@@ -66,19 +66,19 @@ def process_packet(packet):
     global df, packet_id
     packet_data = {
         "packet_id": packet_id,
-        "protocol": packet.transport_layer if hasattr(packet, 'transport_layer') else 'UNKNOWN',
-        "tcp_flags": convert_hex_tcp_flags(packet.tcp.flags) if 'TCP' in packet else 'NA',
+        "protocol": packet.transport_layer if hasattr(packet, 'transport_layer') else 'None',
+        "tcp_flags": convert_hex_tcp_flags(packet.tcp.flags) if 'TCP' in packet else 'None',
         "src_ip": '0.0.0.0',
         "src_port": 0,
-        "src_mac": packet.eth.src if 'ETH' in packet else 'NA',
+        "src_mac": packet.eth.src if 'ETH' in packet else 'None',
         "dst_ip": '0.0.0.0',
         "dst_port": 0,
-        "dst_mac": packet.eth.dst if 'ETH' in packet else 'NA',
+        "dst_mac": packet.eth.dst if 'ETH' in packet else 'None',
         "size": len(packet),
-        "dns_domain": packet.dns.qry_name if 'DNS' in packet and hasattr(packet.dns, 'qry_name') else 'NA',
-        "http_url": packet.http.request.full_uri if 'HTTP' in packet and hasattr(packet.http, 'request') and hasattr(packet.http.request, 'full_uri') else 'NA',
-        "info": packet.info if hasattr(packet, 'info') else 'NA',
-        "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else 'NA',
+        "dns_domain": packet.dns.qry_name if 'DNS' in packet and hasattr(packet.dns, 'qry_name') else 'None',
+        "http_url": packet.http.request.full_uri if 'HTTP' in packet and hasattr(packet.http, 'request') and hasattr(packet.http.request, 'full_uri') else 'None',
+        "info": packet.info if hasattr(packet, 'info') else 'None',
+        "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else 'None',
         "timestamp": float(packet.sniff_time.timestamp()) * 1000,
         "label": 'BASE'
     }
