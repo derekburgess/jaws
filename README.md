@@ -21,6 +21,19 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV 
 
 The `data` directory is not included, create or change the path as needed. Only pertains to CSV storage.
 
-![example test using raw data, openai, and starcoder](/assets/test.png)
+50 packet example:
 
-![diagram of pipeline and neo4j example](/assets/diagram.png)
+![50 packet example test using raw data, openai, and starcoder](/assets/test50.png)
+
+500 packet example:
+
+![500 packet example test using raw data, openai, and starcoder](/assets/test500.png)
+
+Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
+
+![diagram of pipeline and neo4j example](/assets/diagram_21724.png)
+
+TODO:
+- Disect StarCoder during embedding creation using `hyperspace`
+- Move StarCoder onto Cloud for faster compute
+- 100,000+ packet example
