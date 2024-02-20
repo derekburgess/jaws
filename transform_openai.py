@@ -28,6 +28,7 @@ def fetch_data(batch_size=25):
         p.size AS size, 
         p.payload AS payload, 
         p.payload_ascii AS ascii,
+        p.payload_binary AS binary,
         p.http_url AS http, 
         p.dns_domain AS dns,
         org.name AS org,
@@ -71,8 +72,8 @@ def get_embedding(text):
         return None
 
 def process_embeddings(df):
-    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
-    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [ascii: {row['ascii']}] [http: {row['http']}] at size: {row['size']} with Ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] [ascii: {row['ascii']}] [http: {row['http']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] [ascii: {row['ascii']}] [http: {row['http']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
     
     print("\nStarting parallel processing for embeddings...")
     #for text, id in texts_and_ids:

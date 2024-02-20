@@ -40,7 +40,7 @@ Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
 
 Example packet string:
 
-`packet = "13.226.34.128:443(00:90:7f:04:7d:2f) > 192.168.99.10:51887(50:eb:f6:cd:df:40) using: TCP(PSH, ACK), sending: [hex: 17:03:03:00:2e:7f:55:aa:c6:23:b1:2b:0e:4e:66:18:20:a5:6c:0f:cb:2a:b3:94:ca:e0:6a:93:07:b4:60:c2:6e:66:33:af:78:5f:7f:f0:a3:5f:fd:e3:c7:30:86:04:a8:a7:5d] [ascii: .UªÆ#±+Nf ¥lË*³Êàj´Ânf3¯x_ð£_ýãÇ0¨§]] [http: None] at size: 105 with Ownership: AS16509 Amazon.com, Inc., server-13-226-34-91.ewr53.r.cloudfront.net(None), 40.7357,-74.1724"`
+`packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] [binary payload] [ascii payload] [http payload] at a size of: size with ownership: org, hostname, dns, location`
 
 Example packet embedding (reduced):
 
