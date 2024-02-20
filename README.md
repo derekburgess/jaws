@@ -7,7 +7,7 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 
 `neonet.py` -- Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j.
 
-`util/hex.py` -- Attempts to convert hexadecimal payloads into ASCII... I really need to figure out what I want to do with payloads... My current hypothesis is that the hexadecimal payloads are less noisy downstream. Moved this script to util/ as it is optional/for testing.
+`util/hexbin.py` -- Attempts to convert hexadecimal payloads into Binary and ASCII... My current hypothesis is that the binary payloads are less noisy downstream. Moved this script to util/ as it is optional/for testing.
 
 `transform_openai.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5).
 
@@ -40,12 +40,14 @@ Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
 
 Example packet string:
 
-`packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] [binary payload] [ascii payload] [http payload] at a size of: size with ownership: org, hostname, dns, location`
+`packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] AND/OR [binary payload] AND/OR [ascii payload] AND/OR [http payload] at a size of: size with ownership: org, hostname(dns) lat, long`
 
-Example packet embedding (reduced):
+Note: Sending all of the Payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750.
+
+Example packet embedding from StarCoder (reduced):
 
 `embedding = [-0.6838231086730957, 0.619213342666626, -0.2213636040687561, 0.5388462543487549, 0.9698492288589478, -0.05627664178609848, 0.400848925113678, 0.42690804600715637, -0.2869364321231842, 0.14443190395832062, 0.19022825360298157, -0.37119436264038086, -0.8193771839141846, -0.3072223961353302, -0.43989384174346924, 0.700538694858551, 0.879992663860321, -0.6817106008529663, 0.17782720923423767, 0.3537529706954956, -0.38453713059425354, -0.890569269657135... ]`
 
-StarCoder activation and attention, all layers:
+StarCoder activation and attention, all layers across heads:
 
 ![Activation and attetion across layers for the packet string](/assets/starcoder_packet.png)

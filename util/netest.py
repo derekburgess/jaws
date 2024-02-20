@@ -33,6 +33,7 @@ def fetch_data():
         p.size AS size, 
         p.payload AS payload, 
         p.payload_ascii AS ascii,
+        p.payload_binary AS binary,
         p.http_url AS http, 
         p.dns_domain AS dns,
         org.name AS org,
@@ -49,7 +50,7 @@ print("\nFetching data and performing one-hot encoding and PCA...")
 #sample_fraction = 0.2 #Sample non-embedding data!
 df = fetch_data()
 #df = df.sample(frac=sample_fraction)
-df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'payload', 'ascii', 'http', 'dns', 'org', 'hostname', 'location'], drop_first=True)
+df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'payload', 'binary', 'ascii', 'http', 'dns', 'org', 'hostname', 'location'], drop_first=True)
 total_records = len(df)
 scaler = StandardScaler()
 data_scaled = scaler.fit_transform(df)

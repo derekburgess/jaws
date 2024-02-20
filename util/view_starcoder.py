@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-def get_layer_activations_and_attention(model, tokenizer, input_text):
-    inputs = tokenizer(input_text, return_tensors='pt')
+def get_layer_activations_and_attention(model, tokenizer, packet):
+    inputs = tokenizer(packet, return_tensors='pt').to(device)
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True, output_hidden_states=True)
     hidden_states = outputs.hidden_states
@@ -20,34 +20,51 @@ tokenizer = AutoTokenizer.from_pretrained(model_name, token='KEY')
 model = AutoModel.from_pretrained(model_name, token='KEY', attn_implementation="eager").to(device)
 scaler = StandardScaler()
 total_layers = model.config.num_hidden_layers
-print(f"The model has {total_layers} layers.")
+
 packet = "PACKET"
+
 hidden_states, attentions = get_layer_activations_and_attention(model, tokenizer, packet)
-cols = 8
-num_rows = int(np.ceil(total_layers / cols))
-fig, axes = plt.subplots(num_rows, cols, figsize=(24, num_rows * 4))
-plt.subplots_adjust(hspace=0.4, wspace=0.4)
+user_choice = input(f'Enter "ALL" to visualize all layers or specify a single layer number(1-{total_layers}): ')
 
-for ax in axes.flat[total_layers:]:
-    ax.remove()
+def plot_specific_or_all_layers(choice):
+    if choice.upper() == "ALL":
+        cols = 8
+        num_rows = int(np.ceil(total_layers / cols))
+        fig, axes = plt.subplots(num_rows, cols, figsize=(24, num_rows * 4))
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
 
-for i, layer_index in enumerate(range(total_layers)):
-    ax = axes.flat[i]
-    
+        for ax in axes.flat[total_layers:]:
+            ax.remove()
+
+        for i, layer_index in enumerate(range(total_layers)):
+            ax = axes.flat[i]
+            plot_layer(ax, layer_index, i == 0)
+
+        plt.tight_layout()
+        plt.show()
+    elif choice.isdigit() and 1 <= int(choice) <= total_layers:
+        layer_index = int(choice) - 1
+        fig, ax = plt.subplots(figsize=(12, 12))
+        plot_layer(ax, layer_index, True)
+        plt.tight_layout()
+        plt.show()
+    else:
+        print("Invalid choice. Please enter 'ALL' or a valid layer number.")
+
+def plot_layer(ax, layer_index, show_legend):
     layer_activations = hidden_states[layer_index][0].mean(dim=-1).cpu().numpy()
     layer_activations_scaled = scaler.fit_transform(layer_activations.reshape(-1, 1)).flatten()
     layer_attentions_mean = attentions[layer_index][0].mean(0).mean(-1).cpu().numpy()
     layer_attentions_scaled = scaler.fit_transform(layer_attentions_mean.reshape(-1, 1)).flatten()
     token_positions = np.arange(len(layer_activations_scaled))
-    ax.scatter(token_positions, layer_activations_scaled, color='blue', alpha=0.2, label='Activations' if i == 0 else "")
-    ax.scatter(token_positions, layer_attentions_scaled, color='green', alpha=0.2, label='Attentions' if i == 0 else "")
+    ax.scatter(token_positions, layer_activations_scaled, color='blue', alpha=0.2, label='Activations' if show_legend else "")
+    ax.scatter(token_positions, layer_attentions_scaled, color='green', alpha=0.2, label='Attentions' if show_legend else "")
     ax.set_title(f'Layer {layer_index + 1}', fontsize=8)
     ax.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     ax.tick_params(axis='x', labelsize=6)
     ax.tick_params(axis='y', labelsize=6)
-
-    if i == 0:
+    if show_legend:
         ax.legend()
 
-plt.tight_layout()
-plt.show()
+plot_specific_or_all_layers(user_choice)
+

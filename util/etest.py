@@ -65,7 +65,7 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 
 print("Plotting results...")
-fig2 = plt.figure(num=f'PCA/DBSCAN | Embeddings(StarCoder)', figsize=(12, 10))
+fig2 = plt.figure(num=f'PCA/DBSCAN | Embeddings(OpenAI)', figsize=(12, 10))
 fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
@@ -75,7 +75,7 @@ outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
             color='red', alpha=0.8, marker='^', s=200, label='Outliers', zorder=3)
 
-plt.title(f'PCA/DBSCAN | {int(num_embeddings)} Embeddings(StarCoder) | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', size=8)
+plt.title(f'PCA/DBSCAN | {int(num_embeddings)} Embeddings(OpenAI) | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', size=8)
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
 plt.xticks(fontsize=8)
 plt.yticks(fontsize=8)
