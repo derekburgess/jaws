@@ -3,12 +3,13 @@ import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel
 
-uri = "bolt://localhost:7687"  # Update as needed
-username = "neo4j"  # Local Neo4j username
-password = "testtest"  # Local Neo4j password
-driver = GraphDatabase.driver(uri, auth=(username, password))
+uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
+username = "neo4j"  # Typical/local Neo4j username - Updated as needed
+password = "testtest"  # Typical/l Neo4j password - Updated as needed
+driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
 model_name = "bigcode/starcoder"
-tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY')
+# Replace 'KEY' with your Hugging Face API key, only needed to pull the model the first time.
+tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY') 
 model = AutoModel.from_pretrained("bigcode/starcoder", token='KEY').to('cuda')
 
 def fetch_data():
@@ -29,9 +30,7 @@ def fetch_data():
         p.tcp_flags AS tcp,
         p.size AS size, 
         p.payload AS payload,
-        p.payload_ascii AS ascii,
         p.payload_binary AS binary,
-        p.http_url AS http, 
         p.dns_domain AS dns,
         org.name AS org,
         org.hostname AS hostname,
@@ -39,7 +38,7 @@ def fetch_data():
         ID(p) AS packet_id
     LIMIT 1
     """
-    with driver.session() as session:
+    with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
     print(f"Retrieved {len(df)} record without embeddings.")
@@ -51,7 +50,7 @@ def update_neo4j(packet_id, embedding):
     WHERE ID(p) = $packet_id
     SET p.embedding = $embedding
     """
-    with driver.session() as session:
+    with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         session.run(query, packet_id=packet_id, embedding=embedding)
 
 def get_embedding(text):
@@ -72,6 +71,7 @@ def process_embeddings(df):
         embedding = get_embedding(text)
         update_neo4j(row['packet_id'], embedding)
 
+        # Useful debug, or for grabbing example packet strings
         #print("\nProcessing embedding for...")
         #print(f"Text for node ID {row['packet_id']}: {text}")
 
