@@ -78,9 +78,9 @@ def process_embeddings(df):
     # Reverse direction
     texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
     
-    print("\nStarting parallel processing for embeddings...")
-    for text, id in texts_and_ids:
-        print(f"\nText for node ID {id}: {text}")
+    #print("\nStarting parallel processing for embeddings...")
+    #for text, id in texts_and_ids:
+        #print(f"\nText for node ID {id}: {text}")
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}

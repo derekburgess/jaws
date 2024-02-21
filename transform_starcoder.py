@@ -63,17 +63,17 @@ def get_embedding(text):
 
 def process_embeddings(df):
     for _, row in df.iterrows():
-        text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
         embedding = get_embedding(text)
         update_neo4j(row['packet_id'], embedding)
         
         # Reverse direction
-        text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
         embedding = get_embedding(text)
         update_neo4j(row['packet_id'], embedding)
 
-        print("\nProcessing embedding for...")
-        print(f"Text for node ID {row['packet_id']}: {text}")
+        #print("\nProcessing embedding for...")
+        #print(f"Text for node ID {row['packet_id']}: {text}")
 
 while True:
     df = fetch_data()
