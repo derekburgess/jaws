@@ -25,9 +25,6 @@ Example packet string:
 
 `packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] AND/OR [binary payload] AND/OR [ascii payload] AND/OR [http payload] at a size of: size with ownership: org, hostname(dns) lat, long`
 
-Note: Sending all of the payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750.
-
-Commentary: The repo is currently configured to only send the NO payload. After testing various combinations, I find that the payloads oftens only add noise and increase compute.
 
 Example packet embedding from StarCoder (reduced):
 
@@ -68,8 +65,9 @@ Binary Payloads:
 
 Observations:
 - Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
-- OpenAI embeddings are a decent improvement and easiest to implement. While this approach improves accuracy, it is also the most sensitive to EPS and still noisy.
+- OpenAI embeddings appear to improve accuracy, they are also the most sensitive to EPS and still noisy.
 - StarCoder (or other code gen LLM) appears to be the "best", most stable (low sensitivity to change in EPS) results.
+- Payloads appear to add noise.
 
 Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
 
