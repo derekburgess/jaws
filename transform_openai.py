@@ -39,7 +39,7 @@ def fetch_data(batch_size=25):
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         result = session.run(query, batch_size=batch_size)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} records without embeddings.")
+    print(f"Retrieved {len(df)} packets without embeddings...")
     return df
 
 def update_neo4j(packet_id, embedding):
@@ -72,7 +72,7 @@ def get_embedding(text):
 
 # Note: Sending all of the Payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750. I have included only the binary payload for this example.
     
-# sending: [payload: {row['payload']}] (hex) AND/OR [binary: {row['binary']}]
+# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
     
 def process_embeddings(df):
     texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
@@ -94,16 +94,16 @@ def process_embeddings(df):
                 if embedding is not None:
                     update_neo4j(node_id, embedding)
             except Exception as exc:
-                print(f'Node ID {node_id} generated an exception: {exc}')
+                print(f'{exc}')
 
 while True:
     df = fetch_data(25)  # Adjust batch size if needed -- Unlike the StarCoder script, this works much better in conjuction with ThreadPoolExecutor. The current 25/25 settings are from my testing and consume ~60%-80% CPU using a 12th gen i5.
     if df.empty:
-        print("No new nodes without embeddings. Terminating script...")
+        print("No new packets without embeddings. Terminating script...")
         break
     
     process_embeddings(df)
-    print("\nFinished processing current batch of nodes.")
+    print("\nFinished processing current batch of packets...")
 
 driver.close()
 print("Closed connection to Neo4j.")

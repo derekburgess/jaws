@@ -16,6 +16,11 @@ username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
 driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
 
+# Add for including payloads
+#p.payload AS payload,
+#p.payload_binary AS binary,
+# Also add to pd.getdummies, 'payload', 'binary'
+
 def fetch_data():
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -31,6 +36,7 @@ def fetch_data():
         p.protocol AS protocol,
         p.tcp_flags AS tcp,
         p.size AS size,
+        p.dns_domain AS dns,
         org.name AS org,
         org.hostname AS hostname,
         org.location AS location 
@@ -48,7 +54,7 @@ df.replace('None', np.nan, inplace=True)
 #df.fillna(df.mean(), inplace=True)
 #df = df.sample(frac=sample_fraction)
 #print(f"{df.head()}")
-df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'org', 'hostname', 'location'], drop_first=True)
+df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'org', 'hostname', 'dns', 'location'], drop_first=True)
 total_records = len(df)
 scaler = StandardScaler()
 data_scaled = scaler.fit_transform(df)

@@ -41,7 +41,7 @@ def fetch_data():
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} record...")
+    print(f"Retrieved {len(df)} packet...") # Currently only fetching one packet at a time...
     return df
 
 def update_neo4j(packet_id, embedding):
@@ -60,7 +60,7 @@ def get_embedding(text):
     embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy().tolist()[0]
     return embeddings
 
-# sending: [payload: {row['payload']}] (hex) AND/OR [binary: {row['binary']}]
+# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
 
 def process_embeddings(df):
     for _, row in df.iterrows():
@@ -74,17 +74,17 @@ def process_embeddings(df):
         update_neo4j(row['packet_id'], embedding)
 
         # Useful debug, or for grabbing example packet strings
-        print("\nProcessing embedding for...")
-        print(f"{text}")
+        #print("\nProcessing embedding for:")
+        #print(f"{text}")
 
 while True:
     df = fetch_data()
     if df.empty:
-        print("No new node without embeddings. Terminating script...")
+        print("No new packets without embeddings. Terminating script...")
         break
     
     process_embeddings(df)
-    print("\nFinished processing embedding(s)...")
+    print("\nFinished processing all embeddings...")
 
 driver.close()
 print("Closed connection to Neo4j.")

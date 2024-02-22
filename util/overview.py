@@ -49,7 +49,7 @@ def plot_specific_or_all_layers(choice):
         plt.tight_layout()
         plt.show()
     else:
-        print("Invalid choice. Please enter 'ALL' or a valid layer number.")
+        print("Invalid choice. Please enter 'ALL' or a valid layer number...")
 
 def plot_layer(ax, layer_index, show_legend):
     layer_activations = hidden_states[layer_index][0].mean(dim=-1).cpu().numpy()

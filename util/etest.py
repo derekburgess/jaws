@@ -15,28 +15,26 @@ username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
 driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
 
-def fetch_embeddings(driver):
-    print("\nFetching data from Neo4j...")
+def fetch_edge_embeddings(driver):
+    print("\nFetching edge embeddings from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NOT NULL AND p.embedding <> "token_string_too_large"
-    RETURN src.address AS src_ip, p.embedding AS embedding
+    RETURN p.embedding AS embedding
     """
-    with driver.session(database="ethcaptures") as session: # Update database="" to your database name
+    with driver.session(database="ethcaptures") as session:
         result = session.run(query)
-        src_ips, embeddings= [], []
+        embeddings = []
         for record in result:
             embedding = np.array(record['embedding'])
             embeddings.append(embedding)
-            src_ips.append(record['src_ip'])
-        return np.array(embeddings), src_ips
+        return np.array(embeddings)
 
 start_time = time.time()
-embeddings, src_ips = fetch_embeddings(driver)
+embeddings = fetch_edge_embeddings(driver)
 num_embeddings = len(embeddings)
 print(f"\nPerforming PCA on {num_embeddings} embeddings...")
-scaler = StandardScaler()
-embeddings_scaled = scaler.fit_transform(embeddings)
+embeddings_scaled = StandardScaler().fit_transform(embeddings)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(embeddings_scaled)
 

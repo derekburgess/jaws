@@ -7,55 +7,62 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 
 `neonet.py` -- Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
 
-`util/hexbin.py` -- Attempts to convert hexadecimal payloads into Binary and ASCII(commented out)... My current hypothesis is that the binary payloads are less noisy downstream. Moved this script to util/ as it is optional/for testing.
+`util/hexbin.py` -- Converts hexadecimal payloads into Binary and ASCII(commented out)... My current hypothesis is that payloads only create noise, but was worth testing. If anything hex or binary- but not both.
 
 `transform_openai.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
 
 `transform_starcoder.py` -- Same as the other `transform_`, but uses Huggingface StarCoder and local CUDA support to store the final hidden state from StarCoder as the packet embedding. This came about from a recommendation to try a Code Gen LLM. Initial testing suggests this outperforms OpenAI/GPT embeddings in terms of embedding fidelity. Commentary: In hindsight, this approach makes complete sense. Since a code gen LLM is trained on syntax and expected to output code or guidance relative to "technology", my hypothesis is that a code gen LLM inherently understands the structure of the packet better than a GPT. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
 
-`neojawsx.py` -- Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
+`neojawsx.py` -- The TOOL. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
 
-`util/ne_test.py` -- Or `non-embedding test`, demonstrates the performance of raw packet analysis, for comparing against `etest.py` which performs the same test using embeddings. Does not include labels. Great for public demonstration.
+`util/ne_test.py` -- Or `non-embedding test`, demonstrates the performance of raw packet analysis, for comparing against `etest.py` which performs the same test using embeddings. Does not include labels. Great for testing and public demonstration.
 
-`util/overview.py` -- Uses a hardcoded packet example to return scatter plots that represent the hidden states and attentions for all layers, or a specific layer, out of StarCoder. Layer 40 is what we use for embeddings in the `transform_starcoder.py` script. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
+`util/overview.py` -- Uses a hardcoded packet example to return scatter plots that represent the hidden states and attentions for all layers(or a specific layer) in StarCoder. Layer 40 is what we use for embeddings in the `transform_starcoder.py` script. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
 
 `util/chum.py` -- This script in conjunction with `listener.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `IP address`, will label the data accordingly... either `BASE` or `CHUM`...
-
-The `data` directory is not included, create or change the path as needed. Only pertains to CSV storage.
-
-50 packet example
-
-Left to right: Raw data, OpenAI, StarCoder. Top to bottom represents different eps values until no outliers were present.
-
-![50 packet example test using raw data, OpenAI, and StarCoder](/assets/test50.png)
-
-500 packet example
-
-Left to right: Raw data, OpenAI, StarCoder. Top to bottom represents different eps values until no outliers were present.
-
-![500 packet example test using raw data, OpenAI, and StarCoder](/assets/test500.png)
-
-Observations:
-- Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
-- OpenAI embeddings are a decent improvement and easiest to implement. While this approach improves accuracy, it is also the most sensitive to EPS and still noisy.
-- StarCoder (or other code gen LLM) appears to be the "best", most stable (low sensitivity to change in EPS) results. Do not be fooled by the sparse plot, zoom into those clusters (or check the db) to better understand embedding fidelity.
-
-Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
-
-![diagram of pipeline and Neo4j example](/assets/diagram_21724.png)
 
 Example packet string:
 
 `packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] AND/OR [binary payload] AND/OR [ascii payload] AND/OR [http payload] at a size of: size with ownership: org, hostname(dns) lat, long`
 
-Note: Sending all of the Payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750.
+Note: Sending all of the payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750.
 
-Commentary: The repo is currently configured to only send the binary payload. After testing various combinations, I find the binary payload oftens produces higher density embeddings at a reduced token count compared to sending both the hex/binary or hex/binary/ascii. Reducing resources and compute time.
+Commentary: The repo is currently configured to only send the NO payload. After testing various combinations, I find that the payloads oftens only add noise and increase compute.
 
 Example packet embedding from StarCoder (reduced):
 
 `embedding = [-0.6838231086730957, 0.619213342666626, -0.2213636040687561, 0.5388462543487549, 0.9698492288589478, -0.05627664178609848, 0.400848925113678, 0.42690804600715637, -0.2869364321231842, 0.14443190395832062, 0.19022825360298157, -0.37119436264038086, -0.8193771839141846, -0.3072223961353302, -0.43989384174346924, 0.700538694858551, 0.879992663860321, -0.6817106008529663, 0.17782720923423767, 0.3537529706954956, -0.38453713059425354, -0.890569269657135... ]`
 
-StarCoder activation and attention, all layers across heads:
+~50(58) packet example, no payloads.
 
-![Activation and attetion across layers for the packet string](/assets/starcoder_packet_22224.png)
+Left to right: Raw data, OpenAI, StarCoder. Starcoder shows "zoomed in" views ontop of the plot as the clusters are very tight.
+
+No Payloads:
+
+![58 packet example test using raw data, OpenAI, and StarCoder, no payloads](/assets/group_no.png)
+
+Hex Payloads:
+
+![58 packet example test using raw data, OpenAI, and StarCoder, hex payloads](/assets/group_hex.png)
+
+Binary Payloads:
+
+![58 packet example test using raw data, OpenAI, and StarCoder, binary payloads](/assets/group_bin.png)
+
+StarCoder hidden states and attentions across all layers:
+
+![Hidden states and attetion across layers, no payload](/assets/overview_no.png)
+![Layer 40, embedding layer, no payload](/assets/overview_no.png)
+![Hidden states and attetion across layers, hex payload](/assets/overview_hex.png)
+![Layer 40, embedding layer, hex payload](/assets/overview_hex.png)
+![Hidden states and attetion across layers, binary payload](/assets/overview_bin.png)
+![Layer 40, embedding layer, binary payload](/assets/overview_bin.png)
+
+Observations:
+- Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
+- OpenAI embeddings are a decent improvement and easiest to implement. While this approach improves accuracy, it is also the most sensitive to EPS and still noisy.
+- StarCoder (or other code gen LLM) appears to be the "best", most stable (low sensitivity to change in EPS) results.
+
+Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
+
+![diagram of pipeline and Neo4j example](/assets/diagram_21724.png)

@@ -17,8 +17,6 @@ def fetch_data():
         df = pd.DataFrame([record.data() for record in result])
         #df['payload_ascii'] = df['payload'].apply(hex_to_ascii)
         df['payload_binary'] = df['payload'].apply(hex_to_binary)
-        
-    print(f"Retrieved {len(df)} records.")
     return df
 
 # Not sure of the usefulness of this. I think the ASCII payload only creates noise and increases token count... I am leaving it here for now, but have commented it out and removed queries that use it.

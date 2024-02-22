@@ -57,7 +57,7 @@ def main(api_key):
         ip_info = get_ip_info(src_ip, api_key)
         if ip_info:
             update_neo4j(src_ip, ip_info, driver)
-            print(f"Updated IP info for {src_ip}, with: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
+            print(f"Created ORGANIZATION realtionship from {src_ip}: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
 
 if __name__ == "__main__":
     main(api_key)
