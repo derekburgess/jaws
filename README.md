@@ -17,7 +17,7 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 
 `util/ne_test.py` -- Or `non-embedding test`, demonstrates the performance of raw packet analysis, for comparing against `etest.py` which performs the same test using embeddings. Does not include labels. Great for public demonstration.
 
-`util/view_starcoder.py` -- Uses a hardcoded packet example to return scatter plots that represent the activation and attention for all layers, or a specific layer, out of StarCoder. Layer 40 is what we use for embeddings in the `transform_starcoder.py` script. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
+`util/overview.py` -- Uses a hardcoded packet example to return scatter plots that represent the hidden states and attentions for all layers, or a specific layer, out of StarCoder. Layer 40 is what we use for embeddings in the `transform_starcoder.py` script. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
 
 `util/chum.py` -- This script in conjunction with `listener.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `IP address`, will label the data accordingly... either `BASE` or `CHUM`...
 
@@ -58,4 +58,4 @@ Example packet embedding from StarCoder (reduced):
 
 StarCoder activation and attention, all layers across heads:
 
-![Activation and attetion across layers for the packet string](/assets/starcoder_packet.png)
+![Activation and attetion across layers for the packet string](/assets/starcoder_packet_22224.png)

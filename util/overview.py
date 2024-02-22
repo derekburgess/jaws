@@ -57,7 +57,7 @@ def plot_layer(ax, layer_index, show_legend):
     layer_attentions_mean = attentions[layer_index][0].mean(0).mean(-1).cpu().numpy()
     layer_attentions_scaled = scaler.fit_transform(layer_attentions_mean.reshape(-1, 1)).flatten()
     token_positions = np.arange(len(layer_activations_scaled))
-    ax.scatter(token_positions, layer_activations_scaled, color='blue', alpha=0.2, label='Activations' if show_legend else "")
+    ax.scatter(token_positions, layer_activations_scaled, color='blue', alpha=0.2, label='Hidden States' if show_legend else "")
     ax.scatter(token_positions, layer_attentions_scaled, color='green', alpha=0.2, label='Attentions' if show_legend else "")
     ax.set_title(f'Layer {layer_index + 1}', fontsize=8)
     ax.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
@@ -65,6 +65,7 @@ def plot_layer(ax, layer_index, show_legend):
     ax.tick_params(axis='y', labelsize=6)
     if show_legend:
         ax.legend()
+    ax.set_ylim(-2,2)
 
 plot_specific_or_all_layers(user_choice)
 

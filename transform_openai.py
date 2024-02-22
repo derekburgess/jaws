@@ -27,7 +27,6 @@ def fetch_data(batch_size=25):
         p.tcp_flags AS tcp,
         p.size AS size, 
         p.payload AS payload, 
-        p.payload_ascii AS ascii,
         p.payload_binary AS binary,
         p.http_url AS http, 
         p.dns_domain AS dns,
@@ -72,15 +71,19 @@ def get_embedding(text):
         return None
 
 # Note: Sending all of the Payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750. I have included only the binary payload for this example.
+    
+# sending: [payload: {row['payload']}] (hex) AND/OR [binary: {row['binary']}]
+    
 def process_embeddings(df):
-    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
     
     # Reverse direction
-    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+    texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
     
+    # Useful debug, or for grabbing example packet strings
     #print("\nStarting parallel processing for embeddings...")
     #for text, id in texts_and_ids:
-        #print(f"\nText for node ID {id}: {text}")
+        #print(f"{text}")
 
     with ThreadPoolExecutor(max_workers=25) as executor:
         future_to_id = {executor.submit(get_embedding, text): node_id for text, node_id in texts_and_ids}

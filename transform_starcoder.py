@@ -41,7 +41,7 @@ def fetch_data():
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} record without embeddings.")
+    print(f"Retrieved {len(df)} record...")
     return df
 
 def update_neo4j(packet_id, embedding):
@@ -60,20 +60,22 @@ def get_embedding(text):
     embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy().tolist()[0]
     return embeddings
 
+# sending: [payload: {row['payload']}] (hex) AND/OR [binary: {row['binary']}]
+
 def process_embeddings(df):
     for _, row in df.iterrows():
-        text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
         embedding = get_embedding(text)
         update_neo4j(row['packet_id'], embedding)
         
         # Reverse direction
-        text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), sending: [hex: {row['payload']}] [binary: {row['binary']}] at a size of: {row['size']} with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
+        text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
         embedding = get_embedding(text)
         update_neo4j(row['packet_id'], embedding)
 
         # Useful debug, or for grabbing example packet strings
-        #print("\nProcessing embedding for...")
-        #print(f"Text for node ID {row['packet_id']}: {text}")
+        print("\nProcessing embedding for...")
+        print(f"{text}")
 
 while True:
     df = fetch_data()

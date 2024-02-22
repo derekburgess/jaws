@@ -30,10 +30,7 @@ def fetch_data():
         p.dst_mac AS dst_mac,  
         p.protocol AS protocol,
         p.tcp_flags AS tcp,
-        p.size AS size, 
-        p.payload AS payload, 
-        p.payload_binary AS binary,
-        p.dns_domain AS dns,
+        p.size AS size,
         org.name AS org,
         org.hostname AS hostname,
         org.location AS location 
@@ -47,8 +44,11 @@ start_time = time.time()
 print("\nFetching data and performing one-hot encoding and PCA...")
 #sample_fraction = 0.2 #Sample non-embedding data!
 df = fetch_data()
+df.replace('None', np.nan, inplace=True)
+#df.fillna(df.mean(), inplace=True)
 #df = df.sample(frac=sample_fraction)
-df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'payload', 'binary', 'dns', 'org', 'hostname', 'location'], drop_first=True)
+#print(f"{df.head()}")
+df = pd.get_dummies(df, columns=['src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'protocol', 'tcp', 'size', 'org', 'hostname', 'location'], drop_first=True)
 total_records = len(df)
 scaler = StandardScaler()
 data_scaled = scaler.fit_transform(df)
