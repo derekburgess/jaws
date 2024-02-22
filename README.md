@@ -49,14 +49,22 @@ Binary Payloads:
 
 ![58 packet example test using raw data, OpenAI, and StarCoder, binary payloads](/assets/group_bin.png)
 
-StarCoder hidden states and attentions across all layers:
+The following outputs crudely show what is happening inside of StarCoder by plotting hidden states and attentions across all layers, followed by layer 40 (final hidden states).
+
+No Payloads:
 
 ![Hidden states and attetion across layers, no payload](/assets/overview_no.png)
-![Layer 40, embedding layer, no payload](/assets/overview_no.png)
+![Layer 40, embedding layer, no payload](/assets/layer40_no.png)
+
+Hex Payloads:
+
 ![Hidden states and attetion across layers, hex payload](/assets/overview_hex.png)
-![Layer 40, embedding layer, hex payload](/assets/overview_hex.png)
+![Layer 40, embedding layer, hex payload](/assets/layer40_hex.png)
+
+Binary Payloads:
+
 ![Hidden states and attetion across layers, binary payload](/assets/overview_bin.png)
-![Layer 40, embedding layer, binary payload](/assets/overview_bin.png)
+![Layer 40, embedding layer, binary payload](/assets/layer40_bin.png)
 
 Observations:
 - Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
