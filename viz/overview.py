@@ -69,3 +69,24 @@ def plot_layer(ax, layer_index, show_legend):
 
 plot_specific_or_all_layers(user_choice)
 
+"""
+def plot_layer(ax, layer_index, show_legend):
+    layer_activations = hidden_states[layer_index][0].mean(dim=-1).cpu().numpy()
+    layer_activations_scaled = scaler.fit_transform(layer_activations.reshape(-1, 1)).flatten()
+    layer_attentions = attentions[layer_index][0].cpu().numpy()  # Get all attention heads
+    token_positions = np.arange(len(layer_activations_scaled))
+    
+    # Plotting each attention head separately
+    for head_index, attention_head in enumerate(layer_attentions):
+        attention_head_scaled = scaler.fit_transform(attention_head.mean(-1).reshape(-1, 1)).flatten()
+        ax.scatter(token_positions, attention_head_scaled, alpha=0.2, label=f'Head {head_index+1}' if show_legend else "", marker='.')
+    
+    ax.set_title(f'Layer {layer_index + 1}', fontsize=8)
+    ax.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    ax.tick_params(axis='x', labelsize=6)
+    ax.tick_params(axis='y', labelsize=6)
+    #if show_legend:
+        #ax.legend()
+    ax.set_ylim(-2, 2)
+"""
+

@@ -1,16 +1,16 @@
 from neo4j import GraphDatabase
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
 driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
-model_name = "bigcode/starcoder"
-# Replace 'KEY' with your Hugging Face API key, only needed to pull the model the first time.
-tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder", token='KEY') 
-model = AutoModel.from_pretrained("bigcode/starcoder", token='KEY').to('cuda')
+quantization_config = BitsAndBytesConfig(load_in_4bit=True) # to use 4bit use `load_in_4bit=True` instead
+checkpoint = "bigcode/starcoder2-15b"
+tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+model = AutoModelForCausalLM.from_pretrained(checkpoint, quantization_config=quantization_config)
 
 def fetch_data():
     print("\nFetching data from Neo4j...")
@@ -56,8 +56,9 @@ def update_neo4j(packet_id, embedding):
 def get_embedding(text):
     inputs = tokenizer(text, return_tensors="pt", max_length=512, truncation=True).to('cuda')
     with torch.no_grad():
-        outputs = model(**inputs)
-    embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy().tolist()[0]
+        outputs = model(**inputs, output_hidden_states=True)
+    last_hidden_states = outputs.hidden_states[-1]
+    embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
     return embeddings
 
 # sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
@@ -84,7 +85,7 @@ while True:
         break
     
     process_embeddings(df)
-    print("\nFinished processing all embeddings...")
+    print("\nFinished processing embedding...")
 
 driver.close()
 print("Closed connection to Neo4j.")

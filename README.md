@@ -7,19 +7,21 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 
 `neonet.py` -- Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
 
-`util/hexbin.py` -- Converts hexadecimal payloads into Binary and ASCII(commented out)... My current hypothesis is that payloads only create noise, but was worth testing. If anything hex or binary- but not both.
-
-`transform_openai.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
-
-`transform_starcoder.py` -- Same as the other `transform_`, but uses Huggingface StarCoder and local CUDA support to store the final hidden state from StarCoder as the packet embedding. This came about from a recommendation to try a Code Gen LLM. Initial testing suggests this outperforms OpenAI/GPT embeddings in terms of embedding fidelity. Commentary: In hindsight, this approach makes complete sense. Since a code gen LLM is trained on syntax and expected to output code or guidance relative to "technology", my hypothesis is that a code gen LLM inherently understands the structure of the packet better than a GPT. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
-
 `neojawsx.py` -- The TOOL. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
+
+`transformers/openai.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
+
+`transformers/starcoder.py` -- Same as the other `transform_`, but uses Huggingface StarCoder and local CUDA support to store the final hidden state from StarCoder as the packet embedding. This came about from a recommendation to try a Code Gen LLM. Initial testing suggests this outperforms OpenAI/GPT embeddings in terms of embedding fidelity. Commentary: In hindsight, this approach makes complete sense. Since a code gen LLM is trained on syntax and expected to output code or guidance relative to "technology", my hypothesis is that a code gen LLM inherently understands the structure of the packet better than a GPT. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
+
+`transformers/starcoder2_quant.py` -- Same as the other StarCoder transformer, but updated to use StarCoder2 and 4/8-bit quantization expriements.
 
 `util/ne_test.py` -- Or `non-embedding test`, demonstrates the performance of raw packet analysis, for comparing against `etest.py` which performs the same test using embeddings. Does not include labels. Great for testing and public demonstration.
 
-`util/overview.py` -- Uses a hardcoded packet example to return scatter plots that represent the hidden states and attentions for all layers(or a specific layer) in StarCoder. Layer 40 is what we use for embeddings in the `transform_starcoder.py` script. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
+`util/overview.py` and `_quant` -- Uses a hardcoded packet example to return scatter plots that represent the hidden states and attentions for all layers(or a specific layer) in StarCoder (1 and 2). Layer 40 is what we use for embeddings in the `transformers/` scripts. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
 
 `util/chum.py` -- This script in conjunction with `listener.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `IP address`, will label the data accordingly... either `BASE` or `CHUM`...
+
+`util/hexbin.py` -- Converts hexadecimal payloads into Binary and ASCII(commented out)... My current hypothesis is that payloads only create noise, but was worth testing. If anything hex or binary- but not both.
 
 Example packet string:
 
