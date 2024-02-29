@@ -7,7 +7,7 @@ uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
 driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
-quantization_config = BitsAndBytesConfig(load_in_4bit=True) # to use 4bit use `load_in_4bit=True` instead
+quantization_config = BitsAndBytesConfig(load_in_8bit=True) # to use 4bit use `load_in_4bit=True` instead
 checkpoint = "bigcode/starcoder2-15b"
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 model = AutoModelForCausalLM.from_pretrained(checkpoint, quantization_config=quantization_config)
