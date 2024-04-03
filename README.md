@@ -70,6 +70,25 @@ Run `neojawsx` to process embeddings and display cluster plots.
 `neojawsx.py` -- Run with `neojawsx`. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
 
 
+### Working with Neo4j
+
+The tool does not seek to replace the neo4j management, in theory any graph database could be swapped in, replacing the cypher queries as needed. My testing leaned on the DBMS application provided at https://neo4j.com/product/developer-tools/
+
+The DBMS application is straight forward and on local systems should work out of the box with the scripts.
+
+From within the DBMS application you can also access the `Graph Apps` sub menu and the `Neo4j Browser`. From within the browser you can:
+- View the network graph by clicking on any of the node labels.
+- Hoving over entities will show properties and relationships.
+- Run queries on the database outside of the jaws scripts, including a common debug query I use:
+
+```
+MATCH ()-[r]->()
+WHERE r.embedding IS NOT NULL
+REMOVE r.embedding
+RETURN COUNT(*)
+```
+
+
 ### Examples
 
 Example packet string:
