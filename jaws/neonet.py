@@ -57,7 +57,7 @@ def update_neo4j(src_ip, ip_info, driver):
         })
 
 
-def main(ipinfo_api_key):
+def main():
     src_ips = fetch_data()
     for src_ip in src_ips:
         ip_info = get_ip_info(src_ip, ipinfo_api_key)
@@ -67,4 +67,4 @@ def main(ipinfo_api_key):
 
 
 if __name__ == "__main__":
-    main(ipinfo_api_key)
+    main()

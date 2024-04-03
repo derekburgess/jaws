@@ -3,13 +3,45 @@
 
 JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV, and Graph Databases (Neo4j) to provide: A shell pipeline for gathering network packets on a given `interface` and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. I went with the "Jaws Theme" because I like Jaws the movie, which to me, like Moby Dick, is about finding anomalies.
 
-`neosea.py` -- Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation IP".
 
-`neonet.py` -- Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
+## Setup
+
+JAWS uses `pyshark` which requires tshark, which can be installed with Wireshark.
+
+JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup.
+
+
+Install dependencies:
+
+`pip install -r requirements.txt`
+
+
+I've tried to make everything CPU friendly, but if you want to use CUDA, install Pytorch for CUDA 12+
+
+`pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121`
+
+Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
+
+
+Install dependencies for quantization:
+
+`pip install -i https://pypi.org/simple/ bitsandbytes`
+
+
+Install JAWS:
+
+`pip install -e .`
+
+
+### Script descriptions
+
+`neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation IP".
+
+`neonet.py` -- Run with `neonet`. Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
 
 `neojawsx.py` -- The TOOL. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
 
-`transformers/openai.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
+`transformers/openai_embedding.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
 
 `transformers/starcoder.py` -- Same as the other `transform_`, but uses Huggingface StarCoder and local CUDA support to store the final hidden state from StarCoder as the packet embedding. This came about from a recommendation to try a Code Gen LLM. Initial testing suggests this outperforms OpenAI/GPT embeddings in terms of embedding fidelity. Commentary: In hindsight, this approach makes complete sense. Since a code gen LLM is trained on syntax and expected to output code or guidance relative to "technology", my hypothesis is that a code gen LLM inherently understands the structure of the packet better than a GPT. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
 
@@ -22,6 +54,9 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 `util/chum.py` -- This script in conjunction with `listener.py`, and any "remote server" (I've been testing with a free EC2 instance at no cost...), can help simulate "exfiltration events". In addition, the `neosea.py` script, when given this `IP address`, will label the data accordingly... either `BASE` or `CHUM`...
 
 `util/hexbin.py` -- Converts hexadecimal payloads into Binary and ASCII(commented out)... My current hypothesis is that payloads only create noise, but was worth testing. If anything hex or binary- but not both.
+
+
+### Examples
 
 Example packet string:
 
@@ -62,11 +97,16 @@ Binary Payloads:
 
 ![Hidden states and attetion across layers, binary payload](/assets/overview_bin.png)
 
-Observations:
+
+### Observations
+
 - Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
 - OpenAI embeddings appear to improve accuracy, they are also the most sensitive to EPS and still noisy.
 - StarCoder (or other code gen LLM) appears to be the "best", most stable (low sensitivity to change in EPS) results.
 - Payloads appear to add noise.
+
+
+#### Screenshot
 
 Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
 

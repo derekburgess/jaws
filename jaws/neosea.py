@@ -124,11 +124,13 @@ def process_packet(packet):
     packet_id += 1
 
 
-if __name__ == "__main__":
+def main():
     print(f"\nBatch size: {batch_size}", end="\n\n")
     print(df, end="\n\n")
     capture = pyshark.LiveCapture(interface='Ethernet')
     capture.apply_on_packets(process_packet)
 
+    driver.close()
 
-driver.close()
+if __name__ == "__main__":
+    main()

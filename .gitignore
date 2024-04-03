@@ -1,1 +1,3 @@
-/data
+/jaws/data
+/jaws/__pycache__
+/JAWS.egg-info

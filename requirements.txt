@@ -1,0 +1,11 @@
+neo4j
+pyshark
+pandas
+scikit-learn
+kneed
+transformers
+accelerate
+openai
+matplotlib
+requests
+rich
