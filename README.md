@@ -10,6 +10,12 @@ JAWS uses `pyshark` which requires tshark, which can be installed with Wireshark
 
 JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup.
 
+To use `neonet` (ipinfo), OpenAI, or Hugging Face `transformers`, you will also need to sign up for those accounts and create env variables for:
+
+- `IPINFO_API_KEY`
+- `OPENAI_API_KEY`
+- `HUGGINGFACE_KEY`
+
 
 Install dependencies:
 
