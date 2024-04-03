@@ -1,3 +1,4 @@
+import os
 from neo4j import GraphDatabase
 import pandas as pd
 import numpy as np
@@ -11,9 +12,10 @@ import random
 import time
 
 
-uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
-username = "neo4j"  # Typical/local Neo4j username - Updated as needed
-password = "testtest"  # Typical/l Neo4j password - Updated as needed
+uri = os.getenv("LOCAL_NEO4J_URI")
+username = os.getenv("LOCAL_NEO4J_USERNAME")
+password = os.getenv("LOCAL_NEO4J_PASSWORD")
+database = os.getenv("LOCAL_NEO4J_DATABASE")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 
 
@@ -35,7 +37,7 @@ def fetch_data(driver):
         org.location AS location,
         p.embedding AS embedding
     """
-    with driver.session(database="ethcaptures") as session: # Update database="" to your database name
+    with driver.session(database=database) as session:
         result = session.run(query)
         embeddings = []
         data = []
