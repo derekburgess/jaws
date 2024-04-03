@@ -10,7 +10,7 @@ JAWS uses `pyshark` which requires tshark, which can be installed with Wireshark
 
 JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup.
 
-To use `neonet` (ipinfo), OpenAI, or Hugging Face `transformers`, you will also need to sign up for those accounts and create env variables for:
+To use `neonet` [ipinfo](https://ipinfo.io/), [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) `transformers`, you will also need to sign up for those accounts and create env variables for:
 
 - `IPINFO_API_KEY`
 - `OPENAI_API_KEY`
@@ -43,11 +43,15 @@ Install JAWS:
 
 Run a local Neo4j Database, update references... the defaults are fine.
 
+
 Run `neosea` to capture packets.
+
 
 Run `neonet` to gather intel on IP Addresses. Uses IPInfo and requires a free api key.
 
+
 Run `neotransform`, optionally passing `--api` with either `openai` or `starcoder`(default).
+
 
 Run `neojawsx` to process embeddings and display cluster plots.
 
@@ -56,13 +60,12 @@ Run `neojawsx` to process embeddings and display cluster plots.
 
 `neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation IP".
 
+
 `neonet.py` -- Run with `neonet`. Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
 
-`transformers/openai_embedding.py` -- Takes each packet and uses OpenAI Embeddings endpoint to transform them into embeddings, storing them back on the original entities in the Neo db. Uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). *REQUIRES OpenAI API environment variables.
 
-`transformers/starcoder.py` -- Same as the other `transform_`, but uses Huggingface StarCoder and local CUDA support to store the final hidden state from StarCoder as the packet embedding. This came about from a recommendation to try a Code Gen LLM. Initial testing suggests this outperforms OpenAI/GPT embeddings in terms of embedding fidelity. Commentary: In hindsight, this approach makes complete sense. Since a code gen LLM is trained on syntax and expected to output code or guidance relative to "technology", my hypothesis is that a code gen LLM inherently understands the structure of the packet better than a GPT. *REQUIRES Huggingface access to StarCoder/Huggingface API key.
+`neotransform.py` -- Takes each packet and uses either OpenAI Embeddings endpoint or Hugging Face StarCoder 2 (pulled locally, so watch out) to transform them into embeddings, storing them back on the original entities in the Neo db. OpenAI uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). StarCoder locally on cuda uses processes 1 packet set at a time. StarCoder 2 also uses 4/8-bit quantization.
 
-`transformers/starcoder2_quant.py` -- Same as the other StarCoder transformer, but updated to use StarCoder2 and 4/8-bit quantization expriements.
 
 `neojawsx.py` -- The TOOL. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
 
@@ -86,13 +89,16 @@ No Payloads:
 
 ![58 packet example test using raw data, OpenAI, and StarCoder, no payloads](/assets/group_no.png)
 
+
 Hex Payloads:
 
 ![58 packet example test using raw data, OpenAI, and StarCoder, hex payloads](/assets/group_hex.png)
 
+
 Binary Payloads:
 
 ![58 packet example test using raw data, OpenAI, and StarCoder, binary payloads](/assets/group_bin.png)
+
 
 The following outputs crudely show what is happening inside of StarCoder by plotting hidden states and attentions across all layers.
 
@@ -100,9 +106,11 @@ No Payloads:
 
 ![Hidden states and attetion across layers, no payload](/assets/overview_no.png)
 
+
 Hex Payloads:
 
 ![Hidden states and attetion across layers, hex payload](/assets/overview_hex.png)
+
 
 Binary Payloads:
 
@@ -115,10 +123,3 @@ Binary Payloads:
 - OpenAI embeddings appear to improve accuracy, they are also the most sensitive to EPS and still noisy.
 - StarCoder (or other code gen LLM) appears to be the "best", most stable (low sensitivity to change in EPS) results.
 - Payloads appear to add noise.
-
-
-#### Screenshot
-
-Diagram of pipeline/recommended workflow and screenshot of Neo4j graph:
-
-![diagram of pipeline and Neo4j example](/assets/diagram_21724.png)
