@@ -6,7 +6,7 @@ JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV,
 
 ## Setup
 
-JAWS uses `pyshark` which requires tshark, which can be installed with Wireshark.
+JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
 
 JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup.
 
@@ -41,13 +41,13 @@ Install JAWS:
 
 ## Running and Commands
 
-Run a local Neo4j Database, update references... the defaults are fine.
+Run a local Neo4j Database.
 
 
 Run `neosea` to capture packets.
 
 
-Run `neonet` to gather intel on IP Addresses. Uses IPInfo and requires a free api key.
+Run `neonet` to gather intel on IP Addresses.
 
 
 Run `neotransform`, optionally passing `--api` with either `openai` or `starcoder`(default).
@@ -58,16 +58,16 @@ Run `neojawsx` to process embeddings and display cluster plots.
 
 ### Script descriptions
 
-`neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation IP".
+`neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`.
 
 
 `neonet.py` -- Run with `neonet`. Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
 
 
-`neotransform.py` -- Takes each packet and uses either OpenAI Embeddings endpoint or Hugging Face StarCoder 2 (pulled locally, so watch out) to transform them into embeddings, storing them back on the original entities in the Neo db. OpenAI uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). StarCoder locally on cuda uses processes 1 packet set at a time. StarCoder 2 also uses 4/8-bit quantization.
+`neotransform.py` -- Run with `neotrasnform` Takes each packet and uses either OpenAI Embeddings endpoint or Hugging Face StarCoder 2 (pulled locally, so watch out) to transform them into embeddings, storing them back on the original entities in the Neo db. OpenAI uses concurrent batch processing; the current settings typically hit ~80% CPU for my setup (12th gen i5). StarCoder 2 locally on cuda processes 1 packet set at a time. StarCoder 2 also uses 4/8-bit quantization.
 
 
-`neojawsx.py` -- The TOOL. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
+`neojawsx.py` -- Run with `neojawsx`. Performs PCA on the packet embeddings, uses nearest neighbor/knee to select EPS, then clusters using DBSCAN. Returns a 2D scatter plot with outliers called out as red markers and labeled with `org`, `domain/DNS`, `loc`, `route (IP:port(MAC) > IP:port(MAC))`, and `size`.
 
 
 ### Examples
