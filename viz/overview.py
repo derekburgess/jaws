@@ -1,8 +1,10 @@
+import os
 import torch
 from transformers import AutoTokenizer, AutoModel
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+
 
 def get_layer_activations_and_attention(model, tokenizer, packet):
     inputs = tokenizer(packet, return_tensors='pt').to(device)
@@ -12,19 +14,26 @@ def get_layer_activations_and_attention(model, tokenizer, packet):
     attentions = outputs.attentions
     return hidden_states, attentions
 
+
 print("Initializing device...")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_name = "bigcode/starcoder"
+
+
 print("Loading tokenizer and model...")
-tokenizer = AutoTokenizer.from_pretrained(model_name, token='KEY')
-model = AutoModel.from_pretrained(model_name, token='KEY', attn_implementation="eager").to(device)
+huggingface_token = os.getenv("HUGGINGFACE_KEY")
+tokenizer = AutoTokenizer.from_pretrained(model_name, token=huggingface_token)
+model = AutoModel.from_pretrained(model_name, token=huggingface_token, attn_implementation="eager").to(device)
 scaler = StandardScaler()
 total_layers = model.config.num_hidden_layers
 
+
 packet = "PACKET"
+
 
 hidden_states, attentions = get_layer_activations_and_attention(model, tokenizer, packet)
 user_choice = input(f'Enter "ALL" to visualize all layers or specify a single layer number(1-{total_layers}): ')
+
 
 def plot_specific_or_all_layers(choice):
     if choice.upper() == "ALL":
@@ -51,6 +60,7 @@ def plot_specific_or_all_layers(choice):
     else:
         print("Invalid choice. Please enter 'ALL' or a valid layer number...")
 
+
 def plot_layer(ax, layer_index, show_legend):
     layer_activations = hidden_states[layer_index][0].mean(dim=-1).cpu().numpy()
     layer_activations_scaled = scaler.fit_transform(layer_activations.reshape(-1, 1)).flatten()
@@ -67,7 +77,9 @@ def plot_layer(ax, layer_index, show_legend):
         ax.legend()
     ax.set_ylim(-2,2)
 
+
 plot_specific_or_all_layers(user_choice)
+
 
 """
 def plot_layer(ax, layer_index, show_legend):

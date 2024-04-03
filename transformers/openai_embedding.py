@@ -4,10 +4,13 @@ import openai
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+
 uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
-driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
+driver = GraphDatabase.driver(uri, auth=(username, password))
+client = OpenAI()
+
 
 def fetch_data(batch_size=25):
     print("\nFetching data from Neo4j...")
@@ -42,6 +45,7 @@ def fetch_data(batch_size=25):
     print(f"Retrieved {len(df)} packets without embeddings...")
     return df
 
+
 def update_neo4j(packet_id, embedding):
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -51,8 +55,8 @@ def update_neo4j(packet_id, embedding):
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         session.run(query, packet_id=packet_id, embedding=embedding)
 
+
 def get_embedding(text):
-    client = OpenAI()
     try:
         response = client.embeddings.create(input=text, model="text-embedding-3-large")
         return response.data[0].embedding
@@ -72,8 +76,8 @@ def get_embedding(text):
 
 # Note: Sending all of the Payload options to OpenAI will often trigger the token limit error... Have seen packet payloads exceed 15,000 tokens and the OpenAI embeddings end-point has a max 8750. I have included only the binary payload for this example.
     
-# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
-    
+
+# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]  
 def process_embeddings(df):
     texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
     
@@ -96,6 +100,7 @@ def process_embeddings(df):
             except Exception as exc:
                 print(f'{exc}')
 
+
 while True:
     df = fetch_data(25)  # Adjust batch size if needed -- Unlike the StarCoder script, this works much better in conjuction with ThreadPoolExecutor. The current 25/25 settings are from my testing and consume ~60%-80% CPU using a 12th gen i5.
     if df.empty:
@@ -104,6 +109,7 @@ while True:
     
     process_embeddings(df)
     print("\nFinished processing current batch of packets...")
+
 
 driver.close()
 print("Closed connection to Neo4j.")

@@ -9,17 +9,21 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import time
 
+
 # Test script for non-embedding, raw packet data. Fetches data from Neo4j, performs one-hot encoding and PCA, and then applies DBSCAN for clustering. Does not plot labels. Intended for testing and public demonstrations.
+
 
 uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
-driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
+driver = GraphDatabase.driver(uri, auth=(username, password))
+
 
 # Add for including payloads
 #p.payload AS payload,
 #p.payload_binary AS binary,
 # Also add to pd.getdummies, 'payload', 'binary'
+
 
 def fetch_data():
     query = """
@@ -46,7 +50,10 @@ def fetch_data():
         data = [record.data() for record in result]
         return pd.DataFrame(data)
 
+
 start_time = time.time()
+
+
 print("\nFetching data and performing one-hot encoding and PCA...")
 #sample_fraction = 0.2 #Sample non-embedding data!
 df = fetch_data()
@@ -60,6 +67,7 @@ scaler = StandardScaler()
 data_scaled = scaler.fit_transform(df)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(data_scaled)
+
 
 print("Using Kneed to recommend EPS...")
 min_samples = 2
@@ -81,6 +89,7 @@ clusters = dbscan.fit_predict(data_scaled)
 end_time = time.time()
 elapsed_time = end_time - start_time
 
+
 print("Plotting results...")
 fig2 = plt.figure(num=f'PCA/DBSCAN | Raw Packets', figsize=(12, 10))
 fig2.canvas.manager.window.wm_geometry("+50+50")
@@ -88,9 +97,11 @@ clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                       c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='o', s=200, zorder=2)
 
+
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
             color='red', alpha=0.8, marker='^', s=200, label='Outliers', zorder=3)
+
 
 plt.title(f"PCA/DBSCAN | {int(total_records)} Raw Packets | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds", size=8)
 plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)

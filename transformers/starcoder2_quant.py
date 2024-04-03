@@ -1,16 +1,22 @@
+import os
 from neo4j import GraphDatabase
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
+
 uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
-driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
+driver = GraphDatabase.driver(uri, auth=(username, password))
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+huggingface_token = os.getenv("HUGGINGFACE_KEY")
+model_name = "bigcode/starcoder2-15b"
 quantization_config = BitsAndBytesConfig(load_in_8bit=True) # to use 4bit use `load_in_4bit=True` instead
-checkpoint = "bigcode/starcoder2-15b"
-tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-model = AutoModelForCausalLM.from_pretrained(checkpoint, quantization_config=quantization_config)
+tokenizer = AutoTokenizer.from_pretrained(model_name, token=huggingface_token)
+model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quantization_config, token=huggingface_token)
+
 
 def fetch_data():
     print("\nFetching data from Neo4j...")
@@ -44,6 +50,7 @@ def fetch_data():
     print(f"Retrieved {len(df)} packet...") # Currently only fetching one packet at a time...
     return df
 
+
 def update_neo4j(packet_id, embedding):
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -53,16 +60,17 @@ def update_neo4j(packet_id, embedding):
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         session.run(query, packet_id=packet_id, embedding=embedding)
 
+
 def get_embedding(text):
-    inputs = tokenizer(text, return_tensors="pt", max_length=512, truncation=True).to('cuda')
+    inputs = tokenizer(text, return_tensors="pt", max_length=512, truncation=True).to(device)
     with torch.no_grad():
         outputs = model(**inputs, output_hidden_states=True)
     last_hidden_states = outputs.hidden_states[-1]
     embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
     return embeddings
 
-# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
 
+# sending: [payload: {row['payload']}] (hex) AND/OR [payload: {row['binary']}]
 def process_embeddings(df):
     for _, row in df.iterrows():
         text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
@@ -78,6 +86,7 @@ def process_embeddings(df):
         #print("\nProcessing embedding for:")
         #print(f"{text}")
 
+
 while True:
     df = fetch_data()
     if df.empty:
@@ -86,6 +95,7 @@ while True:
     
     process_embeddings(df)
     print("\nFinished processing embedding...")
+
 
 driver.close()
 print("Closed connection to Neo4j.")

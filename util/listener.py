@@ -3,11 +3,14 @@ import ssl
 import traceback
 import threading
 
+
 # Used in conjunction with chum.py
 # Place this script on your server and run it. It will listen for incoming connections on the port you configure below, allowing the connection and "accepting" the payload, acting as our "exfiltration server".
 
+
 HOST = '0.0.0.0'
 PORTS = [53, 80, 8080, 445, 6660, 6661, 6662, 6663, 6664, 6665, 6666, 6667, 6668, 6669, 2503, 55553]
+
 
 def start_server(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -48,6 +51,7 @@ def start_server(port):
                 except Exception as e:
                     print(f"An error occurred: {e}")
                     traceback.print_exc()
+
 
 for port in PORTS:
     threading.Thread(target=start_server, args=(port,)).start()

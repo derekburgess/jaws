@@ -8,12 +8,15 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import time
 
+
 # Test script for packet embeddings. Fetches data from Neo4j, performs PCA, and then applies DBSCAN for clustering. Does not plot labels. Intended for testing and public demonstrations.
+
 
 uri = "bolt://localhost:7687"  # Typical/local Neo4j URI - Updated as needed
 username = "neo4j"  # Typical/local Neo4j username - Updated as needed
 password = "testtest"  # Typical/l Neo4j password - Updated as needed
-driver = GraphDatabase.driver(uri, auth=(username, password)) # Set up the driver
+driver = GraphDatabase.driver(uri, auth=(username, password))
+
 
 def fetch_edge_embeddings(driver):
     print("\nFetching edge embeddings from Neo4j...")
@@ -33,10 +36,13 @@ def fetch_edge_embeddings(driver):
 start_time = time.time()
 embeddings = fetch_edge_embeddings(driver)
 num_embeddings = len(embeddings)
+
+
 print(f"\nPerforming PCA on {num_embeddings} embeddings...")
 embeddings_scaled = StandardScaler().fit_transform(embeddings)
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(embeddings_scaled)
+
 
 print("Measuring k-distance...")
 min_samples = 2
@@ -45,6 +51,7 @@ nearest_neighbors.fit(embeddings_scaled)
 distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
 k_distances = distances[:, min_samples - 1]
 sorted_k_distances = np.sort(k_distances)
+
 
 print("Using Kneed to recommend EPS...")
 kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
@@ -62,12 +69,14 @@ clusters = dbscan.fit_predict(embeddings_scaled)
 end_time = time.time()
 elapsed_time = end_time - start_time
 
+
 print("Plotting results...")
 fig2 = plt.figure(num=f'PCA/DBSCAN | Embeddings(AI)', figsize=(12, 10))
 fig2.canvas.manager.window.wm_geometry("+50+50")
 clustered_indices = clusters != -1
 scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                       c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='o', s=200, zorder=2)
+
 
 outlier_indices = clusters == -1
 plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
