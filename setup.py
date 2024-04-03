@@ -90,7 +90,9 @@ setup(
     entry_points={
        'console_scripts': [
            'neosea = jaws.neosea:main',
-           'neonet = jaws.neonet:main'
+           'neonet = jaws.neonet:main',
+           'neotransform = jaws.neotransform:main',
+           'neojawsx = jaws.neojawsx:main'
        ],
     },
 )

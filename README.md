@@ -39,6 +39,19 @@ Install JAWS:
 `pip install -e .`
 
 
+## Running and Commands
+
+Run a local Neo4j Database, update references... the defaults are fine.
+
+Run `neosea` to capture packets.
+
+Run `neonet` to gather intel on IP Addresses. Uses IPInfo and requires a free api key.
+
+Run `neotransform`, optionally passing `--api` with either `openai` or `starcoder`(default).
+
+Run `neojawsx` to process embeddings and display cluster plots.
+
+
 ### Script descriptions
 
 `neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`, and if you use the `chum.py` script, your AWS or "exfiltration simulation IP".
