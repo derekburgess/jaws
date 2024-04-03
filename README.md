@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/ohey.jpeg)
 
-JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), CSV, and Graph Databases (Neo4j) to provide: A shell pipeline for gathering network packets on a given `interface` and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. I went with the "Jaws Theme" because I like Jaws the movie, which to me, like Moby Dick, is about finding anomalies.
+JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given `interface` and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. I went with the "Jaws Theme" because I like Jaws the movie, which to me, like Moby Dick, is about finding anomalies.
 
 
 ## Setup
@@ -58,7 +58,7 @@ Run `neojawsx` to process embeddings and display cluster plots.
 
 ### Script descriptions
 
-`neosea.py` -- Run with `neosea`. Stores packets in a CSV file `data/packets.csv`, as well as in a local or cloud-based Neo4j db. Update the `batch`, `interface`.
+`neosea.py` -- Run with `neosea`. Stores packets in the Neo4j database. Update the `interface`.
 
 
 `neonet.py` -- Run with `neonet`. Passes `src_ip` to IPInfo and returns `org`, `hostname`, and `loc` -- Creating an Org node and OWNERSHIP relationship (relative to src_ip) to IP nodes in Neo4j. *REQUIRES your own IPInfo key.
