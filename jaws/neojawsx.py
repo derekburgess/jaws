@@ -104,7 +104,7 @@ def main():
 
 
     print("Plotting results...")
-    fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings(StarCoder) | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
+    fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
