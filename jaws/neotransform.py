@@ -16,7 +16,7 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
 
-def fetch_data(batch_size=25):
+def fetch_data(batch_size):
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -46,7 +46,7 @@ def fetch_data(batch_size=25):
     with driver.session(database="ethcaptures") as session: # Update database="" to your database name
         result = session.run(query, batch_size=batch_size)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} packets without embeddings...")
+    print(f"Retrieved {len(df)} packet(s) without embeddings...")
     return df
 
 
@@ -96,13 +96,13 @@ class TransformStarCoder:
 
     def transform(self):
         while True:
-            df = fetch_data()
+            df = fetch_data(1)
             if df.empty:
                 print("No new packets without embeddings. Terminating script...")
                 break
             
             self.process_embeddings(df)
-            print("\nFinished processing embedding...")
+            print("\nFinished processing embedding using StarCoder...")
 
         self.driver.close()
         print("Closed connection to Neo4j.")
@@ -154,7 +154,7 @@ class TransformOpenAI:
                 break
 
             self.process_embeddings(df)
-            print("\nFinished processing current batch of packets...")
+            print("\nFinished processing current batch of packets using OpenAI...")
 
         self.driver.close()
         print("Closed connection to Neo4j.")
