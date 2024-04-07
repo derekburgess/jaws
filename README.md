@@ -10,10 +10,10 @@ JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshar
 
 JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup, but are env variables, so configure:
 
-- `LOCAL_NEO4J_URI`
-- `LOCAL_NEO4J_USERNAME`
-- `LOCAL_NEO4J_PASSWORD`
-- `LOCAL_NEO4J_DATABASE`
+- `LOCAL_NEO4J_URI` (typically... bolt://localhost:7687)
+- `LOCAL_NEO4J_USERNAME` (default: neo4j)
+- `LOCAL_NEO4J_PASSWORD` (you set)
+- `LOCAL_NEO4J_DATABASE` (you set)
 
 
 To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) `transformers`, you will also need to sign up for those accounts and create env variables for:
