@@ -1,4 +1,7 @@
 import os
+import time
+import random
+import argparse
 from neo4j import GraphDatabase
 import pandas as pd
 import numpy as np
@@ -8,18 +11,9 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
-import random
-import time
 
 
-uri = os.getenv("LOCAL_NEO4J_URI")
-username = os.getenv("LOCAL_NEO4J_USERNAME")
-password = os.getenv("LOCAL_NEO4J_PASSWORD")
-database = os.getenv("LOCAL_NEO4J_DATABASE")
-driver = GraphDatabase.driver(uri, auth=(username, password))
-
-
-def fetch_data(driver):
+def fetch_data(driver, database):
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -58,8 +52,18 @@ def fetch_data(driver):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
+    parser.add_argument("--database", default="captures", 
+                        help="Specify the Neo4j database to connect to (default: captures)")
+    
+    args = parser.parse_args()
+    uri = os.getenv("LOCAL_NEO4J_URI")
+    username = os.getenv("LOCAL_NEO4J_USERNAME")
+    password = os.getenv("LOCAL_NEO4J_PASSWORD")
+    driver = GraphDatabase.driver(uri, auth=(username, password))
+
     start_time = time.time()
-    embeddings, data = fetch_data(driver)
+    embeddings, data = fetch_data(driver, args.database)
     num_embeddings = len(embeddings)
 
 
@@ -163,7 +167,6 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
     plt.show()
-
 
 if __name__ == "__main__":
     main()

@@ -12,12 +12,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 uri = os.getenv("LOCAL_NEO4J_URI")
 username = os.getenv("LOCAL_NEO4J_USERNAME")
 password = os.getenv("LOCAL_NEO4J_PASSWORD")
-database = os.getenv("LOCAL_NEO4J_DATABASE")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
 
-def fetch_data(batch_size):
+def fetch_data(batch_size, database):
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -51,7 +50,7 @@ def fetch_data(batch_size):
     return df
 
 
-def update_neo4j(packet_id, embedding):
+def update_neo4j(packet_id, embedding, database):
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE ID(p) = $packet_id
@@ -62,8 +61,9 @@ def update_neo4j(packet_id, embedding):
 
 
 class TransformStarCoder:
-    def __init__(self, driver):
+    def __init__(self, driver, database):
         self.driver = driver
+        self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
         self.model_name = "bigcode/starcoder2-15b" # bigcode/starcoder for starcoder 1
@@ -84,12 +84,12 @@ class TransformStarCoder:
         for _, row in df.iterrows():
             text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
             embedding = self.get_embedding(text)
-            update_neo4j(row['packet_id'], embedding)
+            update_neo4j(row['packet_id'], embedding, self.database)
             
             # Reverse direction
             text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
             embedding = self.get_embedding(text)
-            update_neo4j(row['packet_id'], embedding)
+            update_neo4j(row['packet_id'], embedding, self.database)
 
             # Useful debug, or for grabbing example packet strings
             #print("\nProcessing embedding for:")
@@ -97,7 +97,7 @@ class TransformStarCoder:
 
     def transform(self):
         while True:
-            df = fetch_data(1)
+            df = fetch_data(1, self.database)
             if df.empty:
                 print("No new packets without embeddings. Terminating script...")
                 break
@@ -110,9 +110,10 @@ class TransformStarCoder:
 
 
 class TransformOpenAI:
-    def __init__(self, client, driver):
+    def __init__(self, client, driver, database):
         self.client = client
         self.driver = driver
+        self.database = database
 
     def get_embedding(self, text):
         try:
@@ -143,13 +144,13 @@ class TransformOpenAI:
                 try:
                     embedding = future.result()
                     if embedding is not None:
-                        update_neo4j(node_id, embedding)
+                        update_neo4j(node_id, embedding, self.database)
                 except Exception as exc:
                     print(f'{exc}')
 
     def transform(self):
         while True:
-            df = fetch_data(25)
+            df = fetch_data(25, self.database)
             if df.empty:
                 print("No new packets without embeddings. Terminating script...")
                 break
@@ -165,13 +166,15 @@ def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
     parser.add_argument("--api", choices=["openai", "starcoder"], default="starcoder",
                         help="Specify the api to use for embedding processing (default: starcoder)")
+    parser.add_argument("--database", default="captures", 
+                        help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
 
     if args.api == "starcoder":
-        transformer = TransformStarCoder(driver)
+        transformer = TransformStarCoder(driver, args.database)
     elif args.api == "openai":
-        transformer = TransformOpenAI(client, driver)
+        transformer = TransformOpenAI(client, driver, args.database)
     else:
         print("Invalid api specified.")
         exit(1)

@@ -1,4 +1,5 @@
 import os
+import argparse
 from neo4j import GraphDatabase
 import requests
 
@@ -6,9 +7,11 @@ import requests
 uri = os.getenv("LOCAL_NEO4J_URI")
 username = os.getenv("LOCAL_NEO4J_USERNAME")
 password = os.getenv("LOCAL_NEO4J_PASSWORD")
-database = os.getenv("LOCAL_NEO4J_DATABASE")
-driver = GraphDatabase.driver(uri, auth=(username, password))
 ipinfo_api_key = os.getenv("IPINFO_API_KEY")
+
+
+def connect_to_database(uri, username, password, database):
+    return GraphDatabase.driver(uri, auth=(username, password))
 
 
 def get_ip_info(ip_address, ipinfo_api_key):
@@ -31,7 +34,7 @@ def get_ip_info(ip_address, ipinfo_api_key):
         return None
 
 
-def fetch_data():
+def fetch_data(driver, database):
     print("\nFetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -42,7 +45,7 @@ def fetch_data():
         return [record['src_ip'] for record in result]
 
 
-def update_neo4j(src_ip, ip_info, driver):
+def update_neo4j(src_ip, ip_info, driver, database):
     query = """
     MATCH (src:IP {address: $src_ip})
     MERGE (org:Organization {name: $org})
@@ -59,13 +62,18 @@ def update_neo4j(src_ip, ip_info, driver):
 
 
 def main():
-    src_ips = fetch_data()
+    parser = argparse.ArgumentParser(description="Update Neo4j database with IP information from ipinfo.io")
+    parser.add_argument("--database", default="captures", 
+                        help="Specify the Neo4j database to connect to (default: captures)")
+    
+    args = parser.parse_args()
+    driver = connect_to_database(uri, username, password, args.database)
+    src_ips = fetch_data(driver, args.database)
     for src_ip in src_ips:
         ip_info = get_ip_info(src_ip, ipinfo_api_key)
         if ip_info:
-            update_neo4j(src_ip, ip_info, driver)
+            update_neo4j(src_ip, ip_info, driver, args.database)
             print(f"Created ORGANIZATION realtionship from {src_ip}: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
-
 
 if __name__ == "__main__":
     main()

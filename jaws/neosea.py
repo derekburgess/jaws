@@ -1,4 +1,5 @@
 import os
+import argparse
 from neo4j import GraphDatabase
 import pandas as pd
 import pyshark
@@ -7,10 +8,10 @@ import pyshark
 uri = os.getenv("LOCAL_NEO4J_URI")
 username = os.getenv("LOCAL_NEO4J_USERNAME")
 password = os.getenv("LOCAL_NEO4J_PASSWORD")
-database = os.getenv("LOCAL_NEO4J_DATABASE")
-driver = GraphDatabase.driver(uri, auth=(username, password))
-chum_addr = os.getenv("CHUM_ADDR")  # Flag an IP address to be labeled as "chum"
-df = pd.DataFrame(columns=['protocol', 'tcp_flags', 'src_ip', 'src_port', 'src_mac', 'dst_ip', 'dst_port', 'dst_mac', 'size', 'dns_domain', 'http_url', 'info', 'payload', 'timestamp', 'label'])
+
+
+def connect_to_database(uri, username, password, database):
+    return GraphDatabase.driver(uri, auth=(username, password))
 
 
 def convert_hex_tcp_flags(hex_flags):
@@ -34,7 +35,7 @@ def convert_hex_tcp_flags(hex_flags):
     return ', '.join(readable_flags)
 
 
-def add_packet_to_neo4j(driver, packet_data):
+def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
         MERGE (src:IP {address: $src_ip})
@@ -52,14 +53,12 @@ def add_packet_to_neo4j(driver, packet_data):
             http_url: $http_url,
             info: $info,
             payload: $payload, 
-            timestamp: $timestamp, 
-            label: $label
+            timestamp: $timestamp
         }
         """, packet_data))
 
 
-def process_packet(packet):
-    global df, packet_id
+def process_packet(packet, driver, database):
     packet_data = {
         "protocol": packet.transport_layer if hasattr(packet, 'transport_layer') else 'None',
         "tcp_flags": convert_hex_tcp_flags(packet.tcp.flags) if 'TCP' in packet else 'None',
@@ -74,8 +73,7 @@ def process_packet(packet):
         "http_url": packet.http.request.full_uri if 'HTTP' in packet and hasattr(packet.http, 'request') and hasattr(packet.http.request, 'full_uri') else 'None',
         "info": packet.info if hasattr(packet, 'info') else 'None',
         "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else 'None',
-        "timestamp": float(packet.sniff_time.timestamp()) * 1000,
-        "label": 'BASE'
+        "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
 
     if 'IP' in packet:
@@ -83,23 +81,27 @@ def process_packet(packet):
         packet_data["dst_ip"] = packet.ip.dst
         packet_data["src_port"] = int(packet[packet.transport_layer].srcport) if hasattr(packet, 'transport_layer') and packet.transport_layer and packet[packet.transport_layer].srcport.isdigit() else 0
         packet_data["dst_port"] = int(packet[packet.transport_layer].dstport) if hasattr(packet, 'transport_layer') and packet.transport_layer and packet[packet.transport_layer].dstport.isdigit() else 0
-        packet_data["label"] = 'CHUM' if packet.ip.dst == chum_addr else 'BASE'
 
-    if packet_data['dst_ip'] == chum_addr:
-        print(f">>>> [PROTOCOL: {packet_data['protocol']} | {packet_data['tcp_flags']}] [SRC: {packet_data['src_ip']} | {packet_data['src_port']} | {packet_data['src_mac']}] [DST :{packet_data['dst_ip']} | {packet_data['dst_port']} | {packet_data['dst_mac']}] [SIZE :{packet_data['size']}] [DNS: {packet_data['dns_domain']}] [HTTP: {packet_data['http_url']}] [INFO: {packet_data['info']}] [PAYLOAD NOT DISPLAYED] [{packet_data['timestamp']}] <<<< {packet_data['label']} PACKET")
-    else:
-        print(f">>>> [PROTOCOL: {packet_data['protocol']} | {packet_data['tcp_flags']}] [SRC: {packet_data['src_ip']} | {packet_data['src_port']} | {packet_data['src_mac']}] [DST :{packet_data['dst_ip']} | {packet_data['dst_port']} | {packet_data['dst_mac']}] [SIZE :{packet_data['size']}] [DNS: {packet_data['dns_domain']}] [HTTP: {packet_data['http_url']}] [INFO: {packet_data['info']}] [PAYLOAD NOT DISPLAYED] [{packet_data['timestamp']}] <<<< {packet_data['label']} PACKET")
+    print(f" <<<< [PROTOCOL: {packet_data['protocol']} | {packet_data['tcp_flags']}] [SRC: {packet_data['src_ip']} | {packet_data['src_port']} | {packet_data['src_mac']}] [DST :{packet_data['dst_ip']} | {packet_data['dst_port']} | {packet_data['dst_mac']}] [SIZE :{packet_data['size']}] [DNS: {packet_data['dns_domain']}] [HTTP: {packet_data['http_url']}] [INFO: {packet_data['info']}] [PAYLOAD NOT DISPLAYED] [{packet_data['timestamp']}] >>>> ")
 
     try:
-        add_packet_to_neo4j(driver, packet_data)
+        add_packet_to_neo4j(driver, packet_data, database)
     except Exception as e:
         print(f"An error occurred: {e}")
 
 
 def main():
-    print(df, end="\n\n")
-    capture = pyshark.LiveCapture(interface='Ethernet')
-    capture.apply_on_packets(process_packet)
+    parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database")
+    parser.add_argument("--interface", default="Ethernet",
+                        help="Specify the network interface to use (default: Ethernet)")
+    parser.add_argument("--database", default="captures",
+                        help="Specify the Neo4j database to connect to (default: captures)")
+
+    args = parser.parse_args()
+    driver = connect_to_database(uri, username, password, args.database)
+    capture = pyshark.LiveCapture(interface=args.interface)
+    capture.apply_on_packets(lambda pkt: process_packet(pkt, driver, args.database))
+    
     driver.close()
 
 if __name__ == "__main__":
