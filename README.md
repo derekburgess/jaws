@@ -13,7 +13,6 @@ JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, 
 - `LOCAL_NEO4J_URI` (typically... bolt://localhost:7687)
 - `LOCAL_NEO4J_USERNAME` (default: neo4j)
 - `LOCAL_NEO4J_PASSWORD` (you set)
-- `LOCAL_NEO4J_DATABASE` (you set)
 
 
 To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) `transformers`, you will also need to sign up for those accounts and create env variables for:
@@ -47,7 +46,7 @@ Install JAWS:
 
 ## Running and Commands
 
-Run a local Neo4j Database.
+Run a local Neo4j Database...
 
 All of the commands can accept `--database`, which defaults to `captures`.
 
@@ -57,12 +56,12 @@ Run `neosea` with `--interface` to capture packets.
 `neosea --interface "Ethernet" --database "captures"`
 
 
-Run `neonet` to gather intel on IP Addresses.
+Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`
 
 `neonet --interface "captures"`
 
 
-Run `neotransform`, optionally passing `--api` with either `openai` or `starcoder`(default).
+Run `neotransform` with `--api` and either `openai` or `starcoder`(default) to transform packets into embeddings.
 
 `neotransform --api "openai" --interface "captures"`
 
