@@ -58,17 +58,17 @@ Run `neosea` with `--interface` to capture packets.
 
 Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`
 
-`neonet --interface "captures"`
+`neonet --database "captures"`
 
 
 Run `neotransform` with `--api` and either `openai` or `starcoder`(default) to transform packets into embeddings.
 
-`neotransform --api "openai" --interface "captures"`
+`neotransform --api "openai" --database "captures"`
 
 
 Run `neojawsx` to process embeddings and display cluster plots.
 
-`neojawsx --interface "captures"`
+`neojawsx --database "captures"`
 
 
 ### Script descriptions
