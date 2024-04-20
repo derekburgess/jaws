@@ -19,7 +19,7 @@ JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, 
 
 ### Additional Services
 
-To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) `transformers`, you will also need to sign up for those accounts and create env variables for:
+To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) transformers, you will also need to sign up for those accounts and create env variables for:
 
 - `IPINFO_API_KEY`
 - `OPENAI_API_KEY`
