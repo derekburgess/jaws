@@ -10,10 +10,18 @@ JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshar
 
 JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup, but are env variables, so configure:
 
+### Local/Neo4j Developer Tools
+
 - `LOCAL_NEO4J_URI` (typically... bolt://localhost:7687)
 - `LOCAL_NEO4J_USERNAME` (default: neo4j)
 - `LOCAL_NEO4J_PASSWORD` (you set)
 
+### Neo4j Docker Container
+
+Alternatively you can use the Neo4j Docker Image. To do so, run `docker build -t neojawsdbms .` from the JAWS root directory. Then run `docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`. `-t neojawsdbms` tags the container as such, where `--name captures` is a specific container with the `captures` database running. I'll probably expand on this later to be more effecient. With the docker container running, everything should work out of the box. You can also connect to it using the Neo4j developer-tools and browser, its all very easy, so I wont explain here.
+
+
+### Additional Services
 
 To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) `transformers`, you will also need to sign up for those accounts and create env variables for:
 
@@ -21,6 +29,8 @@ To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://
 - `OPENAI_API_KEY`
 - `HUGGINGFACE_KEY`
 
+
+### Installation
 
 Install dependencies:
 
@@ -87,9 +97,7 @@ Run `neojawsx` to process embeddings and display cluster plots.
 
 ### Working with Neo4j
 
-The tool does not seek to replace the neo4j management, in theory any graph database could be swapped in, replacing the cypher queries as needed. My testing leaned on the DBMS application provided at https://neo4j.com/product/developer-tools/
-
-The DBMS application is straight forward and on local systems should work out of the box with the scripts.
+The tool does not seek to replace the database management, in theory any graph database could be swapped in, replacing the cypher queries as needed. My testing leaned on the DBMS application provided at https://neo4j.com/product/developer-tools/, but see `Neo4j Docker Container` above to skip the developer tools.
 
 From within the DBMS application you can also access the `Graph Apps` sub menu and the `Neo4j Browser`. From within the browser you can:
 - View the network graph by clicking on any of the node labels.
@@ -132,23 +140,6 @@ Hex Payloads:
 Binary Payloads:
 
 ![58 packet example test using raw data, OpenAI, and StarCoder, binary payloads](/assets/group_bin.png)
-
-
-The following outputs crudely show what is happening inside of StarCoder by plotting hidden states and attentions across all layers.
-
-No Payloads:
-
-![Hidden states and attetion across layers, no payload](/assets/overview_no.png)
-
-
-Hex Payloads:
-
-![Hidden states and attetion across layers, hex payload](/assets/overview_hex.png)
-
-
-Binary Payloads:
-
-![Hidden states and attetion across layers, binary payload](/assets/overview_bin.png)
 
 
 ### Observations
