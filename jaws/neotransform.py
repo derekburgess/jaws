@@ -17,7 +17,7 @@ client = OpenAI()
 
 
 def fetch_data(batch_size, database):
-    print("\nFetching data from Neo4j...")
+    print("\nFetching packet from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NULL
@@ -46,7 +46,6 @@ def fetch_data(batch_size, database):
     with driver.session(database=database) as session:
         result = session.run(query, batch_size=batch_size)
         df = pd.DataFrame([record.data() for record in result])
-    print(f"Retrieved {len(df)} packet(s) without embeddings...")
     return df
 
 
@@ -72,8 +71,8 @@ class TransformStarCoder:
         # Remove quantization_config=self.quantization_config if not using quantization or using StarCoder 1
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token)
 
-    def get_embedding(self, text):
-        inputs = self.tokenizer(text, return_tensors="pt", max_length=512, truncation=True).to(self.device)
+    def get_embedding(self, packet_string):
+        inputs = self.tokenizer(packet_string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs, output_hidden_states=True)
         last_hidden_states = outputs.hidden_states[-1]
@@ -82,28 +81,22 @@ class TransformStarCoder:
 
     def process_embeddings(self, df):
         for _, row in df.iterrows():
-            text = f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
-            embedding = self.get_embedding(text)
-            update_neo4j(row['packet_id'], embedding, self.database)
+            packet_string = f" <<<< {row['src_ip']}:{row['src_port']}({row['src_mac']}) {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using: {row['protocol']}({row['tcp']}), with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), and location: {row['location']}"
             
-            # Reverse direction
-            text = f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}"
-            embedding = self.get_embedding(text)
-            update_neo4j(row['packet_id'], embedding, self.database)
-
-            # Useful debug, or for grabbing example packet strings
-            #print("\nProcessing embedding for:")
-            #print(f"{text}")
+            embedding = self.get_embedding(packet_string)
+            if embedding is not None:
+                update_neo4j(row['packet_id'], embedding, self.database)
+                print("\nComputing embedding(StarCoder2-15b w/ 8bit quantization) for:")
+                print(f"{packet_string}")
 
     def transform(self):
         while True:
             df = fetch_data(1, self.database)
             if df.empty:
-                print("No new packets without embeddings. Terminating script...")
+                print("No packets without embeddings. Terminating script...")
                 break
             
             self.process_embeddings(df)
-            print("\nFinished processing embedding using StarCoder...")
 
         self.driver.close()
         print("Closed connection to Neo4j.")
@@ -119,44 +112,28 @@ class TransformOpenAI:
         try:
             response = self.client.embeddings.create(input=text, model="text-embedding-3-large")
             return response.data[0].embedding
-        except openai.APIError as e:
-            if e.status_code == 400:
-                print(f"OpenAI API returned a 400 Error: {e}")
-                return "token_string_too_large"
-            else:
-                print(f"OpenAI API returned an API Error: {e}")
-                return None
-        except openai.APIConnectionError as e:
-            print(f"Failed to connect to OpenAI API: {e}")
-            return None
-        except openai.RateLimitError as e:
-            print(f"OpenAI API request exceeded rate limit: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return None
 
     def process_embeddings(self, df):
-        texts_and_ids = [(f"{row['src_ip']}:{row['src_port']}({row['src_mac']}) > {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
-        texts_and_ids += [(f"{row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) > {row['src_ip']}:{row['src_port']}({row['src_mac']}) using: {row['protocol']}({row['tcp']}), at a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), {row['location']}", row['packet_id']) for _, row in df.iterrows()]
+        for _, row in df.iterrows():
+            packet_string = f" <<<< {row['src_ip']}:{row['src_port']}({row['src_mac']}) {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using: {row['protocol']}({row['tcp']}), with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), and location: {row['location']}"
 
-        with ThreadPoolExecutor(max_workers=25) as executor:
-            future_to_id = {executor.submit(self.get_embedding, text): node_id for text, node_id in texts_and_ids}
-            for future in as_completed(future_to_id):
-                node_id = future_to_id[future]
-                try:
-                    embedding = future.result()
-                    if embedding is not None:
-                        update_neo4j(node_id, embedding, self.database)
-                except Exception as exc:
-                    print(f'{exc}')
+            embedding = self.get_embedding(packet_string)
+            if embedding is not None:
+                update_neo4j(row['packet_id'], embedding, self.database)
+                print("\nComputing embedding(OpenAI text-embedding-3-large) for:")
+                print(f"{packet_string}")
 
     def transform(self):
         while True:
-            df = fetch_data(25, self.database)
+            df = fetch_data(1, self.database)
             if df.empty:
-                print("No new packets without embeddings. Terminating script...")
+                print("No packets without embeddings. Terminating script...")
                 break
 
             self.process_embeddings(df)
-            print("\nFinished processing current batch of packets using OpenAI...")
 
         self.driver.close()
         print("Closed connection to Neo4j.")

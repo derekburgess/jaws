@@ -120,29 +120,6 @@ Example packet string:
 `packet = src_ip:src_port(src_mac) > dst_ip:dst_port(dst_mac) using: protocol(flags) sending: [hex payload] AND/OR [binary payload] AND/OR [ascii payload] AND/OR [http payload] at a size of: size with ownership: org, hostname(dns) lat, long`
 
 
-Example packet embedding from StarCoder (reduced):
-
-`embedding = [-0.6838231086730957, 0.619213342666626, -0.2213636040687561, 0.5388462543487549, 0.9698492288589478, -0.05627664178609848, 0.400848925113678, 0.42690804600715637, -0.2869364321231842, 0.14443190395832062, 0.19022825360298157, -0.37119436264038086, -0.8193771839141846, -0.3072223961353302, -0.43989384174346924, 0.700538694858551, 0.879992663860321, -0.6817106008529663, 0.17782720923423767, 0.3537529706954956, -0.38453713059425354, -0.890569269657135... ]`
-
-~50(58) packet example, no payloads.
-
-Left to right: Raw data, OpenAI, StarCoder. Starcoder shows "zoomed in" views ontop of the plot as the clusters are very tight.
-
-No Payloads:
-
-![58 packet example test using raw data, OpenAI, and StarCoder, no payloads](/assets/group_no.png)
-
-
-Hex Payloads:
-
-![58 packet example test using raw data, OpenAI, and StarCoder, hex payloads](/assets/group_hex.png)
-
-
-Binary Payloads:
-
-![58 packet example test using raw data, OpenAI, and StarCoder, binary payloads](/assets/group_bin.png)
-
-
 ### Observations
 
 - Raw data cannot really be used at scale and is too noisy (lacks meaning/context I suppose).
