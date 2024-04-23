@@ -14,7 +14,7 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
 
-def fetch_data(batch_size, database):
+def fetch_data(database):
     #print("\nFetching packet from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
@@ -39,10 +39,9 @@ def fetch_data(batch_size, database):
         org.hostname AS hostname,
         org.location AS location, 
         ID(p) AS packet_id
-    LIMIT $batch_size
     """
     with driver.session(database=database) as session:
-        result = session.run(query, batch_size=batch_size)
+        result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
     return df
 
@@ -89,7 +88,7 @@ class TransformStarCoder:
 
     def transform(self):
         while True:
-            df = fetch_data(1, self.database)
+            df = fetch_data(self.database)
             if df.empty:
                 print("\nAll packets embedded. Terminating script.")
                 break
@@ -126,7 +125,7 @@ class TransformOpenAI:
 
     def transform(self):
         while True:
-            df = fetch_data(1, self.database)
+            df = fetch_data(self.database)
             if df.empty:
                 print("\nAll packets embedded. Terminating script.")
                 break

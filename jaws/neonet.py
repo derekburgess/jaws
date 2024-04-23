@@ -35,26 +35,26 @@ def get_ip_info(ip_address, ipinfo_api_key):
 
 
 def fetch_data(driver, database):
-    print("Fetching data from Neo4j...")
+    #print("Fetching data from Neo4j...")
     query = """
-    MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    RETURN DISTINCT src.address AS src_ip
+    MATCH (ip:IP)
+    RETURN DISTINCT ip.address AS ip_address
     """
     with driver.session(database=database) as session:
         result = session.run(query)
-        return [record['src_ip'] for record in result]
+        return [record['ip_address'] for record in result]
 
 
-def update_neo4j(src_ip, ip_info, driver, database):
+def update_neo4j(ip_address, ip_info, driver, database):
     query = """
-    MATCH (src:IP {address: $src_ip})
+    MATCH (ip:IP {address: $ip_address})
     MERGE (org:Organization {name: $org})
-    MERGE (src)-[:OWNERSHIP]->(org)
+    MERGE (ip)-[:OWNERSHIP]->(org)
     SET org.hostname = $hostname, org.location = $location
     """
     with driver.session(database=database) as session:
         session.run(query, {
-            'src_ip': src_ip,
+            'ip_address': ip_address,
             'org': ip_info.get('org', 'None'),
             'hostname': ip_info.get('hostname', 'None'),
             'location': ip_info.get('loc', 'None')
@@ -68,12 +68,12 @@ def main():
     
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
-    src_ips = fetch_data(driver, args.database)
-    for src_ip in src_ips:
-        ip_info = get_ip_info(src_ip, ipinfo_api_key)
+    ip_addresses = fetch_data(driver, args.database)
+    for ip_address in ip_addresses:
+        ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:
-            update_neo4j(src_ip, ip_info, driver, args.database)
-            print(f"Created ORGANIZATION realtionship from {src_ip}: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
+            update_neo4j(ip_address, ip_info, driver, args.database)
+            print(f"Created OWNERSHIP realtionship from {ip_address}: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
 
 if __name__ == "__main__":
     main()
