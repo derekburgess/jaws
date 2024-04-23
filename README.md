@@ -80,3 +80,8 @@ Run `neotransform` with `--api` and either `openai` or `starcoder`(default) to t
 Run `neojawsx` to process embeddings and display cluster plots.
 
 `neojawsx --database "captures"`
+
+
+Run `neosink` to clear the database...
+
+`neosink --database "captures"`
