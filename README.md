@@ -1,14 +1,14 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given `interface` and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. I went with the "Jaws Theme" because I like Jaws the movie, which to me, like Moby Dick, is about finding anomalies.
+JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given interface and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. The name JAWS because "wireshark", and I like the original Jaws movie. Which to me is really anomalies and outliers.
 
 
 ## Setup
 
 JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
 
-JAWS also uses Neo4j graph database. You can setup and run neo4j locally using, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default setup, but are env variables, so configure:
+JAWS also uses a Neo4j graph database. You can run the docker container, or install and run neo4j locally using their tool, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
 
 ### Set Environment Variables
 
@@ -28,7 +28,14 @@ To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://
 
 ### Neo4j Docker Container
 
-Alternatively you can use the Neo4j Docker Image. To do so, run `docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .` from the JAWS root directory. Then run `docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`. `-t neojawsdbms` tags the container as such, where `--name captures` is a specific container with the `captures` database running. I'll probably expand on this later to be more effecient. With the docker container running, everything should work out of the box. You can also connect to it using the Neo4j developer-tools and browser, its all very easy, so I wont explain here.
+From the JAWS root directory run: 
+
+`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .` 
+
+
+Then run: 
+
+`docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`
 
 
 ### Installation
@@ -57,9 +64,7 @@ Install JAWS:
 
 ## Running and Commands
 
-Run a local Neo4j Database...
-
-All of the commands can accept `--database`, which defaults to `captures`.
+All of the commands default to `captures` but also accept `--database`
 
 
 Run `neosea` with `--interface` to capture packets.
