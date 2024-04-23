@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 def fetch_data(driver, database):
-    print("\nFetching data from Neo4j...")
+    print("Fetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NOT NULL AND p.embedding <> "token_string_too_large"
@@ -73,7 +73,7 @@ def main():
     principal_components = pca.fit_transform(embeddings_scaled)
 
 
-    print("Measuring k-distance...")
+    print("\nMeasuring k-distance...")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(embeddings_scaled)
@@ -89,7 +89,7 @@ def main():
     plt.tight_layout()
 
 
-    print("Using Kneed to recommend EPS...")
+    print("\nUsing Kneed to recommend EPS...")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
@@ -107,7 +107,7 @@ def main():
     elapsed_time = end_time - start_time
 
 
-    print("Plotting results...")
+    print("\nPlotting results...")
     fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
