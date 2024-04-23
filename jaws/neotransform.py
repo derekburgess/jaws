@@ -62,10 +62,9 @@ class TransformStarCoder:
         self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
-        self.model_name = "bigcode/starcoder2-15b" # bigcode/starcoder for starcoder 1
-        self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)  # to use 4bit use `load_in_4bit=True` instead
+        self.model_name = "bigcode/starcoder2-15b"
+        self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
-        # Remove quantization_config=self.quantization_config if not using quantization or using StarCoder 1
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token)
 
     def compute_starcoder_embedding(self, packet_string):
@@ -83,7 +82,7 @@ class TransformStarCoder:
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
                 update_neo4j(row['packet_id'], embedding, self.database)
-                print("\nCompleted embedding(StarCoder2-15b w/ 8bit quantization):")
+                print("\nCompleted embedding(StarCoder2-15b-quantization):")
                 print(f"{packet_string}")
 
     def transform(self):
