@@ -92,7 +92,8 @@ setup(
            'neosea = jaws.neosea:main',
            'neonet = jaws.neonet:main',
            'neotransform = jaws.neotransform:main',
-           'neojawsx = jaws.neojawsx:main'
+           'neojawsx = jaws.neojawsx:main',
+           'neosink = jaws.neosink:main' 
        ],
     },
 )

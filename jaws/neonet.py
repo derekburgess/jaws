@@ -35,7 +35,7 @@ def get_ip_info(ip_address, ipinfo_api_key):
 
 
 def fetch_data(driver, database):
-    print("\nFetching data from Neo4j...")
+    print("Fetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     RETURN DISTINCT src.address AS src_ip
