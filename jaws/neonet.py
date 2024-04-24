@@ -48,7 +48,7 @@ def fetch_data(driver, database):
 def update_neo4j(ip_address, ip_info, driver, database):
     query = """
     MATCH (ip:IP {address: $ip_address})
-    MERGE (org:Organization {name: $org})
+    MERGE (org:ORGANIZATION {name: $org})
     MERGE (ip)-[:OWNERSHIP]->(org)
     SET org.hostname = $hostname, org.location = $location
     """
@@ -73,7 +73,7 @@ def main():
         ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:
             update_neo4j(ip_address, ip_info, driver, args.database)
-            print(f"Created OWNERSHIP realtionship from {ip_address}: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
+            print(f"Created OWNERSHIP realtionship from IP: {ip_address} to ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
 
 if __name__ == "__main__":
     main()

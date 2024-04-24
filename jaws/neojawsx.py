@@ -14,18 +14,17 @@ import matplotlib.pyplot as plt
 
 
 def fetch_data(driver, database):
-    print("Fetching data from Neo4j...")
+    #print("Fetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    WHERE p.embedding IS NOT NULL AND p.embedding <> "token_string_too_large"
-    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:Organization)
-    OPTIONAL MATCH (dst)-[:OWNERSHIP]->(dst_org:Organization)
+    WHERE p.embedding IS NOT NULL
+    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
     RETURN src.address AS src_ip, 
-        dst.address AS dst_ip,
-        p.src_port AS src_port, 
-        p.dst_port AS dst_port, 
+        src.src_port AS src_port,
+        dst.address AS dst_ip,  
+        dst.dst_port AS dst_port, 
+        p.protocol AS protocol,
         p.size AS size,
-        p.dns_domain AS dns,
         org.name AS org,
         org.hostname AS hostname,
         org.location AS location,
@@ -42,8 +41,8 @@ def fetch_data(driver, database):
                 'dst_ip': record['dst_ip'],
                 'src_port': record['src_port'],
                 'dst_port': record['dst_port'],
+                'protocol': record['protocol'],
                 'size': record['size'],
-                'dns': record['dns'],
                 'org': record['org'],
                 'hostname': record['hostname'],
                 'location': record['location'],
@@ -129,7 +128,7 @@ def main():
 
     for i, item in enumerate(data):
         if clusters[i] != -1:
-            annotation_text = f"{item.get('org')}\n{item.get('hostname')}({item.get('dns')})\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')}"
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')} ({item.get('protocol')})"
 
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.05)
 
@@ -147,7 +146,7 @@ def main():
                         textcoords='offset points',
                         zorder=1)
         else:
-            annotation_text = f"{item.get('org')}\n{item.get('hostname')}({item.get('dns')})\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')}"
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')} ({item.get('protocol')})"
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.8)
             
             plt.annotate(annotation_text, 

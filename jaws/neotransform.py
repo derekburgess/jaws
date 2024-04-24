@@ -20,21 +20,15 @@ def fetch_data(database):
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NULL
     WITH src, dst, p
-    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:Organization)
-    OPTIONAL MATCH (dst)-[:OWNERSHIP]->(dst_org:Organization)
-    RETURN src.address AS src_ip, 
-        dst.address AS dst_ip,
-        p.src_port AS src_port, 
-        p.dst_port AS dst_port, 
-        p.src_mac AS src_mac, 
-        p.dst_mac AS dst_mac,  
+    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
+    RETURN src.address AS src_ip,
+        src.src_port AS src_port,
+        src.src_mac AS src_mac,
+        dst.address AS dst_ip,  
+        dst.dst_port AS dst_port, 
+        dst.dst_mac AS dst_mac,
         p.protocol AS protocol,
-        p.tcp_flags AS tcp,
-        p.size AS size, 
-        p.payload AS payload, 
-        p.payload_binary AS binary,
-        p.http_url AS http, 
-        p.dns_domain AS dns,
+        p.size AS size,
         org.name AS org,
         org.hostname AS hostname,
         org.location AS location, 
@@ -77,7 +71,7 @@ class TransformStarCoder:
 
     def process_starcoder_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f" <<<< FROM: {row['src_ip']}:{row['src_port']}({row['src_mac']}) TO: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using protocols: {row['protocol']}({row['tcp']}), carriring a size of: {row['size']}, and from ownership: {row['org']}, {row['hostname']}({row['dns']}), and location: {row['location']}"
+            packet_string = f" <<<< FROM: {row['src_ip']}:{row['src_port']}({row['src_mac']}) TO: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using procotol: {row['protocol']}, with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}, and location: {row['location']}"
             
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
@@ -114,7 +108,7 @@ class TransformOpenAI:
 
     def process_openai_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f" <<<< {row['src_ip']}:{row['src_port']}({row['src_mac']}) {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using: {row['protocol']}({row['tcp']}), with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}({row['dns']}), and location: {row['location']}"
+            packet_string = f" <<<< {row['src_ip']}:{row['src_port']}({row['src_mac']}) {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using procotol: {row['protocol']}, with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}, and location: {row['location']}"
 
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
