@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 
 
 def fetch_data(driver, database):
-    #print("Fetching data from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NOT NULL
@@ -66,13 +65,13 @@ def main():
     num_embeddings = len(embeddings)
 
 
-    print(f"\nPerforming PCA on {num_embeddings} embeddings...")
+    print(f"Performing PCA on {num_embeddings} embeddings...")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
 
 
-    print("\nMeasuring k-distance...")
+    print("Measuring k-distance...")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(embeddings_scaled)
@@ -88,7 +87,7 @@ def main():
     plt.tight_layout()
 
 
-    print("\nUsing Kneed to recommend EPS...")
+    print("Using Kneed to recommend EPS...")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
@@ -106,16 +105,16 @@ def main():
     elapsed_time = end_time - start_time
 
 
-    print("\nPlotting results...")
+    print("Plotting results...")
     fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='o', s=300, zorder=2)
+                        c=clusters[clustered_indices], cmap='winter', alpha=0.2, edgecolors='none', marker='o', s=150, zorder=2)
 
     outlier_indices = clusters == -1
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-                color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=3)
+                color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=10)
 
 
     position_options = {
@@ -128,9 +127,9 @@ def main():
 
     for i, item in enumerate(data):
         if clusters[i] != -1:
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')} ({item.get('protocol')})"
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
 
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.05)
+            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
 
             label_position_key = random.choice(list(position_options.keys()))
             label_position = position_options[label_position_key]
@@ -138,7 +137,7 @@ def main():
             plt.annotate(annotation_text, 
                         (principal_components[i, 0], principal_components[i, 1]), 
                         fontsize=6,
-                        color='#666666',
+                        color='#999999',
                         bbox=bbox_style,
                         horizontalalignment=label_position['horizontalalignment'],
                         verticalalignment=label_position['verticalalignment'],
@@ -146,7 +145,7 @@ def main():
                         textcoords='offset points',
                         zorder=1)
         else:
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} > {item.get('dst_ip')}:{item.get('dst_port')}\nSize: {item.get('size')} ({item.get('protocol')})"
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.8)
             
             plt.annotate(annotation_text, 
@@ -158,7 +157,7 @@ def main():
                         verticalalignment='bottom',
                         xytext=(0,10),
                         textcoords='offset points',
-                        zorder=1)
+                        zorder=10)
 
 
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)

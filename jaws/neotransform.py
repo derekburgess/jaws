@@ -15,7 +15,6 @@ client = OpenAI()
 
 
 def fetch_data(database):
-    #print("\nFetching packet from Neo4j...")
     query = """
     MATCH (src:IP)-[p:PACKET]->(dst:IP)
     WHERE p.embedding IS NULL
@@ -76,20 +75,18 @@ class TransformStarCoder:
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
                 update_neo4j(row['packet_id'], embedding, self.database)
-                print("\nCompleted embedding(StarCoder2-15b-quantization):")
-                print(f"{packet_string}")
+                print("Completed embedding(StarCoder2-15b-quantization)")
 
     def transform(self):
         while True:
             df = fetch_data(self.database)
             if df.empty:
-                print("\nAll packets embedded. Terminating script.")
+                print("All packets embedded.(StarCoder2-15b-quantization)")
                 break
             
             self.process_starcoder_packet(df)
 
         self.driver.close()
-        print("Closed connection to Neo4j.")
 
 
 class TransformOpenAI:
@@ -113,20 +110,18 @@ class TransformOpenAI:
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_neo4j(row['packet_id'], embedding, self.database)
-                print("\nCompleted embedding(OpenAI text-embedding-3-large):")
-                print(f"{packet_string}")
+                print("Completed embedding(OpenAI text-embedding-3-large)")
 
     def transform(self):
         while True:
             df = fetch_data(self.database)
             if df.empty:
-                print("\nAll packets embedded. Terminating script.")
+                print("All packets embedded(OpenAI text-embedding-3-large)")
                 break
 
             self.process_openai_packet(df)
 
         self.driver.close()
-        print("Closed connection to Neo4j.")
 
 
 def main():
@@ -143,7 +138,7 @@ def main():
     elif args.api == "openai":
         transformer = TransformOpenAI(client, driver, args.database)
     else:
-        print("Invalid api specified.")
+        print("Invalid API specified. Try openai or starcoder.")
         exit(1)
 
     transformer.transform()

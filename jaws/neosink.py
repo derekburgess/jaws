@@ -14,7 +14,6 @@ def connect_to_database(uri, username, password, database):
 def clear_database(driver, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
-    print("Database cleared successfully.")
 
 
 def main():

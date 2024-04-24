@@ -35,7 +35,6 @@ def get_ip_info(ip_address, ipinfo_api_key):
 
 
 def fetch_data(driver, database):
-    #print("Fetching data from Neo4j...")
     query = """
     MATCH (ip:IP)
     RETURN DISTINCT ip.address AS ip_address
