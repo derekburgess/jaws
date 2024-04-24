@@ -1,5 +1,6 @@
 import os
 import argparse
+import time
 from neo4j import GraphDatabase
 import pandas as pd
 import pyshark
@@ -23,9 +24,6 @@ def add_packet_to_neo4j(driver, packet_data, database):
         SET p += { 
             protocol: $protocol,  
             size: $size,
-            dns_domain: $dns_domain, 
-            http_url: $http_url,
-            info: $info,
             payload: $payload, 
             timestamp: $timestamp
         }
@@ -42,9 +40,6 @@ def process_packet(packet, driver, database):
         "dst_port": None,
         "dst_mac": packet.eth.dst if 'ETH' in packet else None,
         "size": len(packet),
-        "dns_domain": packet.dns.qry_name if 'DNS' in packet and hasattr(packet.dns, 'qry_name') else None,
-        "http_url": packet.http.request.full_uri if 'HTTP' in packet and hasattr(packet.http, 'request') and hasattr(packet.http.request, 'full_uri') else None,
-        "info": packet.info if hasattr(packet, 'info') else None,
         "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else None,
         "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
@@ -71,11 +66,18 @@ def main():
                         help="Specify the network interface to use (default: Ethernet)")
     parser.add_argument("--database", default="captures",
                         help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--duration", type=int, default=60,
+                        help="Specify the duration of the capture in seconds (default: 10)")
 
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
     capture = pyshark.LiveCapture(interface=args.interface)
-    capture.apply_on_packets(lambda pkt: process_packet(pkt, driver, args.database))
+
+    start_time = time.time()
+    for packet in capture.sniff_continuously():
+        process_packet(packet, driver, args.database)
+        if time.time() - start_time > args.duration:
+            break
 
     driver.close()
 

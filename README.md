@@ -67,22 +67,22 @@ Install JAWS:
 All of the commands default to `captures` but also accept `--database`
 
 
-Run `neosea` with `--interface` to capture packets.
+Run `neosea` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
 
-`neosea --interface "Ethernet" --database "captures"`
+`neosea --interface "Ethernet" --database "captures" --duration 10`
 
 
-Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`
+Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`, defaults to captures database.
 
 `neonet --database "captures"`
 
 
-Run `neotransform` with `--api` and either `openai` or `starcoder`(default) to transform packets into embeddings.
+Run `neotransform` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to captures and OpenAI.
 
 `neotransform --api "openai" --database "captures"`
 
 
-Run `neojawsx` to process embeddings and display cluster plots.
+Run `neojawsx` to process embeddings and display cluster plots. Defaults to captures database.
 
 `neojawsx --database "captures"`
 
