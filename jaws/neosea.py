@@ -66,7 +66,7 @@ def main():
                         help="Specify the network interface to use (default: Ethernet)")
     parser.add_argument("--database", default="captures",
                         help="Specify the Neo4j database to connect to (default: captures)")
-    parser.add_argument("--duration", type=int, default=60,
+    parser.add_argument("--duration", type=int, default=10,
                         help="Specify the duration of the capture in seconds (default: 10)")
 
     args = parser.parse_args()
