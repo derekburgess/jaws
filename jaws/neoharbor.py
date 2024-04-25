@@ -2,6 +2,8 @@ import os
 import argparse
 from neo4j import GraphDatabase
 import pandas as pd
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 
 
@@ -41,59 +43,131 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"\nAlong with a detailed system prompt, this program also sends: {df.shape[0]} packets (snapshot below)\n")
+        print(f"\nPreparing to send: {df.shape[0]} packets (snapshot below)\n")
         df = df.sample(frac=1)
         print(df.head())
         df_json = df.to_json(orient="records")
-        #print(df_json)
         return df_json
-
-
-def generate_response(df_json):
-    system_prompt = """
-    As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
-
-    Traffic Analysis:
-    1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
     
-    2. Highlight any anomalies or unusual patterns.
 
-    Firewall Recommendations:
+class SummarizeLlama:
+    def __init__(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
+        self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, token=self.huggingface_token)
 
-    1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
+    def generate_summary_from_llama(self, df_json):
+        system_prompt = """
+        As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
 
-    2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
+        Traffic Analysis:
+        1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
+        
+        2. Highlight any anomalies or unusual patterns.
 
-    Instructions:
+        Firewall Recommendations:
 
-    - Use clear, concise language.
-    - Utilize diagrams to represent traffic flows effectively.
-    - Ensure recommendations are specific and supported by data from the provided logs.
-    
-    """
+        1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
 
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo-16k",
-        messages=[
+        2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
+
+        Instructions:
+
+        - Use clear, concise language.
+        - Utilize diagrams to represent traffic flows effectively.
+        - Ensure recommendations are specific and supported by data from the provided logs.
+        
+        """
+
+        messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
+            {"role": "user", "content": f"Snapshot of network traffic: {df_json}"},
         ]
-    )
 
-    print(completion.choices[0].message.content)
-    #print(completion.usage)
+        input_ids = self.tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            return_tensors="pt"
+        ).to(self.model.device)
+
+        terminators = [
+            self.tokenizer.eos_token_id,
+            self.tokenizer.convert_tokens_to_ids("")
+        ]
+
+        outputs = self.model.generate(
+            input_ids,
+            max_new_tokens=1024,
+            eos_token_id=terminators,
+            do_sample=True,
+            temperature=0.6,
+            top_p=0.9,
+        )
+        response = outputs[0][input_ids.shape[-1]:]
+        print(self.tokenizer.decode(response, skip_special_tokens=True))
+
+
+class SummarizeOpenAI:
+    def __init__(self, client):
+        self.client = client
+
+    def generate_summary_from_openai(self, df_json):
+        system_prompt = """
+        As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
+
+        Traffic Analysis:
+        1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
+        
+        2. Highlight any anomalies or unusual patterns.
+
+        Firewall Recommendations:
+
+        1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
+
+        2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
+
+        Instructions:
+
+        - Use clear, concise language.
+        - Utilize diagrams to represent traffic flows effectively.
+        - Ensure recommendations are specific and supported by data from the provided logs.
+        
+        """
+
+        completion = self.client.chat.completions.create(
+            model="gpt-3.5-turbo-16k",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
+            ]
+        )
+
+        print(completion.choices[0].message.content)
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Summarize network traffic using OpenAI GPT-X")
+    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using Meta-Llama-3-8B-Instruct or OpenAI gpt-3.5-turbo-16k")
+    parser.add_argument("--api", choices=["openai", "llama"], default="openai",
+                        help="Specify the api to use for network traffic analysis (default: openai)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
-    print("\nThis uses OpenAI Chat Completion to analyze network data and return a summary of network traffic.")
     df_json = fetch_data(driver, args.database)
 
     input("\nPress Enter to send data and generate a response...")
-    generate_response(df_json)
+
+    if args.api == "llama":
+        transformer = SummarizeLlama()
+        transformer.generate_summary_from_llama(df_json)
+    elif args.api == "openai":
+        transformer = SummarizeOpenAI(client)
+        transformer.generate_summary_from_openai(df_json)
+    else:
+        print("Invalid API specified. Try openai or llama.")
+
 
 if __name__ == "__main__":
     main()

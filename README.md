@@ -64,7 +64,7 @@ Install JAWS:
 
 ## Running and Commands
 
-All of the commands default to `captures` but also accept `--database`
+All of the commands default to the `captures` database and `openai` api, running `starcoder` and `llama` locally will not work on every machine.
 
 
 Run `neosea` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
@@ -72,24 +72,28 @@ Run `neosea` with `--interface` (Default: Ethernet), `--database` (Default: capt
 `neosea --interface "Ethernet" --database "captures" --duration 10`
 
 
-Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`, defaults to captures database.
+Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`. Defaults to the captures database.
 
 `neonet --database "captures"`
 
 
-Run `neotransform` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to captures and OpenAI.
+Run `neotransform` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to the captures database and openai api.
 
 `neotransform --api "openai" --database "captures"`
 
+Note: `starcode` will cache and run `bigcode/starcoder2-15b`
 
-Run `neojawsx` to process embeddings and display cluster plots. Defaults to captures database.
+
+Run `neojawsx` to process embeddings and display cluster plots. Defaults to the captures database.
 
 `neojawsx --database "captures"`
 
 
-Run `neoharbor` to send network traffic snapshots to OpenAI Chat Completion and return network analysis. Defaults to captures database.
+Run `neoharbor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis. Defaults to the captures database and openai api.
 
-`neoharbor --database "captures"`
+`neoharbor --api "openai" --database "captures"`
+
+Note: `llama` will cache and run `meta-llama/Meta-Llama-3-8B-Instruct`
 
 
 Run `neosink` to clear the database...
