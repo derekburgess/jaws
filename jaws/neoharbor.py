@@ -41,7 +41,7 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"\nAlong with a detailed system prompt, this program also sends: {df.shape[0]} packets(snapshot below)\n")
+        print(f"\nAlong with a detailed system prompt, this program also sends: {df.shape[0]} packets (snapshot below)\n")
         df = df.sample(frac=1)
         print(df.head())
         df_json = df.to_json(orient="records")
@@ -84,12 +84,12 @@ def generate_response(df_json):
     #print(completion.usage)
 
 def main():
-    parser = argparse.ArgumentParser(description="Request router and firewall advice using OpenAI's GPT-X.")
+    parser = argparse.ArgumentParser(description="Summarize network traffic using OpenAI GPT-X")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
-    print("\nArrgh, this uses OpenAI Chat Completion to analyze and return summarization of network traffic patterns.")
+    print("\nThis uses OpenAI Chat Completion to analyze network data and return a summary of network traffic.")
     df_json = fetch_data(driver, args.database)
 
     input("\nPress Enter to send data and generate a response...")
