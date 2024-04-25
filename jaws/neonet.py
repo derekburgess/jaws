@@ -37,6 +37,7 @@ def get_ip_info(ip_address, ipinfo_api_key):
 def fetch_data(driver, database):
     query = """
     MATCH (ip:IP)
+    WHERE NOT (ip)-[:OWNERSHIP]->(:ORGANIZATION)
     RETURN DISTINCT ip.address AS ip_address
     """
     with driver.session(database=database) as session:
