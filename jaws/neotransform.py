@@ -75,7 +75,7 @@ class TransformStarCoder:
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
                 update_neo4j(row['packet_id'], embedding, self.database)
-                print("Completed embedding(StarCoder2-15b-quantization)")
+                print("Computed embedding(StarCoder2-15b-quantization)")
 
     def transform(self):
         while True:
@@ -110,7 +110,7 @@ class TransformOpenAI:
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_neo4j(row['packet_id'], embedding, self.database)
-                print("Completed embedding(OpenAI text-embedding-3-large)")
+                print("Computed embedding(OpenAI text-embedding-3-large)")
 
     def transform(self):
         while True:

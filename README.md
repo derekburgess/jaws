@@ -87,6 +87,11 @@ Run `neojawsx` to process embeddings and display cluster plots. Defaults to capt
 `neojawsx --database "captures"`
 
 
+Run `neoharbor` to send network traffic snapshots to OpenAI Chat Completion and return network analysis. Defaults to captures database.
+
+`neoharbor --database "captures"`
+
+
 Run `neosink` to clear the database...
 
 `neosink --database "captures"`
