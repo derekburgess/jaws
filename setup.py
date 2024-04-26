@@ -23,7 +23,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='2.5.0',
+    version='3.0.0',
 
     description='Packet capture and anomaly detection system',
     long_description=long_description,
@@ -89,6 +89,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
        'console_scripts': [
+           'neostart = jaws.neostart:main',
            'neosea = jaws.neosea:main',
            'neonet = jaws.neonet:main',
            'neotransform = jaws.neotransform:main',

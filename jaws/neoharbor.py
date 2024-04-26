@@ -43,20 +43,24 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"\nPreparing to send: {df.shape[0]} packets (snapshot below)\n")
+        print(f"\nPassing: {df.shape[0]} packets (snapshot below)\n")
         df = df.sample(frac=1)
-        print(df.head())
+        print(df.head(), "\n")
         df_json = df.to_json(orient="records")
         return df_json
-    
+  
 
 class SummarizeLlama:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
         self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, token=self.huggingface_token)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_name,
+            torch_dtype=torch.bfloat16,
+            device_map="auto"
+        )
 
     def generate_summary_from_llama(self, df_json):
         system_prompt = """
@@ -78,7 +82,6 @@ class SummarizeLlama:
         - Use clear, concise language.
         - Utilize diagrams to represent traffic flows effectively.
         - Ensure recommendations are specific and supported by data from the provided logs.
-        
         """
 
         messages = [
@@ -92,16 +95,9 @@ class SummarizeLlama:
             return_tensors="pt"
         ).to(self.model.device)
 
-        terminators = [
-            self.tokenizer.eos_token_id,
-            self.tokenizer.convert_tokens_to_ids("")
-        ]
-
         outputs = self.model.generate(
             input_ids,
-            max_new_tokens=1024,
-            eos_token_id=terminators,
-            do_sample=True,
+            max_length=6400,
             temperature=0.6,
             top_p=0.9,
         )
@@ -133,7 +129,6 @@ class SummarizeOpenAI:
         - Use clear, concise language.
         - Utilize diagrams to represent traffic flows effectively.
         - Ensure recommendations are specific and supported by data from the provided logs.
-        
         """
 
         completion = self.client.chat.completions.create(
@@ -148,7 +143,7 @@ class SummarizeOpenAI:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using Meta-Llama-3-8B-Instruct or OpenAI gpt-3.5-turbo-16k")
+    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Meta Llama-3 8B Instruct")
     parser.add_argument("--api", choices=["openai", "llama"], default="openai",
                         help="Specify the api to use for network traffic analysis (default: openai)")
     parser.add_argument("--database", default="captures", 
@@ -156,8 +151,6 @@ def main():
 
     args = parser.parse_args()
     df_json = fetch_data(driver, args.database)
-
-    input("\nPress Enter to send data and generate a response...")
 
     if args.api == "llama":
         transformer = SummarizeLlama()

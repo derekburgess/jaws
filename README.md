@@ -64,7 +64,7 @@ Install JAWS:
 
 ## Running and Commands
 
-All of the commands default to the `captures` database and `openai` api, running `starcoder` and `llama` locally will not work on every machine.
+Run `neostart` for instructions and commend overview.
 
 
 Run `neosea` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
