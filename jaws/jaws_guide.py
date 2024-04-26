@@ -22,28 +22,27 @@ def main():
 
     print("""
     [grey58]To collect packets:[/]
-    [grey100]jaws-capture --interface 'Ethernet' --database 'captures' --duration 10[/]
-    [grey100]jaws-capture --duration 10[/]
+    [grey100]jaws-capture[/] [grey58]OPTIONAL/DEFAULTS[/] [grey100]--interface 'Ethernet' --database 'captures' --duration 10[/]
     """)
 
     print("""
     [grey58]To investigate IP Addresses:[/]
-    [grey100]jaws-ipinfo[/]
+    [grey100]jaws-ipinfo[/] [grey58]OPTIONAL/DEFAULTS[/] [grey100]--database 'captures'[/]
     """)
 
     print("""
     [grey58]To process packets or orgs into embeddings:[/]
-    [grey100]jaws-embedd --api 'starcoder' or 'openai' and --type 'packets' or 'orgs'[/]
+    [grey100]jaws-embedd[/] [grey58]OPTIONAL/DEFAULTS[/] [grey100]--api 'starcoder' (or openai) --type 'packets' (or orgs) --database 'captures'[/]
     """)
           
     print("""
     [grey58]To view cluster plots of packet embeddings:[/]
-    [grey100]jaws-finder --type 'packets' or 'orgs'[/]
+    [grey100]jaws-finder[/] [grey58]OPTIONAL/DEFAULTS[/] [grey100]--type 'packets' (or orgs)[/]
     """)
           
     print("""
     [grey58]To generate an analysis:[/]
-    [grey100]jaws-advisor --api 'llama' or 'openai'[/]
+    [grey100]jaws-advisor[/] [grey58]OPTIONAL/DEFAULTS[/] [grey100]--api 'llama' (or openai)[/]
     """)
           
     print("""
