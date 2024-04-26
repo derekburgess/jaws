@@ -75,5 +75,6 @@ def main():
             update_neo4j(ip_address, ip_info, driver, args.database)
             print(f"Created OWNERSHIP realtionship from IP: {ip_address} to ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
 
+
 if __name__ == "__main__":
     main()
