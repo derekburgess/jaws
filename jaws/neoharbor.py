@@ -12,6 +12,26 @@ username = os.getenv("LOCAL_NEO4J_USERNAME")
 password = os.getenv("LOCAL_NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
+system_prompt = """
+As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
+
+Traffic Analysis:
+1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
+
+2. Highlight any anomalies or unusual patterns.
+
+Firewall Recommendations:
+
+1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
+
+2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
+
+Instructions:
+
+- Use clear, concise language.
+- Utilize diagrams to represent traffic flows effectively.
+- Ensure recommendations are specific and supported by data from the provided logs.
+"""
 
 
 def fetch_data(driver, database):
@@ -43,7 +63,7 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"\nPassing: {df.shape[0]} packets (snapshot below)\n")
+        print(f"Passing: {df.shape[0]} packets (snapshot below):")
         df = df.sample(frac=1)
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
@@ -62,27 +82,8 @@ class SummarizeLlama:
             device_map="auto"
         )
 
-    def generate_summary_from_llama(self, df_json):
-        system_prompt = """
-        As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
-
-        Traffic Analysis:
-        1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
+    def generate_summary_from_llama(self, system_prompt, df_json):
         
-        2. Highlight any anomalies or unusual patterns.
-
-        Firewall Recommendations:
-
-        1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
-
-        2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
-
-        Instructions:
-
-        - Use clear, concise language.
-        - Utilize diagrams to represent traffic flows effectively.
-        - Ensure recommendations are specific and supported by data from the provided logs.
-        """
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -98,6 +99,8 @@ class SummarizeLlama:
         outputs = self.model.generate(
             input_ids,
             max_length=6400,
+            pad_token_id=self.tokenizer.eos_token_id,
+            do_sample=True,
             temperature=0.6,
             top_p=0.9,
         )
@@ -109,28 +112,7 @@ class SummarizeOpenAI:
     def __init__(self, client):
         self.client = client
 
-    def generate_summary_from_openai(self, df_json):
-        system_prompt = """
-        As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
-
-        Traffic Analysis:
-        1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
-        
-        2. Highlight any anomalies or unusual patterns.
-
-        Firewall Recommendations:
-
-        1. Based on the traffic patterns identified, list detailed recommendations for enhancing firewall security. Each recommendation should refer directly to specific addresses, ports, or domains observed in the dataset.
-
-        2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
-
-        Instructions:
-
-        - Use clear, concise language.
-        - Utilize diagrams to represent traffic flows effectively.
-        - Ensure recommendations are specific and supported by data from the provided logs.
-        """
-
+    def generate_summary_from_openai(self, system_prompt, df_json):
         completion = self.client.chat.completions.create(
             model="gpt-3.5-turbo-16k",
             messages=[
@@ -154,10 +136,10 @@ def main():
 
     if args.api == "llama":
         transformer = SummarizeLlama()
-        transformer.generate_summary_from_llama(df_json)
+        transformer.generate_summary_from_llama(system_prompt, df_json)
     elif args.api == "openai":
         transformer = SummarizeOpenAI(client)
-        transformer.generate_summary_from_openai(df_json)
+        transformer.generate_summary_from_openai(system_prompt, df_json)
     else:
         print("Invalid API specified. Try openai or llama.")
 

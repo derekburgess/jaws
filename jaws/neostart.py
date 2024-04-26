@@ -33,6 +33,8 @@ neojawsx
 To generate an analysis of network traffic using OpenAI's gpt-3.5-turbo-16k or Meta-Llama-3-8B-Instruct:
 neoharbor --api "openai" or "llama"
           
+neosink to clear the database.
+          
 NOTE: All commands default to the captures database.
           
 """)
