@@ -47,8 +47,8 @@ def main():
           
     print("""
     [grey58]To clear the database:[/]
-    [grey100]jaws-clear[/] [grey58]OPTIONAL[/] --database 'captures'[/]
-    [/]""")
+    [grey100]jaws-clear[/] [grey58]OPTIONAL[/] [grey100]--database 'captures'[/]
+    """)
 
 
 if __name__ == "__main__":
