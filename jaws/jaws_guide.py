@@ -38,7 +38,7 @@ def main():
           
     print("""
     [grey58]To view cluster plots of packet embeddings:[/]
-    [grey100]jaws-finder[/]
+    [grey100]jaws-finder --type 'orgs' or 'packets'[/]
     """)
           
     print("""

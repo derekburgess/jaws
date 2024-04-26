@@ -115,7 +115,7 @@ class TransformStarCoder:
                 print("Computed org embedding(StarCoder2-15b-quantization)")
 
     def transform(self, transform_type):
-        if transform_type == 'packet':
+        if transform_type == 'packets':
             while True:
                 df = fetch_packet_data(self.database)
                 if df.empty:
@@ -166,7 +166,7 @@ class TransformOpenAI:
                 print("Computed org embedding(OpenAI text-embedding-3-large)")
 
     def transform(self, transform_type):
-        if transform_type == 'packet':
+        if transform_type == 'packets':
             while True:
                 df = fetch_packet_data(self.database)
                 if df.empty:

@@ -67,31 +67,31 @@ Install JAWS:
 Run `jaws-guide` for instructions and commend overview.
 
 
-Run `jaws-capture` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
+Run `jaws-capture` with `--interface`, `--database`, and `--duration` in seconds to capture packets.
 
-`jaws-capture --interface "Ethernet" --database "captures" --duration 10`
-
-
-Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`. Defaults to the captures database.
-
-`jaws-ipinfo --database "captures"`
+Defaults: `jaws-capture --interface "Ethernet" --database "captures" --duration 10`
 
 
-Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform either `--type` `orgs` or `packets` into embeddings. Defaults to the captures database and openai api.
+Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`.
 
-`jaws-embedd --api "openai" --type "orgs" --database "captures"`
-
-Note: `starcode` will cache and run `bigcode/starcoder2-15b`
+Defaults: `jaws-ipinfo --database "captures"`
 
 
-Run `jaws-finder` to process embeddings and display cluster plots. Defaults to the captures database.
+Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform either `--type` `orgs` or `packets` into embeddings.
 
-`jaws-finder --type "orgs" --database "captures"`
+Defaults: `jaws-embedd --api "openai" --type "orgs" --database "captures"`
+
+Note: `starcoder` will cache and run `bigcode/starcoder2-15b`
 
 
-Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis. Defaults to the captures database and openai api.
+Run `jaws-finder` with either `--type` `orgs` or `packets` to process embeddings and display cluster plots.
 
-`jaws-advisor --api "openai" --database "captures"`
+Defaults: `jaws-finder --type "orgs" --database "captures"`
+
+
+Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis.
+
+Defaults: `jaws-advisor --api "openai" --database "captures"`
 
 Note: `llama` will cache and run `meta-llama/Meta-Llama-3-8B-Instruct`
 
