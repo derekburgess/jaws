@@ -37,23 +37,18 @@ def main():
           
     print("""
     [grey58]To view cluster plots of packet embeddings:[/]
-    [grey100]jaws-finder[/] [grey58]OPTIONAL[/] [grey100]--type 'packets' (or orgs)[/]
+    [grey100]jaws-finder[/] [grey58]OPTIONAL[/] [grey100]--type 'packets' (or orgs) --database 'captures'[/]
     """)
           
     print("""
     [grey58]To generate an analysis:[/]
-    [grey100]jaws-advisor[/] [grey58]OPTIONAL[/] [grey100]--api 'llama' (or openai)[/]
+    [grey100]jaws-advisor[/] [grey58]OPTIONAL[/] [grey100]--api 'llama' (or openai) --database 'captures'[/]
     """)
           
     print("""
-    [grey100]jaws-clear[/] [grey58]to clear the database.
+    [grey58]To clear the database:[/]
+    [grey100]jaws-clear[/] [grey58]OPTIONAL[/] --database 'captures'[/]
     [/]""")
-
-    print("""[navajo_white1]                     
-    NOTE:
-    - All commands default to the captures database.
-    - JAWS performs best locally when neosea is run between 5-30 seconds.
-    """)   
 
 
 if __name__ == "__main__":
