@@ -100,6 +100,10 @@ class TransformStarCoder:
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
                 print("Computed packet embedding(StarCoder2-15b-quantization)")
+                print(packet_string, "\n")
+
+        if df.empty:
+            print("All packets embedded.(StarCoder2-15b-quantization)")
 
     def process_starcoder_org(self):
         df = fetch_org_data(self.database)
@@ -113,16 +117,15 @@ class TransformStarCoder:
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
                 print("Computed org embedding(StarCoder2-15b-quantization)")
+                print(org_string, "\n")
 
     def transform(self, transform_type):
         if transform_type == 'packets':
-            while True:
-                df = fetch_packet_data(self.database)
-                if df.empty:
-                    print("All packets embedded.(StarCoder2-15b-quantization)")
-                    break
-                
+            df = fetch_packet_data(self.database)
+            if not df.empty:
                 self.process_starcoder_packet(df)
+            else:
+                print("No packets to process.")
         elif transform_type == 'orgs':
             self.process_starcoder_org()
 
@@ -151,6 +154,10 @@ class TransformOpenAI:
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
                 print("Computed packet embedding(OpenAI text-embedding-3-large)")
+                print(packet_string, "\n")
+
+        if df.empty:
+            print("All packets embedded(OpenAI text-embedding-3-large)")
 
     def process_openai_org(self):
         df = fetch_org_data(self.database)
@@ -164,16 +171,15 @@ class TransformOpenAI:
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
                 print("Computed org embedding(OpenAI text-embedding-3-large)")
+                print(org_string, "\n")
 
     def transform(self, transform_type):
         if transform_type == 'packets':
-            while True:
-                df = fetch_packet_data(self.database)
-                if df.empty:
-                    print("All packets embedded(OpenAI text-embedding-3-large)")
-                    break
-
+            df = fetch_packet_data(self.database)
+            if not df.empty:
                 self.process_openai_packet(df)
+            else:
+                print("No packets to process.")
         elif transform_type == 'orgs':
             self.process_openai_org()
 
@@ -183,7 +189,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
     parser.add_argument("--api", choices=["openai", "starcoder"], default="openai",
                         help="Specify the api to use for embedding processing (default: openai)")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="org",
+    parser.add_argument("--type", choices=["packets", "orgs"], default="orgs",
                         help="Specify the packet string type to pass (default: orgs)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")

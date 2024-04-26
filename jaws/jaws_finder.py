@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 
 def fetch_data(driver, database, type):
     if type == "orgs":
-        embedding = "org.embedding"
-        where_clause = "org IS NOT NULL AND org.embedding IS NOT NULL"
+        embedding = "org.org_embedding"
+        where_clause = "org IS NOT NULL AND org.org_embedding IS NOT NULL"
     else:
-        embedding = "p.embedding"
-        where_clause = "p.embedding IS NOT NULL"
+        embedding = "p.packet_embedding"
+        where_clause = "p.packet_embedding IS NOT NULL"
 
     query = f"""
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -58,7 +58,7 @@ def fetch_data(driver, database, type):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="org",
+    parser.add_argument("--type", choices=["packets", "orgs"], default="orgs",
                         help="Specify the packet string type to pass (default: orgs)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
