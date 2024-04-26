@@ -2,6 +2,7 @@ import os
 import argparse
 from neo4j import GraphDatabase
 import pandas as pd
+import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
@@ -63,12 +64,12 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"Passing: {df.shape[0]} packets (snapshot below):")
+        print(f"Passing: {df.shape[0]} packets:")
         df = df.sample(frac=1)
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
         return df_json
-  
+
 
 class SummarizeLlama:
     def __init__(self):
@@ -83,8 +84,6 @@ class SummarizeLlama:
         )
 
     def generate_summary_from_llama(self, system_prompt, df_json):
-        
-
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Snapshot of network traffic: {df_json}"},
@@ -120,7 +119,6 @@ class SummarizeOpenAI:
                 {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
             ]
         )
-
         print(completion.choices[0].message.content)
 
 

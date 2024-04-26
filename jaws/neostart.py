@@ -21,6 +21,8 @@ neosea --duration 10
 This will default to the Ethernet interface and captures database. To change these parameters run:
 neosea --interface "Ethernet" --database "captures" --duration 10
           
+RECOMMENDED: JAWS performs best locally when neosea is run between 5-30 seconds.
+              
 To add Organization Nodes and Ownership relationships to IP Addresses:
 neonet
         
