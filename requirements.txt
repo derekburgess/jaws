@@ -1,6 +1,7 @@
 neo4j
 pyshark
 pandas
+numpy
 scikit-learn
 kneed
 transformers

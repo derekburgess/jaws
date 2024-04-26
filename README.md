@@ -64,38 +64,38 @@ Install JAWS:
 
 ## Running and Commands
 
-Run `neostart` for instructions and commend overview.
+Run `jaws-guide` for instructions and commend overview.
 
 
-Run `neosea` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
+Run `jaws-capture` with `--interface` (Default: Ethernet), `--database` (Default: captures), and `--duration` (Default: 10) in seconds to capture packets.
 
-`neosea --interface "Ethernet" --database "captures" --duration 10`
-
-
-Run `neonet` to gather intel on IP Addresses using: `ipinfo.io`. Defaults to the captures database.
-
-`neonet --database "captures"`
+`jaws-capture --interface "Ethernet" --database "captures" --duration 10`
 
 
-Run `neotransform` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to the captures database and openai api.
+Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`. Defaults to the captures database.
 
-`neotransform --api "openai" --database "captures"`
+`jaws-ipinfo --database "captures"`
+
+
+Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to the captures database and openai api.
+
+`jaws-embedd --api "openai" --database "captures"`
 
 Note: `starcode` will cache and run `bigcode/starcoder2-15b`
 
 
-Run `neojawsx` to process embeddings and display cluster plots. Defaults to the captures database.
+Run `jaws-finder` to process embeddings and display cluster plots. Defaults to the captures database.
 
-`neojawsx --database "captures"`
+`jaws-finder --database "captures"`
 
 
-Run `neoharbor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis. Defaults to the captures database and openai api.
+Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis. Defaults to the captures database and openai api.
 
-`neoharbor --api "openai" --database "captures"`
+`jaws-advisor --api "openai" --database "captures"`
 
 Note: `llama` will cache and run `meta-llama/Meta-Llama-3-8B-Instruct`
 
 
-Run `neosink` to clear the database...
+Run `jaws-clear` to clear the database...
 
-`neosink --database "captures"`
+`jaws-clear --database "captures"`
