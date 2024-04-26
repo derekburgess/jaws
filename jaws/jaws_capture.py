@@ -18,8 +18,8 @@ def connect_to_database(uri, username, password, database):
 def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
-        MERGE (src:IP {address: $src_ip, src_port: $src_port, src_mac: $src_mac})
-        MERGE (dst:IP {address: $dst_ip, dst_port: $dst_port, dst_mac: $dst_mac})
+        MERGE (src:SRC_IP {src_address: $src_ip, src_port: $src_port, src_mac: $src_mac})
+        MERGE (dst:DST_IP {dst_address: $dst_ip, dst_port: $dst_port, dst_mac: $dst_mac})
         CREATE (src)-[p:PACKET]->(dst)
         SET p += { 
             protocol: $protocol,  

@@ -32,8 +32,8 @@ def main():
     """)
 
     print("""
-    [grey58]To process packets into embeddings:[/]
-    [grey100]jaws-embedd --api 'openai' or 'starcoder'[/]
+    [grey58]To process packets or orgs into embeddings:[/]
+    [grey100]jaws-embedd --api 'openai' or 'starcoder' and --type 'orgs' or 'packets'[/]
     """)
           
     print("""

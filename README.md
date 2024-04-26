@@ -77,16 +77,16 @@ Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`. Defaults t
 `jaws-ipinfo --database "captures"`
 
 
-Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform packets into embeddings. Defaults to the captures database and openai api.
+Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform either `--type` `orgs` or `packets` into embeddings. Defaults to the captures database and openai api.
 
-`jaws-embedd --api "openai" --database "captures"`
+`jaws-embedd --api "openai" --type "orgs" --database "captures"`
 
 Note: `starcode` will cache and run `bigcode/starcoder2-15b`
 
 
 Run `jaws-finder` to process embeddings and display cluster plots. Defaults to the captures database.
 
-`jaws-finder --database "captures"`
+`jaws-finder --type "orgs" --database "captures"`
 
 
 Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis. Defaults to the captures database and openai api.

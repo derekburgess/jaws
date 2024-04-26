@@ -43,7 +43,7 @@ def update_packet(packet_id, embedding, database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
     WHERE ID(p) = $packet_id
-    SET p.packet_embedding = $embedding
+    SET p.embedding = $embedding
     """
     with driver.session(database=database) as session:
         session.run(query, packet_id=packet_id, embedding=embedding)
@@ -67,7 +67,7 @@ def update_org(org, embedding, database):
     query = """
     MATCH (org:ORGANIZATION)
     WHERE org.org = $org
-    SET org.org_embedding = $embedding
+    SET org.embedding = $embedding
     """
     with driver.session(database=database) as session:
         session.run(query, org=org, embedding=embedding)
@@ -123,7 +123,7 @@ class TransformStarCoder:
                     break
                 
                 self.process_starcoder_packet(df)
-        elif transform_type == 'orgs':
+        elif transform_type == 'org':
             self.process_starcoder_org()
 
         self.driver.close()
@@ -174,7 +174,7 @@ class TransformOpenAI:
                     break
 
                 self.process_openai_packet(df)
-        elif transform_type == 'orgs':
+        elif transform_type == 'org':
             self.process_openai_org()
 
         self.driver.close()
@@ -183,10 +183,10 @@ def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
     parser.add_argument("--api", choices=["openai", "starcoder"], default="openai",
                         help="Specify the api to use for embedding processing (default: openai)")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="org",
-                        help="Specify the packet string type to pass (default: orgs)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--type", choices=["packet", "org"], default="org",
+                        help="Specify the packet string type to pass (default: org)")
 
     args = parser.parse_args()
 

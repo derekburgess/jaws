@@ -36,9 +36,9 @@ def get_ip_info(ip_address, ipinfo_api_key):
 
 def fetch_data(driver, database):
     query = """
-    MATCH (ip:IP)
-    WHERE NOT (ip)-[:OWNERSHIP]->(:ORGANIZATION)
-    RETURN DISTINCT ip.address AS ip_address
+    MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
+    WHERE NOT (src)-[:OWNERSHIP]->(:ORGANIZATION)
+    RETURN DISTINCT src.src_address AS ip_address
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -47,9 +47,9 @@ def fetch_data(driver, database):
 
 def update_neo4j(ip_address, ip_info, driver, database):
     query = """
-    MATCH (ip:IP {address: $ip_address})
-    MERGE (org:ORGANIZATION {name: $org})
-    MERGE (ip)-[:OWNERSHIP]->(org)
+    MATCH (src:SRC_IP {src_address: $ip_address})
+    MERGE (org:ORGANIZATION {org: $org})
+    MERGE (src)-[:OWNERSHIP]->(org)
     SET org.hostname = $hostname, org.location = $location
     """
     with driver.session(database=database) as session:

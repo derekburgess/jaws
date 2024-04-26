@@ -13,21 +13,28 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 
 
-def fetch_data(driver, database):
-    query = """
-    MATCH (src:IP)-[p:PACKET]->(dst:IP)
-    WHERE p.embedding IS NOT NULL
+def fetch_data(driver, database, type):
+    if type == "orgs":
+        embedding = "org.embedding"
+        where_clause = "org IS NOT NULL AND org.embedding IS NOT NULL"
+    else:
+        embedding = "p.embedding"
+        where_clause = "p.embedding IS NOT NULL"
+
+    query = f"""
+    MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
     OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
-    RETURN src.address AS src_ip, 
+    WHERE {where_clause}
+    RETURN src.src_address AS src_ip, 
         src.src_port AS src_port,
-        dst.address AS dst_ip,  
+        dst.dst_address AS dst_ip,  
         dst.dst_port AS dst_port, 
         p.protocol AS protocol,
         p.size AS size,
         org.name AS org,
         org.hostname AS hostname,
         org.location AS location,
-        p.embedding AS embedding
+        {embedding} AS embedding
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -51,6 +58,8 @@ def fetch_data(driver, database):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
+    parser.add_argument("--type", choices=["packets", "orgs"], default="org",
+                        help="Specify the packet string type to pass (default: orgs)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
     
@@ -61,7 +70,7 @@ def main():
     driver = GraphDatabase.driver(uri, auth=(username, password))
 
     start_time = time.time()
-    embeddings, data = fetch_data(driver, args.database)
+    embeddings, data = fetch_data(driver, args.database, args.type)
     num_embeddings = len(embeddings)
 
 
