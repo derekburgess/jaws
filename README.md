@@ -79,7 +79,7 @@ Defaults: `jaws-ipinfo --database "captures"`
 
 Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform either `--type` `orgs` or `packets` into embeddings.
 
-Defaults: `jaws-embedd --api "openai" --type "orgs" --database "captures"`
+Defaults: `jaws-embedd --api "starcoder" --type "orgs" --database "captures"`
 
 Note: `starcoder` will cache and run `bigcode/starcoder2-15b`
 
@@ -91,7 +91,7 @@ Defaults: `jaws-finder --type "orgs" --database "captures"`
 
 Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis.
 
-Defaults: `jaws-advisor --api "openai" --database "captures"`
+Defaults: `jaws-advisor --api "llama" --database "captures"`
 
 Note: `llama` will cache and run `meta-llama/Meta-Llama-3-8B-Instruct`
 

@@ -17,7 +17,7 @@ client = OpenAI()
 def fetch_packet_data(database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
-    WHERE p.embedding IS NULL
+    WHERE p.packet_embedding IS NULL
     WITH src, dst, p
     OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
     RETURN src.src_address AS src_ip,
@@ -52,10 +52,12 @@ def update_packet(packet_id, embedding, database):
 def fetch_org_data(database):
     query = """
     MATCH (src:SRC_IP)-[:OWNERSHIP]->(org:ORGANIZATION)
+    WHERE org.org_embedding IS NULL
+    WITH org, collect(src.src_address) AS src_ips
     RETURN org.org AS org,
         org.hostname AS hostname,
         org.location AS location,
-        src.src_address AS src_ip
+        src_ips
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -112,6 +114,7 @@ class TransformStarCoder:
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
+            Source IPs: {', '.join(row['src_ips'])}
             """
             embedding = self.compute_starcoder_embedding(org_string)
             if embedding is not None:
@@ -166,6 +169,7 @@ class TransformOpenAI:
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
+            Source IPs: {', '.join(row['src_ips'])}
             """
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
@@ -187,10 +191,10 @@ class TransformOpenAI:
 
 def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
-    parser.add_argument("--api", choices=["openai", "starcoder"], default="openai",
-                        help="Specify the api to use for embedding processing (default: openai)")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="orgs",
-                        help="Specify the packet string type to pass (default: orgs)")
+    parser.add_argument("--api", choices=["openai", "starcoder"], default="starcoder",
+                        help="Specify the api to use for embedding processing (default: starcoder)")
+    parser.add_argument("--type", choices=["packets", "orgs"], default="packets",
+                        help="Specify the packet string type to pass (default: packets)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 

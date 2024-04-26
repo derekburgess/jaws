@@ -58,8 +58,8 @@ def fetch_data(driver, database, type):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="orgs",
-                        help="Specify the packet string type to pass (default: orgs)")
+    parser.add_argument("--type", choices=["packets", "orgs"], default="packets",
+                        help="Specify the packet string type to pass (default: packets)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
     

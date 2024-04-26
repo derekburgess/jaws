@@ -123,8 +123,8 @@ class SummarizeOpenAI:
 
 def main():
     parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Meta Llama-3 8B Instruct")
-    parser.add_argument("--api", choices=["openai", "llama"], default="openai",
-                        help="Specify the api to use for network traffic analysis (default: openai)")
+    parser.add_argument("--api", choices=["openai", "llama"], default="llama",
+                        help="Specify the api to use for network traffic analysis (default: llama)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 

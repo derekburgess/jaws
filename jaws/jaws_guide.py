@@ -33,17 +33,17 @@ def main():
 
     print("""
     [grey58]To process packets or orgs into embeddings:[/]
-    [grey100]jaws-embedd --api 'openai' or 'starcoder' and --type 'orgs' or 'packets'[/]
+    [grey100]jaws-embedd --api 'starcoder' or 'openai' and --type 'packets' or 'orgs'[/]
     """)
           
     print("""
     [grey58]To view cluster plots of packet embeddings:[/]
-    [grey100]jaws-finder --type 'orgs' or 'packets'[/]
+    [grey100]jaws-finder --type 'packets' or 'orgs'[/]
     """)
           
     print("""
     [grey58]To generate an analysis:[/]
-    [grey100]jaws-advisor --api 'openai' or 'llama'[/]
+    [grey100]jaws-advisor --api 'llama' or 'openai'[/]
     """)
           
     print("""
