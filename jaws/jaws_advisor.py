@@ -96,7 +96,7 @@ class SummarizeLlama:
 
         outputs = self.model.generate(
             input_ids,
-            max_length=6400,
+            max_length=8192,
             pad_token_id=self.tokenizer.eos_token_id,
             do_sample=True,
             temperature=0.6,
