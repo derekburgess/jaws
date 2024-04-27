@@ -23,8 +23,8 @@ To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](http
 
 - `IPINFO_API_KEY`
 
-`jaws-embedd` is defaulted to use bigcode/starcoder2-15b (~60GB) set to 8bit quant using BitsAndBytes.
-`jaws-advisor` is defaulted to use meta-llama/Meta-Llama-3-8B-Instruct (~15GB). 
+`jaws-embedd` is defaulted to use bigcode/starcoder2-15b set to 8bit quant using BitsAndBytes.
+`jaws-advisor` is defaulted to use meta-llama/Meta-Llama-3-8B-Instruct.
 
 Both models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, Starcode-2-15b is very large... Either way, create env variables for:
 

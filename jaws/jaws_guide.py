@@ -33,11 +33,8 @@ def main():
     print("""
     [gray70]To process packets or orgs into embeddings:[/]
     [grey100]jaws-embedd[/] [gray70]OPTIONAL[/] [grey100]--api 'starcoder' (or openai) --type 'packets' (or orgs) --database 'captures'[/]
-          
-    [gold1]WARNING: Caches StarCoder2-15b (~60GB) locally![/]
     """)
-
-          
+   
     print("""
     [gray70]To view cluster plots of packet embeddings:[/]
     [grey100]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packets' (or orgs) --database 'captures'[/]
@@ -46,8 +43,6 @@ def main():
     print("""
     [gray70]To generate an analysis:[/]
     [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'llama' (or openai) --database 'captures'[/]
-          
-    [gold1]WARNING: Caches Llama-3-8b (~15GB) locally![/]
     """)
           
     print("""
