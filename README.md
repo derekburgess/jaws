@@ -19,7 +19,7 @@ JAWS also uses a Neo4j graph database. You can run the docker container, or inst
 
 ### Additional Services
 
-To use `jaws-ipinfo`: [ipinfo](https://ipinfo.io/), you will need to sign up for an account and create env variables for:
+To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](https://ipinfo.io/), and create env variables for:
 
 - `IPINFO_API_KEY`
 
