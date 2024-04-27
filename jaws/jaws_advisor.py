@@ -17,7 +17,7 @@ system_prompt = """
 As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
 
 Traffic Analysis:
-1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., [org] [hostname] (src_ip:src_port) - size -> (dst_ip:dst_port)).
+1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., ( org, hostname ) - [ ownership ] -> ( src_ip:src_port ) - [ packet size ] -> ( dst_ip:dst_port ).
 
 2. Highlight any anomalies or unusual patterns.
 

@@ -39,6 +39,24 @@ def fetch_packet_data(database):
     return df
 
 
+def fetch_org_data(database):
+    query = """
+    MATCH (src:SRC_IP)-[:OWNERSHIP]->(org:ORGANIZATION)
+    WHERE org.org_embedding IS NULL
+    WITH org, collect(src) AS src_nodes
+    RETURN org.org AS org,
+        org.hostname AS hostname,
+        org.location AS location,
+        [node in src_nodes | node.src_address] AS src_ips,
+        [node in src_nodes | node.src_port] AS src_ports,
+        [node in src_nodes | node.src_mac] AS src_macs
+    """
+    with driver.session(database=database) as session:
+        result = session.run(query)
+        df = pd.DataFrame([record.data() for record in result])
+    return df
+
+
 def update_packet(packet_id, embedding, database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -47,22 +65,6 @@ def update_packet(packet_id, embedding, database):
     """
     with driver.session(database=database) as session:
         session.run(query, packet_id=packet_id, embedding=embedding)
-
-
-def fetch_org_data(database):
-    query = """
-    MATCH (src:SRC_IP)-[:OWNERSHIP]->(org:ORGANIZATION)
-    WHERE org.org_embedding IS NULL
-    WITH org, collect(src.src_address) AS src_ips
-    RETURN org.org AS org,
-        org.hostname AS hostname,
-        org.location AS location,
-        src_ips
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query)
-        df = pd.DataFrame([record.data() for record in result])
-    return df
 
 
 def update_org(org, embedding, database):
@@ -96,16 +98,13 @@ class TransformStarCoder:
 
     def process_starcoder_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f" <<<< FROM: {row['src_ip']}:{row['src_port']}({row['src_mac']}) TO: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using procotol: {row['protocol']}, with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}, and location: {row['location']}"
+            packet_string = f"( NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']} ) - [ OWNERSIP ] -> ( NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']}) ) - [ PACKET: procotol: {row['protocol']} size:{row['size']} ] -> ( NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) )"
 
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print("Computed packet embedding(StarCoder2-15b-quantization)")
+                print("Computed packet-embedding(StarCoder2-15b-quantization)")
                 print(packet_string, "\n")
-
-        if df.empty:
-            print("All packets embedded.(StarCoder2-15b-quantization)")
 
     def process_starcoder_org(self):
         df = fetch_org_data(self.database)
@@ -115,11 +114,13 @@ class TransformStarCoder:
             Hostname: {row['hostname']}
             Location: {row['location']}
             Source IPs: {', '.join(row['src_ips'])}
+            Source Ports: {', '.join(map(str, row['src_ports']))}
+            Source MACs: {', '.join(row['src_macs'])}
             """
             embedding = self.compute_starcoder_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org embedding(StarCoder2-15b-quantization)")
+                print("Computed org-embedding(StarCoder2-15b-quantization)")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
@@ -128,7 +129,7 @@ class TransformStarCoder:
             if not df.empty:
                 self.process_starcoder_packet(df)
             else:
-                print("No packets to process.")
+                print("Noting to process.")
         elif transform_type == 'orgs':
             self.process_starcoder_org()
 
@@ -151,16 +152,13 @@ class TransformOpenAI:
 
     def process_openai_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f" <<<< {row['src_ip']}:{row['src_port']}({row['src_mac']}) {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) >>>> using procotol: {row['protocol']}, with a size of: {row['size']}, and with ownership: {row['org']}, {row['hostname']}, and location: {row['location']}"
+            packet_string = f"( NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']} ) - [ OWNERSIP ] -> ( NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']}) ) - [ PACKET: procotol: {row['protocol']} size:{row['size']} ] -> ( NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) )"
 
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print("Computed packet embedding(OpenAI text-embedding-3-large)")
+                print("Computed packet-embedding(OpenAI text-embedding-3-large)")
                 print(packet_string, "\n")
-
-        if df.empty:
-            print("All packets embedded(OpenAI text-embedding-3-large)")
 
     def process_openai_org(self):
         df = fetch_org_data(self.database)
@@ -170,11 +168,13 @@ class TransformOpenAI:
             Hostname: {row['hostname']}
             Location: {row['location']}
             Source IPs: {', '.join(row['src_ips'])}
+            Source Ports: {', '.join(map(str, row['src_ports']))}
+            Source MACs: {', '.join(row['src_macs'])}
             """
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org embedding(OpenAI text-embedding-3-large)")
+                print("Computed org-embedding(OpenAI)")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
@@ -183,7 +183,7 @@ class TransformOpenAI:
             if not df.empty:
                 self.process_openai_packet(df)
             else:
-                print("No packets to process.")
+                print("Noting to process.")
         elif transform_type == 'orgs':
             self.process_openai_org()
 
