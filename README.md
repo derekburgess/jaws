@@ -19,11 +19,20 @@ JAWS also uses a Neo4j graph database. You can run the docker container, or inst
 
 ### Additional Services
 
-To use `neonet`: [ipinfo](https://ipinfo.io/), `neotransform`: [OpenAI](https://platform.openai.com/overview), or [Hugging Face](https://huggingface.co/bigcode/starcoder2-15b) transformers, you will also need to sign up for those accounts and create env variables for:
+To use `jaws-ipinfo`: [ipinfo](https://ipinfo.io/), you will need to sign up for an account and create env variables for:
 
 - `IPINFO_API_KEY`
-- `OPENAI_API_KEY`
+
+`jaws-embedd` is defaulted to use `bigcode/starcoder2-15b` (~60GB) set to 8bit quant using BitsAndBytes.
+`jaws-advisor` is defaulted to use `meta-llama/Meta-Llama-3-8B-Instruct` (~15GB).
+
+Both models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, Starcode-2-15b is very large... Either way, create env variables for:
+
 - `HUGGINGFACE_KEY`
+
+Lastly, both `jaws-embedd` and `jaws-advisor` can be set to use `--type "openai"` and in turn, `text-embedding-3-large` and `gpt-3.5-turbo-16k`. This option requires that you have an OpenAI account and create env variables for: 
+
+- `OPENAI_API_KEY`
 
 
 ### Neo4j Docker Container
