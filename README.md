@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given interface and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs. The name JAWS because "wireshark", and I like the original Jaws movie. Which to me is really anomalies and outliers.
+JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given interface and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs.
 
 
 ## Setup
@@ -90,8 +90,6 @@ Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform e
 
 Defaults: `jaws-embedd --api "starcoder" --type "packets" --database "captures"`
 
-Note: `starcoder` will cache and run `bigcode/starcoder2-15b`
-
 
 Run `jaws-finder` with either `--type` `packets` or `orgs` to process embeddings and display cluster plots.
 
@@ -101,8 +99,6 @@ Defaults: `jaws-finder --type "packets" --database "captures"`
 Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis.
 
 Defaults: `jaws-advisor --api "llama" --database "captures"`
-
-Note: `llama` will cache and run `meta-llama/Meta-Llama-3-8B-Instruct`
 
 
 Run `jaws-clear` to clear the database...
