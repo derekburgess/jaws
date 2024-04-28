@@ -116,9 +116,9 @@ def main():
             print("Invalid input. Using the original EPS value...")
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
-    clusters = dbscan.fit_predict(embeddings_scaled)
+    clusters = dbscan.fit_predict(principal_components)
 
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value:.10f}', figsize=(8, 7))
     fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
