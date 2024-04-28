@@ -191,8 +191,8 @@ class TransformOpenAI:
 
 def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
-    parser.add_argument("--api", choices=["openai", "starcoder"], default="starcoder",
-                        help="Specify the api to use for embedding processing (default: starcoder)")
+    parser.add_argument("--api", choices=["openai", "starcoder"], default="openai",
+                        help="Specify the api to use for embedding processing (default: openai)")
     parser.add_argument("--type", choices=["packet", "org"], default="packet",
                         help="Specify the packet string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
