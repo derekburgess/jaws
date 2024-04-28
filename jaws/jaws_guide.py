@@ -2,13 +2,15 @@ from rich import print
 
 
 def main():
-    print("""[bold turquoise2]
+    print(r"""
+    [bold turquoise2]
         o   O   o       o  o-o
         |  / \  |       | |
         | o---o o   o   o  o-o
     \   o |   |  \ / \ /      |
      o-o  o   o   o   o   o--o
-    [/bold turquoise2]""")
+    [/]
+    """)
 
     print("""
     [indian_red]RECOMMENDED: Review the README for more information on setup and usage.[/]
