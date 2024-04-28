@@ -3,11 +3,11 @@ from rich import print
 
 def main():
     print("""[bold turquoise2]
-        o   O   o       o  o-o 
-        |  / \  |       | |    
-        | o---o o   o   o  o-o 
+        o   O   o       o  o-o
+        |  / \  |       | |
+        | o---o o   o   o  o-o
     \   o |   |  \ / \ /      |
-     o-o  o   o   o   o   o--o 
+     o-o  o   o   o   o   o--o
     [/bold turquoise2]""")
 
     print("""
