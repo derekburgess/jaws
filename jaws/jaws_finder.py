@@ -87,7 +87,7 @@ def main():
     distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    fig1 = plt.figure(num='k-distance', figsize=(12, 4))
+    fig1 = plt.figure(num='k-distance', figsize=(12, 3))
     fig1.canvas.manager.window.wm_geometry("+1300+50")
     plt.plot(sorted_k_distances, marker='s', color='green', linestyle='-', linewidth=0.5)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
@@ -118,7 +118,7 @@ def main():
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='winter', alpha=0.1, edgecolors='none', marker='o', s=150, zorder=2)
+                        c=clusters[clustered_indices], cmap='ocean', alpha=0.1, edgecolors='none', marker='o', s=150, zorder=2)
 
     outlier_indices = clusters == -1
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
@@ -137,7 +137,7 @@ def main():
         if clusters[i] != -1:
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
 
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0)
+            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
 
             label_position_key = random.choice(list(position_options.keys()))
             label_position = position_options[label_position_key]
@@ -151,11 +151,11 @@ def main():
                         verticalalignment=label_position['verticalalignment'],
                         xytext=label_position['offset'],
                         textcoords='offset points',
-                        alpha=0,
+                        alpha=0.8,
                         zorder=1)
         else:
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#666666', edgecolor='none', alpha=0.8)
+            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
             
             plt.annotate(annotation_text, 
                         (principal_components[i, 0], principal_components[i, 1]), 
@@ -166,7 +166,7 @@ def main():
                         verticalalignment='bottom',
                         xytext=(0,10),
                         textcoords='offset points',
-                        alpha=0.8,
+                        alpha=0.9,
                         zorder=10)
 
 
@@ -174,6 +174,22 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
+
+    fig = plt.figure(num='Size through Port', figsize=(12, 6))
+    fig.canvas.manager.window.wm_geometry("+1300+450")
+
+    for i, item in enumerate(data):
+        size = item.get('size')
+        dst_port = item.get('dst_port')
+        plt.scatter(size, dst_port, c=size, cmap='ocean', alpha=0.2, zorder=10, s=50, marker='^')
+
+    plt.xlabel('Size', fontsize=8)
+    plt.ylabel('Port', fontsize=8)
+    plt.xticks(fontsize=6)
+    plt.yticks(fontsize=6)
+    plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
+    plt.tight_layout()
+
     plt.show()
 
 
