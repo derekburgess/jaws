@@ -13,10 +13,6 @@ def main():
     """)
 
     print("""
-    [indian_red]RECOMMENDED: Review the README for more information on setup and usage.[/]
-    """)
-
-    print("""
     [gray70]From the JAWS root directory:[/]
     [grey100]docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .[/]
     [grey100]docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms[/]
