@@ -70,7 +70,7 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
 
     fig = plt.figure(num='Size over Port', figsize=(6, 3))
-    fig.canvas.manager.window.wm_geometry("+1000+450")
+    fig.canvas.manager.window.wm_geometry("+1100+500")
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -97,7 +97,7 @@ def main():
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
     fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
-    fig1.canvas.manager.window.wm_geometry("+1000+10")
+    fig1.canvas.manager.window.wm_geometry("+1100+10")
     plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=6)
