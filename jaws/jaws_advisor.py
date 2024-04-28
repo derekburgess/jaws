@@ -63,7 +63,7 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"Passing: {df.shape[0]} packets:")
+        print(f"Passing: {df.shape[0]} packets (snapshot below)")
         df = df.sample(frac=1)
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
@@ -103,6 +103,7 @@ class SummarizeLlama:
             top_p=0.9,
         )
         response = outputs[0][input_ids.shape[-1]:]
+        print("Response from Meta Llama-3 8B Instruct:")
         print(self.tokenizer.decode(response, skip_special_tokens=True))
 
 
@@ -118,6 +119,7 @@ class SummarizeOpenAI:
                 {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
             ]
         )
+        print("Response from OpenAI GPT-3.5 Turbo 16k:")
         print(completion.choices[0].message.content)
 
 
