@@ -83,7 +83,7 @@ class TransformStarCoder:
         self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
-        self.model_name = "bigcode/starcoder2-15b"
+        self.model_name = "bigcode/starcoder2-3b"
         self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token)
@@ -120,7 +120,7 @@ class TransformStarCoder:
             embedding = self.compute_starcoder_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org-embedding(StarCoder2-15b-quantization)")
+                print("Computed org-embedding(StarCoder2-3b-quantization)")
                 print(org_string, "\n")
 
     def transform(self, transform_type):

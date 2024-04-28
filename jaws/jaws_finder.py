@@ -22,7 +22,7 @@ def fetch_data(driver, database, type):
 
     query = f"""
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
-    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
+    MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
     WHERE {where_clause}
     RETURN src.src_address AS src_ip, 
         src.src_port AS src_port,
@@ -30,7 +30,7 @@ def fetch_data(driver, database, type):
         dst.dst_port AS dst_port, 
         p.protocol AS protocol,
         p.size AS size,
-        org.name AS org,
+        org.org AS org,
         org.hostname AS hostname,
         org.location AS location,
         {embedding} AS embedding
@@ -75,7 +75,7 @@ def main():
     for i, item in enumerate(data):
         size = item.get('size')
         dst_port = item.get('dst_port')
-        plt.scatter(size, dst_port, c=size, cmap='ocean', alpha=0.2, zorder=10, s=50, marker='^')
+        plt.scatter(size, dst_port, c=size, cmap='winter', alpha=0.1, zorder=10, s=50, marker='^')
 
     plt.xlabel('Size', fontsize=6)
     plt.ylabel('Port', fontsize=6)
@@ -98,7 +98,7 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     fig1 = plt.figure(num='K-Distance', figsize=(12, 3))
     fig1.canvas.manager.window.wm_geometry("+1300+50")
-    plt.plot(sorted_k_distances, marker='s', color='green', linestyle='-', linewidth=0.5)
+    plt.plot(sorted_k_distances, marker='o', color='blue', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=6)
     plt.yticks(fontsize=6)
@@ -122,7 +122,7 @@ def main():
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='ocean', alpha=0.1, edgecolors='none', marker='o', s=150, zorder=2)
+                        c=clusters[clustered_indices], cmap='winter', alpha=0.1, edgecolors='none', marker='o', s=150, zorder=2)
 
     outlier_indices = clusters == -1
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
