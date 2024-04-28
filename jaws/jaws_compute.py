@@ -103,7 +103,7 @@ class TransformStarCoder:
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print("Computed packet-embedding(StarCoder2-15b-quantization)")
+                print("Computed packet-embedding(StarCoder2-3b-quantization)")
                 print(packet_string, "\n")
 
     def process_starcoder_org(self):
