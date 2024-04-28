@@ -32,7 +32,7 @@ def main():
 
     print("""
     [gray70]To process packets or orgs into embeddings:[/]
-    [grey100]jaws-embedd[/] [gray70]OPTIONAL[/] [grey100]--api 'starcoder' (or openai) --type 'packets' (or orgs) --database 'captures'[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'starcoder' (or openai) --type 'packets' (or orgs) --database 'captures'[/]
     """)
    
     print("""

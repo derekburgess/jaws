@@ -52,7 +52,7 @@ def process_packet(packet, driver, database):
         packet_data["dst_ip"] = packet.ip.dst
         packet_data["dst_port"] = int(packet[packet.transport_layer].dstport) if hasattr(packet, 'transport_layer') and packet.transport_layer and packet[packet.transport_layer].dstport.isdigit() else 0
 
-    print(f" <<<< protocol: {packet_data['protocol']} | src_ip: {packet_data['src_ip']} : {packet_data['src_port']} ( {packet_data['src_mac']} ) dst_ip: {packet_data['dst_ip']} : {packet_data['dst_port']} ( {packet_data['dst_mac']} ) ~size: {packet_data['size']} [PAYLOAD NOT DISPLAYED] {packet_data['timestamp']} >>>> ")
+    print(f"<<< PACKET CAPTURED {packet_data['src_ip']}:{packet_data['src_port']}({packet_data['src_mac']}) -> {packet_data['dst_ip']}:{packet_data['dst_port']}({packet_data['dst_mac']}) {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED] >>>")
 
     try:
         add_packet_to_neo4j(driver, packet_data, database)
@@ -64,10 +64,10 @@ def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database")
     parser.add_argument("--interface", default="Ethernet",
                         help="Specify the network interface to use (default: Ethernet)")
-    parser.add_argument("--database", default="captures",
-                        help="Specify the Neo4j database to connect to (default: captures)")
     parser.add_argument("--duration", type=int, default=10,
                         help="Specify the duration of the capture in seconds (default: 10)")
+    parser.add_argument("--database", default="captures",
+                        help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)

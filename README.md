@@ -23,14 +23,14 @@ To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](http
 
 - `IPINFO_API_KEY`
 
-`jaws-embedd` is defaulted to use bigcode/starcoder2-15b set to 8bit quant using BitsAndBytes.
+`jaws-compute` is defaulted to use bigcode/starcoder2-15b set to 8bit quant using BitsAndBytes.
 `jaws-advisor` is defaulted to use meta-llama/Meta-Llama-3-8B-Instruct.
 
 Both models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, Starcode-2-15b is very large... Either way, create env variables for:
 
 - `HUGGINGFACE_KEY`
 
-Lastly, both `jaws-embedd` and `jaws-advisor` can be set to use `--type "openai"` and in turn, text-embedding-3-large and gpt-3.5-turbo-16k. This option requires that you have an OpenAI account and create env variables for: 
+Lastly, both `jaws-compute` and `jaws-advisor` can be set to use `--type "openai"` and in turn, text-embedding-3-large and gpt-3.5-turbo-16k. This option requires that you have an OpenAI account and create env variables for: 
 
 - `OPENAI_API_KEY`
 
@@ -78,7 +78,7 @@ Run `jaws-guide` for instructions and commend overview.
 
 Run `jaws-capture` with `--interface`, `--database`, and `--duration` in seconds to capture packets.
 
-Defaults: `jaws-capture --interface "Ethernet" --database "captures" --duration 10`
+Defaults: `jaws-capture --interface "Ethernet" --duration 10 --database "captures"`
 
 
 Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`.
@@ -86,9 +86,9 @@ Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`.
 Defaults: `jaws-ipinfo --database "captures"`
 
 
-Run `jaws-embedd` with `--api` and either `openai` or `starcoder` to transform either `--type` `packets` or `orgs` into embeddings.
+Run `jaws-compute` with `--api` and either `openai` or `starcoder` to transform either `--type` `packets` or `orgs` into embeddings.
 
-Defaults: `jaws-embedd --api "starcoder" --type "packets" --database "captures"`
+Defaults: `jaws-compute --api "starcoder" --type "packets" --database "captures"`
 
 
 Run `jaws-finder` with either `--type` `packets` or `orgs` to process embeddings and display cluster plots.

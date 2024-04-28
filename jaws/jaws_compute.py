@@ -98,7 +98,7 @@ class TransformStarCoder:
 
     def process_starcoder_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f"( NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']} ) - [ OWNERSIP ] -> ( NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']}) ) - [ PACKET: procotol: {row['protocol']} size:{row['size']} ] -> ( NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) )"
+            packet_string = f"(NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']}) - [OWNERSIP] -> (NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_starcoder_embedding(packet_string)
             if embedding is not None:
@@ -129,7 +129,7 @@ class TransformStarCoder:
             if not df.empty:
                 self.process_starcoder_packet(df)
             else:
-                print("Noting to process.")
+                print("No entities left to compute")
         elif transform_type == 'orgs':
             self.process_starcoder_org()
 
@@ -152,7 +152,7 @@ class TransformOpenAI:
 
     def process_openai_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f"( NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']} ) - [ OWNERSIP ] -> ( NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']}) ) - [ PACKET: procotol: {row['protocol']} size:{row['size']} ] -> ( NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}) )"
+            packet_string = f"(NODE: ORG {row['org']}, {row['hostname']}, location: {row['location']}) - [OWNERSIP] -> (NODE: SRC_IP {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE: DST_IP {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
@@ -183,7 +183,7 @@ class TransformOpenAI:
             if not df.empty:
                 self.process_openai_packet(df)
             else:
-                print("Noting to process.")
+                print("No entities left to compute")
         elif transform_type == 'orgs':
             self.process_openai_org()
 
