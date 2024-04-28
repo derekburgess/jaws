@@ -31,18 +31,18 @@ def main():
     """)
 
     print("""
-    [gray70]To process packets or orgs into embeddings:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'starcoder' (or openai) --type 'packet' (or org) --database 'captures'[/]
+    [gray70]To process packets or organization sets into embeddings:[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'starcoder') --type 'packet' (or 'org') --database 'captures'[/]
     """)
    
     print("""
     [gray70]To view cluster plots of packet embeddings:[/]
-    [grey100]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packet' (or org) --database 'captures'[/]
+    [grey100]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packet' (or 'org') --database 'captures'[/]
     """)
           
     print("""
     [gray70]To generate an analysis:[/]
-    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'llama' (or openai) --database 'captures'[/]
+    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'llama') --database 'captures'[/]
     """)
           
     print("""
