@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 def fetch_data(driver, database, type):
-    if type == "orgs":
+    if type == "org":
         embedding = "org.org_embedding"
         where_clause = "org IS NOT NULL AND org.org_embedding IS NOT NULL"
     else:
@@ -57,8 +57,8 @@ def fetch_data(driver, database, type):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="packets",
-                        help="Specify the packet string type to pass (default: packets)")
+    parser.add_argument("--type", choices=["packet", "org"], default="packet",
+                        help="Specify the packet string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
     
@@ -68,6 +68,21 @@ def main():
     password = os.getenv("LOCAL_NEO4J_PASSWORD")
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
+
+    fig = plt.figure(num='Size over Port', figsize=(12, 6))
+    fig.canvas.manager.window.wm_geometry("+1300+450")
+
+    for i, item in enumerate(data):
+        size = item.get('size')
+        dst_port = item.get('dst_port')
+        plt.scatter(size, dst_port, c=size, cmap='ocean', alpha=0.2, zorder=10, s=50, marker='^')
+
+    plt.xlabel('Size', fontsize=6)
+    plt.ylabel('Port', fontsize=6)
+    plt.xticks(fontsize=6)
+    plt.yticks(fontsize=6)
+    plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
+    plt.tight_layout()
 
     print(f"Performing PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
@@ -85,8 +100,8 @@ def main():
     fig1.canvas.manager.window.wm_geometry("+1300+50")
     plt.plot(sorted_k_distances, marker='s', color='green', linestyle='-', linewidth=0.5)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
-    plt.xticks(fontsize=8)
-    plt.yticks(fontsize=8)
+    plt.xticks(fontsize=6)
+    plt.yticks(fontsize=6)
     plt.tight_layout()
 
     print("Using Kneed to recommend EPS")
@@ -157,21 +172,6 @@ def main():
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
-    plt.tight_layout()
-
-    fig = plt.figure(num='Size over Port', figsize=(12, 6))
-    fig.canvas.manager.window.wm_geometry("+1300+450")
-
-    for i, item in enumerate(data):
-        size = item.get('size')
-        dst_port = item.get('dst_port')
-        plt.scatter(size, dst_port, c=size, cmap='ocean', alpha=0.2, zorder=10, s=50, marker='^')
-
-    plt.xlabel('Size', fontsize=8)
-    plt.ylabel('Port', fontsize=8)
-    plt.xticks(fontsize=6)
-    plt.yticks(fontsize=6)
-    plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
 
     plt.show()

@@ -124,13 +124,13 @@ class TransformStarCoder:
                 print(org_string, "\n")
 
     def transform(self, transform_type):
-        if transform_type == 'packets':
+        if transform_type == 'packet':
             df = fetch_packet_data(self.database)
             if not df.empty:
                 self.process_starcoder_packet(df)
             else:
                 print("No entities left to compute")
-        elif transform_type == 'orgs':
+        elif transform_type == 'org':
             self.process_starcoder_org()
 
         self.driver.close()
@@ -178,13 +178,13 @@ class TransformOpenAI:
                 print(org_string, "\n")
 
     def transform(self, transform_type):
-        if transform_type == 'packets':
+        if transform_type == 'packet':
             df = fetch_packet_data(self.database)
             if not df.empty:
                 self.process_openai_packet(df)
             else:
                 print("No entities left to compute")
-        elif transform_type == 'orgs':
+        elif transform_type == 'org':
             self.process_openai_org()
 
         self.driver.close()
@@ -193,8 +193,8 @@ def main():
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
     parser.add_argument("--api", choices=["openai", "starcoder"], default="starcoder",
                         help="Specify the api to use for embedding processing (default: starcoder)")
-    parser.add_argument("--type", choices=["packets", "orgs"], default="packets",
-                        help="Specify the packet string type to pass (default: packets)")
+    parser.add_argument("--type", choices=["packet", "org"], default="packet",
+                        help="Specify the packet string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 
