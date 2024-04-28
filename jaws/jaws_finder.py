@@ -1,5 +1,4 @@
 import os
-import time
 import random
 import argparse
 from neo4j import GraphDatabase
@@ -68,26 +67,21 @@ def main():
     username = os.getenv("LOCAL_NEO4J_USERNAME")
     password = os.getenv("LOCAL_NEO4J_PASSWORD")
     driver = GraphDatabase.driver(uri, auth=(username, password))
-
-    start_time = time.time()
     embeddings, data = fetch_data(driver, args.database, args.type)
-    num_embeddings = len(embeddings)
 
-
-    print(f"Performing PCA on {num_embeddings} embeddings")
+    print(f"Performing PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
 
-
-    print("Measuring k-distance")
+    print("Measuring K-Distance")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(embeddings_scaled)
     distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    fig1 = plt.figure(num='k-distance', figsize=(12, 3))
+    fig1 = plt.figure(num='K-Distance', figsize=(12, 3))
     fig1.canvas.manager.window.wm_geometry("+1300+50")
     plt.plot(sorted_k_distances, marker='s', color='green', linestyle='-', linewidth=0.5)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
@@ -95,26 +89,21 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
 
-
     print("Using Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
-    user_input = input(f"Knee(d) Point: {eps_value} | Press enter to accept, or enter a specific EPS value: ")
+    user_input = input(f"Kneed Point: {eps_value:.6f} | Press ENTER to accept, or provide an EPS value: ")
     if user_input:
         try:
             eps_value = float(user_input)
         except ValueError:
             print("Invalid input. Using the original EPS value...")
 
-
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(embeddings_scaled)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
 
-
-    fig2 = plt.figure(num=f'PCA/DBSCAN | {int(num_embeddings)} Embeddings | n_components/samples: 2, eps: {eps_value} | Time: {int(elapsed_time)} seconds', figsize=(12, 10))
+    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(12, 10))
     fig2.canvas.manager.window.wm_geometry("+50+50")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
@@ -124,7 +113,6 @@ def main():
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
                 color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=10)
 
-
     position_options = {
         'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},
         'bottom': {'offset': (0, -10), 'horizontalalignment': 'center', 'verticalalignment': 'top'},
@@ -132,13 +120,10 @@ def main():
         'left': {'offset': (-10, 0), 'horizontalalignment': 'right', 'verticalalignment': 'center'}
     }
 
-
     for i, item in enumerate(data):
         if clusters[i] != -1:
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
-
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
-
             label_position_key = random.choice(list(position_options.keys()))
             label_position = position_options[label_position_key]
             
@@ -169,13 +154,12 @@ def main():
                         alpha=0.9,
                         zorder=10)
 
-
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
 
-    fig = plt.figure(num='Size through Port', figsize=(12, 6))
+    fig = plt.figure(num='Size over Port', figsize=(12, 6))
     fig.canvas.manager.window.wm_geometry("+1300+450")
 
     for i, item in enumerate(data):
