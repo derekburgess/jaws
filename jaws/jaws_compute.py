@@ -174,7 +174,7 @@ class TransformOpenAI:
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org-embedding(OpenAI)")
+                print("Computed org-embedding(OpenAI text-embedding-3-large)")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
