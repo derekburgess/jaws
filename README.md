@@ -60,7 +60,7 @@ Install JAWS:
 
 ### Neo4j Docker Container
 
-The Neo4j setup really only supports 1 container/dbms running at a time, the commands to do not support passing all of the configurations needed. All of the commands accept the `--database` flag, which defaults to "captures". Run these commands and operating a single container, ignoring the --database flag altogether, should work. Changing "captures" in the commands below, will require passing that database name with every command.
+The Neo4j setup really only supports 1 container/dbms running at a time ("captures"), the commands currently do not support passing all of the configurations needed. All of the commands do accept the `--database` flag, which defaults to "captures". Run the commands and operating a single container, ignoring the --database flag altogether, should work. Changing "captures" in the dockerfile and in commands below, will require passing that database name with every command.
 
 From the JAWS root directory run: 
 
