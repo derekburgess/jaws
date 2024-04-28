@@ -74,33 +74,3 @@ Install JAWS:
 ## Running and Commands
 
 Run `jaws-guide` for instructions and commend overview.
-
-
-Run `jaws-capture` with `--interface`, `--database`, and `--duration` in seconds to capture packets.
-
-Defaults: `jaws-capture --interface "Ethernet" --duration 10 --database "captures"`
-
-
-Run `jaws-ipinfo` to gather intel on IP Addresses using: `ipinfo.io`.
-
-Defaults: `jaws-ipinfo --database "captures"`
-
-
-Run `jaws-compute` with `--api` and either `openai` or `starcoder` to transform either `--type` `packets` or `orgs` into embeddings.
-
-Defaults: `jaws-compute --api "starcoder" --type "packets" --database "captures"`
-
-
-Run `jaws-finder` with either `--type` `packets` or `orgs` to process embeddings and display cluster plots.
-
-Defaults: `jaws-finder --type "packets" --database "captures"`
-
-
-Run `jaws-advisor` with `--api` and either `openai` or `llama` to send network traffic snapshots and return network traffic analysis.
-
-Defaults: `jaws-advisor --api "llama" --database "captures"`
-
-
-Run `jaws-clear` to clear the database...
-
-`jaws-clear --database "captures"`
