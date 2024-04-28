@@ -93,7 +93,7 @@ def main():
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(embeddings_scaled)
-    distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
+    distances, _ = nearest_neighbors.kneighbors(embeddings_scaled)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
     fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
@@ -108,7 +108,7 @@ def main():
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
-    user_input = input(f"Kneed Point: {eps_value:.6f} | Press ENTER to accept, or provide an EPS value: ")
+    user_input = input(f"Kneed Point: {eps_value:.10f} | Press ENTER to accept, or provide an EPS value: ")
     if user_input:
         try:
             eps_value = float(user_input)
