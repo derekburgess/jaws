@@ -84,7 +84,7 @@ def main():
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
 
-    print(f"Performing PCA on Embeddings")
+    print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
