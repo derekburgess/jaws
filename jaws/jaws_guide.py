@@ -36,12 +36,12 @@ def main():
     """)
    
     print("""
-    [gray70]To view cluster plots of packet embeddings:[/]
+    [gray70]To view cluster plots of embeddings:[/]
     [grey100]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packet' (or 'org') --database 'captures'[/]
     """)
           
     print("""
-    [gray70]To generate an analysis:[/]
+    [gray70]To generate an 'expert' analysis:[/]
     [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'llama') --database 'captures'[/]
     """)
           
