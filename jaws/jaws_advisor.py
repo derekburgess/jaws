@@ -63,7 +63,7 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
             })
         df = pd.DataFrame(data)
-        print(f"Passing: {df.shape[0]} packets (snapshot below)")
+        print(f"Passing {df.shape[0]} packets (snapshot below):")
         df = df.sample(frac=1)
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
