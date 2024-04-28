@@ -35,18 +35,6 @@ Lastly, both `jaws-compute` and `jaws-advisor` can be set to use `--type "openai
 - `OPENAI_API_KEY`
 
 
-### Neo4j Docker Container
-
-From the JAWS root directory run: 
-
-`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .` 
-
-
-Then run: 
-
-`docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`
-
-
 ### Installation
 
 Install dependencies:
@@ -69,6 +57,18 @@ Install dependencies for quantization:
 Install JAWS:
 
 `pip install -e .`
+
+
+### Neo4j Docker Container
+
+From the JAWS root directory run: 
+
+`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .` 
+
+
+Then run: 
+
+`docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`
 
 
 ## Running and Commands
