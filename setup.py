@@ -91,6 +91,7 @@ setup(
        'console_scripts': [
            'jaws-guide = jaws.jaws_guide:main',
            'jaws-capture = jaws.jaws_capture:main',
+           'jaws-import = jaws.jaws_import:main',
            'jaws-ipinfo = jaws.jaws_ipinfo:main',
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
