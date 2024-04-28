@@ -19,20 +19,19 @@ JAWS also uses a Neo4j graph database. You can run the docker container, or inst
 
 ### Additional Services
 
-To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](https://ipinfo.io/), and create env variables for:
+To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](https://ipinfo.io/), and create an env variable for:
 
 - `IPINFO_API_KEY`
 
-`jaws-compute` is defaulted to use bigcode/starcoder2-3b set to 8bit quant using BitsAndBytes.
-`jaws-advisor` is defaulted to use meta-llama/Meta-Llama-3-8B-Instruct.
 
-Both models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, Starcode-2-15b is very large... Either way, create env variables for:
-
-- `HUGGINGFACE_KEY`
-
-Lastly, both `jaws-compute` and `jaws-advisor` can be set to use `--type "openai"` and in turn, text-embedding-3-large and gpt-3.5-turbo-16k. This option requires that you have an OpenAI account and create env variables for: 
+Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-16k) are set to use `--api "openai"` by default. These commands require that you have an OpenAI account and create an env variable for: 
 
 - `OPENAI_API_KEY`
+
+
+Optional: By passing `--api`, both scripts can pull and run local models. Passing `starcoder` to `jaws-compute` will use bigcode/starcoder2-3b and passing `llama` to `jaws-advisor` will use meta-llama/Meta-Llama-3-8B-Instruct. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
+
+- `HUGGINGFACE_KEY`
 
 
 ### Installation
