@@ -22,7 +22,7 @@ def main():
 
     print("""
     [gray70]To collect packets:[/]
-    [grey100]jaws-capture[/] [gray70]OPTIONAL[/] [grey100]--interface 'Ethernet' --database 'captures' --duration 10[/]
+    [grey100]jaws-capture[/] [gray70]OPTIONAL[/] [grey100]--interface 'Ethernet' --duration 10 --database 'captures'[/]
     """)
 
     print("""
