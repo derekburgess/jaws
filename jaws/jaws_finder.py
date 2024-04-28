@@ -69,13 +69,13 @@ def main():
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
 
-    fig = plt.figure(num='Size over Port', figsize=(12, 6))
-    fig.canvas.manager.window.wm_geometry("+1300+450")
+    fig = plt.figure(num='Size over Port', figsize=(5, 3))
+    fig.canvas.manager.window.wm_geometry("+750+310")
 
     for i, item in enumerate(data):
         size = item.get('size')
         dst_port = item.get('dst_port')
-        plt.scatter(size, dst_port, c=size, cmap='winter', alpha=0.1, zorder=10, s=50, marker='^')
+        plt.scatter(size, dst_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
 
     plt.xlabel('Size', fontsize=6)
     plt.ylabel('Port', fontsize=6)
@@ -96,9 +96,9 @@ def main():
     distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    fig1 = plt.figure(num='K-Distance', figsize=(12, 3))
-    fig1.canvas.manager.window.wm_geometry("+1300+50")
-    plt.plot(sorted_k_distances, marker='o', color='blue', linestyle='-', linewidth=0.5, alpha=0.8)
+    fig1 = plt.figure(num='K-Distance', figsize=(5, 2))
+    fig1.canvas.manager.window.wm_geometry("+750+10")
+    plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=6)
     plt.yticks(fontsize=6)
@@ -118,15 +118,15 @@ def main():
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(embeddings_scaled)
 
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(12, 10))
-    fig2.canvas.manager.window.wm_geometry("+50+50")
+    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(7, 6))
+    fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='winter', alpha=0.1, edgecolors='none', marker='o', s=150, zorder=2)
+                        c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='o', s=50, alpha=0.1, zorder=2)
 
     outlier_indices = clusters == -1
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-                color='red', alpha=0.8, marker='^', s=100, label='Outliers', zorder=10)
+                color='red', marker='^', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     position_options = {
         'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},
