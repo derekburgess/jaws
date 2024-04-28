@@ -69,8 +69,8 @@ def main():
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
 
-    fig = plt.figure(num='Size over Port', figsize=(5, 3))
-    fig.canvas.manager.window.wm_geometry("+750+310")
+    fig = plt.figure(num='Size over Port', figsize=(6, 4))
+    fig.canvas.manager.window.wm_geometry("+850+410")
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -96,8 +96,8 @@ def main():
     distances, indices = nearest_neighbors.kneighbors(embeddings_scaled)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    fig1 = plt.figure(num='K-Distance', figsize=(5, 2))
-    fig1.canvas.manager.window.wm_geometry("+750+10")
+    fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
+    fig1.canvas.manager.window.wm_geometry("+850+10")
     plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=6)
@@ -118,7 +118,7 @@ def main():
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(embeddings_scaled)
 
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(7, 6))
+    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
     scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
