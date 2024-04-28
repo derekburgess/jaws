@@ -28,6 +28,11 @@ def main():
     """)
 
     print("""
+    [gray70]To import packets from capture files (pcapng):[/]
+    [grey100]jaws-import --file PATH/TO/FILE [gray70]OPTIONAL[/] --database 'captures'[/]
+    """)
+
+    print("""
     [gray70]To investigate IP Addresses:[/]
     [grey100]jaws-ipinfo[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
     """)
