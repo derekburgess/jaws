@@ -39,7 +39,7 @@ def fetch_data(driver, database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
     OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
-    RETURN src.src_address AS src_ip, 
+    RETURN DISTINCT src.src_address AS src_ip, 
         src.src_port AS src_port,
         dst.dst_address AS dst_ip,  
         dst.dst_port AS dst_port,
