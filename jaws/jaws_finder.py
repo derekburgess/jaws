@@ -69,18 +69,19 @@ def main():
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
 
+    # Plot the size of packets over source ports
     fig = plt.figure(num='Size over Port', figsize=(6, 3))
     fig.canvas.manager.window.wm_geometry("+1100+500")
 
     for i, item in enumerate(data):
         size = item.get('size')
-        dst_port = item.get('dst_port')
-        plt.scatter(size, dst_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
+        src_port = item.get('src_port')
+        plt.scatter(size, src_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
 
     plt.xlabel('Size', fontsize=6)
     plt.ylabel('Port', fontsize=6)
-    plt.xticks(fontsize=6)
-    plt.yticks(fontsize=6)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
 
@@ -103,12 +104,13 @@ def main():
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
     
+    # Plot the sorted K-Distance
     fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
     fig1.canvas.manager.window.wm_geometry("+1100+10")
     plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
-    plt.xticks(fontsize=6)
-    plt.yticks(fontsize=6)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
     plt.tight_layout()
 
     print("Using Kneed to recommend EPS")
@@ -125,6 +127,7 @@ def main():
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
+    # Plot the PCA/DBSCAN Outliers
     fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value:.10f}', figsize=(8, 7))
     fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
@@ -144,6 +147,7 @@ def main():
 
     for i, item in enumerate(data):
         if clusters[i] != -1:
+            # Non-Outlier
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
             label_position_key = random.choice(list(position_options.keys()))
@@ -161,6 +165,7 @@ def main():
                         alpha=0.8,
                         zorder=1)
         else:
+            # Outlier
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
             
