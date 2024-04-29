@@ -122,7 +122,7 @@ def main():
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
-    user_input = input(f"Recommended EPS: {eps_value:.10f} | Press ENTER to accept, or provide a value: ")
+    user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
     if user_input:
         try:
             eps_value = float(user_input)
@@ -133,7 +133,7 @@ def main():
     clusters = dbscan.fit_predict(principal_components)
 
     # Plot the PCA/DBSCAN Outliers
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value:.10f}', figsize=(8, 7))
+    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
     non_outlier_scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 

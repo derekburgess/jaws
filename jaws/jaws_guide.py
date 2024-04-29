@@ -35,7 +35,7 @@ def main():
 
     print("""
     [gray70]To process packets or organization sets into embeddings:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'starcoder') --type 'packet' (or 'org') --database 'captures'[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures'[/]
     """)
    
     print("""
@@ -45,7 +45,7 @@ def main():
           
     print("""
     [gray70]To generate an 'expert' analysis:[/]
-    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'llama') --database 'captures'[/]
+    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --database 'captures'[/]
     """)
           
     print("""

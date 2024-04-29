@@ -29,7 +29,7 @@ Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-1
 - `OPENAI_API_KEY`
 
 
-Optional: By passing `--api`, both scripts can pull and run local models. Passing `starcoder` to `jaws-compute` will use bigcode/starcoder2-3b and passing `llama` to `jaws-advisor` will use meta-llama/Meta-Llama-3-8B-Instruct. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
+Optional: By passing `--api transformers`, both scripts can pull and run local models. `jaws-compute` currently uses `bigcode/starcoder2-3b` and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct`. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
 
 - `HUGGINGFACE_KEY`
 

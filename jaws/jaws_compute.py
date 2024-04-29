@@ -77,7 +77,7 @@ def update_org(org, embedding, database):
         session.run(query, org=org, embedding=embedding)
 
 
-class TransformStarCoder:
+class ComputeTransformers:
     def __init__(self, driver, database):
         self.driver = driver
         self.database = database
@@ -88,7 +88,7 @@ class TransformStarCoder:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token)
 
-    def compute_starcoder_embedding(self, packet_string):
+    def compute_transformer_embedding(self, packet_string):
         inputs = self.tokenizer(packet_string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs, output_hidden_states=True)
@@ -96,17 +96,17 @@ class TransformStarCoder:
         embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
         return embeddings
 
-    def process_starcoder_packet(self, df):
+    def process_transformer_packet(self, df):
         for _, row in df.iterrows():
             packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
-            embedding = self.compute_starcoder_embedding(packet_string)
+            embedding = self.compute_transformer_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print("Computed packet-embedding(StarCoder2-3b-quantization)")
+                print(f"Computed packet-embedding({self.model_name})")
                 print(packet_string, "\n")
 
-    def process_starcoder_org(self):
+    def process_transformer_org(self):
         df = fetch_org_data(self.database)
         for _, row in df.iterrows():
             org_string = f"""
@@ -117,34 +117,35 @@ class TransformStarCoder:
             Source Ports: {', '.join(map(str, row['src_ports']))}
             Source MACs: {', '.join(row['src_macs'])}
             """
-            embedding = self.compute_starcoder_embedding(org_string)
+            embedding = self.compute_transformer_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org-embedding(StarCoder2-3b-quantization)")
+                print(f"Computed org-embedding({self.model_name})")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
         if transform_type == 'packet':
             df = fetch_packet_data(self.database)
             if not df.empty:
-                self.process_starcoder_packet(df)
+                self.process_transformer_packet(df)
             else:
                 print("No entities left to compute")
         elif transform_type == 'org':
-            self.process_starcoder_org()
+            self.process_transformer_org()
 
         self.driver.close()
 
 
-class TransformOpenAI:
+class ComputeOpenAI:
     def __init__(self, client, driver, database):
         self.client = client
         self.driver = driver
         self.database = database
+        self.model = "text-embedding-3-large"
 
     def compute_openai_embedding(self, text):
         try:
-            response = self.client.embeddings.create(input=text, model="text-embedding-3-large")
+            response = self.client.embeddings.create(input=text, model=self.model)
             return response.data[0].embedding
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -157,7 +158,7 @@ class TransformOpenAI:
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print("Computed packet-embedding(OpenAI text-embedding-3-large)")
+                print(f"Computed packet-embedding(OpenAI {self.model})")
                 print(packet_string, "\n")
 
     def process_openai_org(self):
@@ -174,7 +175,7 @@ class TransformOpenAI:
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print("Computed org-embedding(OpenAI text-embedding-3-large)")
+                print(f"Computed org-embedding(OpenAI {self.model})")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
@@ -190,22 +191,22 @@ class TransformOpenAI:
         self.driver.close()
 
 def main():
-    parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or StarCoder2 w/ Quantization.")
-    parser.add_argument("--api", choices=["openai", "starcoder"], default="openai",
-                        help="Specify the api to use for embedding processing (default: openai)")
+    parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or Transformers.")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai",
+                        help="Specify the api to use for computing embeddings, either openai or transformers (default: openai)")
     parser.add_argument("--type", choices=["packet", "org"], default="packet",
-                        help="Specify the packet string type to pass (default: packet)")
+                        help="Specify the embedding string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
 
-    if args.api == "starcoder":
-        transformer = TransformStarCoder(driver, args.database)
+    if args.api == "transformers":
+        transformer = ComputeTransformers(driver, args.database)
     elif args.api == "openai":
-        transformer = TransformOpenAI(client, driver, args.database)
+        transformer = ComputeOpenAI(client, driver, args.database)
     else:
-        print("Invalid API specified. Try openai or starcoder.")
+        print("Invalid API specified. Try openai or transformers.")
         exit(1)
 
     transformer.transform(args.type)

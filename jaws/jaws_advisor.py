@@ -70,7 +70,7 @@ def fetch_data(driver, database):
         return df_json
 
 
-class SummarizeLlama:
+class SummarizeTransformers:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
@@ -82,7 +82,7 @@ class SummarizeLlama:
             device_map="auto"
         )
 
-    def generate_summary_from_llama(self, system_prompt, df_json):
+    def generate_summary_from_transformers(self, system_prompt, df_json):
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Snapshot of network traffic: {df_json}"},
@@ -103,44 +103,45 @@ class SummarizeLlama:
             top_p=0.9,
         )
         response = outputs[0][input_ids.shape[-1]:]
-        print("\nResponse from Meta Llama-3 8B Instruct:")
+        print(f"\nResponse from {self.model_name}:")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
 
 class SummarizeOpenAI:
     def __init__(self, client):
         self.client = client
+        self.model_name = "gpt-3.5-turbo-16k"
 
     def generate_summary_from_openai(self, system_prompt, df_json):
         completion = self.client.chat.completions.create(
-            model="gpt-3.5-turbo-16k",
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
             ]
         )
-        print("\nResponse from OpenAI GPT-3.5 Turbo 16k:")
+        print(f"\nResponse from {self.model_name}")
         print(completion.choices[0].message.content, "\n")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Meta Llama-3 8B Instruct")
-    parser.add_argument("--api", choices=["openai", "llama"], default="openai",
-                        help="Specify the api to use for network traffic analysis (default: openai)")
+    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Transformers.")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai",
+                        help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
     df_json = fetch_data(driver, args.database)
 
-    if args.api == "llama":
-        transformer = SummarizeLlama()
-        transformer.generate_summary_from_llama(system_prompt, df_json)
+    if args.api == "transformers":
+        transformer = SummarizeTransformers()
+        transformer.generate_summary_from_transformers(system_prompt, df_json)
     elif args.api == "openai":
         transformer = SummarizeOpenAI(client)
         transformer.generate_summary_from_openai(system_prompt, df_json)
     else:
-        print("Invalid API specified. Try openai or llama.")
+        print("Invalid API specified. Try openai or transformers.")
 
 
 if __name__ == "__main__":
