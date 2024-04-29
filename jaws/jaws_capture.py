@@ -33,14 +33,14 @@ def add_packet_to_neo4j(driver, packet_data, database):
 def process_packet(packet, driver, database):
     packet_data = {
         "protocol": packet.highest_layer,
-        "src_ip": None,
-        "src_port": None,
-        "src_mac": packet.eth.src if 'ETH' in packet else None,
-        "dst_ip": None,
-        "dst_port": None,
-        "dst_mac": packet.eth.dst if 'ETH' in packet else None,
+        "src_ip": "0.0.0.0",
+        "src_port": 0,
+        "src_mac": packet.eth.src if 'ETH' in packet else "00:00:00:00:00:00",
+        "dst_ip": "0.0.0.0",
+        "dst_port": 0,
+        "dst_mac": packet.eth.dst if 'ETH' in packet else "00:00:00:00:00:00",
         "size": len(packet),
-        "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else None,
+        "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else "no_payload",
         "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
 
