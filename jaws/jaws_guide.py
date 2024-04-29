@@ -53,6 +53,11 @@ def main():
     [grey100]jaws-clear[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
     """)
 
+    print("""
+    [grey100]version 1.0.0[/]
+    [gray70]https://github.com/derekburgess/jaws[/]
+    """)
+
 
 if __name__ == "__main__":
     main()
