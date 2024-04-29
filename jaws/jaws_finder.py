@@ -78,8 +78,8 @@ def main():
         src_port = item.get('src_port')
         plt.scatter(size, src_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
 
-    plt.xlabel('Size', fontsize=6)
-    plt.ylabel('Port', fontsize=6)
+    plt.xlabel('SIZE', fontsize=8)
+    plt.ylabel('SRC_PORT', fontsize=8)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
