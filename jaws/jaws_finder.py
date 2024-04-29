@@ -70,16 +70,19 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
 
     # Plot the size of packets over source ports
-    fig = plt.figure(num='Size over Port', figsize=(6, 3))
+    fig = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 3))
     fig.canvas.manager.window.wm_geometry("+1100+500")
 
     for i, item in enumerate(data):
         size = item.get('size')
         src_port = item.get('src_port')
+        dst_port = item.get('dst_port')
         plt.scatter(size, src_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
+        plt.scatter(size, dst_port, c=size, cmap='ocean', marker='^', s=50, alpha=0.1, zorder=10)
 
-    plt.xlabel('SIZE', fontsize=8)
-    plt.ylabel('SRC_PORT', fontsize=8)
+    plt.xlabel('SIZE', fontsize=8, color='#666666')
+    plt.ylabel('SRC_PORT / DST_PORT', fontsize=8, color='#666666')
+    plt.legend(['SRC_PORT', 'DST_PORT'], loc='upper right', fontsize=8)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
@@ -105,10 +108,12 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     
     # Plot the sorted K-Distance
-    fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
+    fig1 = plt.figure(num='Sorted K-Distance', figsize=(6, 3))
     fig1.canvas.manager.window.wm_geometry("+1100+10")
-    plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
+    plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    plt.xlabel('INDEX', fontsize=8, color='#666666')
+    plt.ylabel('K-DISTANCE', fontsize=8, color='#666666')
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
@@ -182,6 +187,8 @@ def main():
                         zorder=10)
 
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    plt.xlabel('PC-1', fontsize=8, color='#666666')
+    plt.ylabel('PC-2', fontsize=8, color='#666666')
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
