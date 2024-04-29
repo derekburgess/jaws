@@ -92,10 +92,17 @@ def main():
     print("Measuring K-Distance")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
-    nearest_neighbors.fit(embeddings_scaled)
-    distances, _ = nearest_neighbors.kneighbors(embeddings_scaled)
+
+    if args.type == "packet":
+        nearest_neighbors.fit(principal_components)
+        distances, _ = nearest_neighbors.kneighbors(principal_components)
+    elif args.type == "org":
+        nearest_neighbors.fit(embeddings_scaled)
+        distances, _ = nearest_neighbors.kneighbors(embeddings_scaled)
+
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
+    
     fig1 = plt.figure(num='K-Distance', figsize=(6, 3))
     fig1.canvas.manager.window.wm_geometry("+1100+10")
     plt.plot(sorted_k_distances, color='blue', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
@@ -108,12 +115,12 @@ def main():
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
-    user_input = input(f"Kneed Point: {eps_value:.10f} | Press ENTER to accept, or provide an EPS value: ")
+    user_input = input(f"Recommended EPS: {eps_value:.10f} | Press ENTER to accept, or provide a value: ")
     if user_input:
         try:
             eps_value = float(user_input)
         except ValueError:
-            print("Invalid input. Using the original EPS value...")
+            print("Invalid input. Using the recommended EPS value...")
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
@@ -121,11 +128,11 @@ def main():
     fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value:.10f}', figsize=(8, 7))
     fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
-    scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
+    non_outlier_scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                         c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='o', s=50, alpha=0.1, zorder=2)
 
     outlier_indices = clusters == -1
-    plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
+    outlier_scatter = plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
                 color='red', marker='^', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     position_options = {
