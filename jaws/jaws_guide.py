@@ -54,7 +54,7 @@ def main():
     """)
 
     print("""
-    [grey100]version 1.0.0[/]
+    [grey100]version 1.0.0 BETA[/]
     [gray70]https://github.com/derekburgess/jaws[/]
     """)
 
