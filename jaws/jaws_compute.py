@@ -98,7 +98,7 @@ class ComputeTransformers:
 
     def process_transformer_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
+            packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_transformer_embedding(packet_string)
             if embedding is not None:
@@ -153,7 +153,7 @@ class ComputeOpenAI:
 
     def process_openai_packet(self, df):
         for _, row in df.iterrows():
-            packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
+            packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
