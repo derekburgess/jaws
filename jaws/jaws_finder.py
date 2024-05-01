@@ -71,7 +71,6 @@ def main():
 
     # Plot the size of packets over source ports
     fig = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
-    fig.canvas.manager.window.wm_geometry("+1100+300")
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -109,7 +108,6 @@ def main():
     
     # Plot the sorted K-Distance
     fig1 = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
-    fig1.canvas.manager.window.wm_geometry("+1100+10")
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xlabel('INDEX', fontsize=8, color='#666666')
@@ -134,7 +132,6 @@ def main():
 
     # Plot the PCA/DBSCAN Outliers
     fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
-    fig2.canvas.manager.window.wm_geometry("+10+10")
     clustered_indices = clusters != -1
     non_outlier_scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                         c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='o', s=50, alpha=0.1, zorder=2)
