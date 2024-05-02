@@ -130,6 +130,15 @@ def main():
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
+    print("\nList of ports and packet sizes:")
+    
+
+    print("\nList of outliers:")
+    for i, item in enumerate(data):
+        if clusters[i] == -1:
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
+            print(annotation_text, "\n")
+
     # Plot the PCA/DBSCAN Outliers
     fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
