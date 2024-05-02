@@ -36,26 +36,19 @@ Optional: By passing `--api transformers`, both scripts can pull and run local m
 
 ### Installation
 
-On some systems (mainly embedded linux systems I have tested on) torch will fail to install through requirements, so if you are also on one of these bespoke systsmes (such as arm), first run: 
-
-`pip install torch`
-
-
 Install dependencies:
 
 `pip install -r requirements.txt`
 
 
-On more common systems, or GPU enabled systems were you want to use CUDA, install Pytorch for CUDA:
+Note that JAWS was developed against CUDA 12+ but should work on CPU. On Linux/Mac and some systems (mainly embedded linux systems I have tested on) torch will fail to install through requirements.txt, so if you are also on one of these bespoke systsmes (such as arm/rpi), first run: `pip install torch`
 
-Note this was developed against CUDA 12+
-
-`pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121`
-
-Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
+On windows, runs: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
 
 If you plan to run `--api transformers`, StarCoder2 is set to use 8-bit quanitzation. Install dependencies:
+
+`pip install accelerate` -- Worth checking, I have seen this not installed from requirements.txt
 
 `pip install -i https://pypi.org/simple/ bitsandbytes`
 
