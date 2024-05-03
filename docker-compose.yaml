@@ -22,7 +22,7 @@ services:
       IPINFO_API_KEY: ${IPINFO_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       # HUGGINGFACE_KEY: ${HUGGINGFACE_KEY}
-      DOWNLOAD_FOLDER: /home
+      JAWS_SAVE_FIGS: /home
       # This does not use the host systems DOWNLOAD_FOLDER, but instead uses the container's /home directory
     depends_on:
       - neo4j
@@ -30,8 +30,8 @@ services:
     privileged: true
     command: ["tail", "-f", "/dev/null"]
     volumes:
-      - ${DOWNLOAD_FOLDER}:/home
-      # This uses the host systems DOWNLOAD_FOLDER, but mounts it to the container's /home directory
+      - ${JAWS_SAVE_FIGS}:/home
+      # This uses the host systems JAWS_SAVE_FIGS, but mounts it to the container's /home directory
       # This allows the files created by the container to be downloaded to the host system
 
 
