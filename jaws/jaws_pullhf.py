@@ -2,13 +2,13 @@ import os
 import subprocess
 
 def login_to_huggingface(token):
-    command = f"huggingface-cli login --token {token}"
+    command = f"huggingface-cli login --token {token} --add-to-git-credential"
     subprocess.run(command, shell=True)
 
 def pull_models():
     models = ["bigcode/starcoder2-3b", "meta-llama/Meta-Llama-3-8B-Instruct"]
     for model in models:
-        command = f"huggingface-cli repo download '{model}'"
+        command = f"huggingface-cli hf download --model-id '{model}'"
         subprocess.run(command, shell=True)
 
 if __name__ == "__main__":
@@ -18,4 +18,3 @@ if __name__ == "__main__":
         pull_models()
     else:
         print("Hugging Face token not found.")
-
