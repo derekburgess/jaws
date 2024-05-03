@@ -79,7 +79,7 @@ Then run:
 
 ### JAWS Docker Container
 
-Currently a work in progress. A fully containerized version of JAWS. Only works with the default parameters and OpenAI.
+Currently a work in progress....
 
 From the root directory run:
 
