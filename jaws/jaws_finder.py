@@ -68,9 +68,10 @@ def main():
     password = os.getenv("LOCAL_NEO4J_PASSWORD")
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
+    download_folder = os.getenv("DOWNLOAD_FOLDER")
 
     # Plot the size of packets over source ports
-    fig = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
+    fig1 = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -86,6 +87,8 @@ def main():
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
+    save_fig1 = os.path.join(download_folder, 'size_over_port.png')
+    plt.savefig(save_fig1)
 
     print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
@@ -107,7 +110,7 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     
     # Plot the sorted K-Distance
-    fig1 = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
+    fig2 = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xlabel('INDEX', fontsize=8, color='#666666')
@@ -115,6 +118,8 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
+    save_fig2 = os.path.join(download_folder, 'sorted_k_distance.png')
+    plt.savefig(save_fig2)
 
     print("Using Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
@@ -198,6 +203,8 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
+    save_outliers = os.path.join(download_folder, 'pca_dbscan_outliers.png')
+    plt.savefig(save_outliers)
 
     plt.show()
 
