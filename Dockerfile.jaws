@@ -27,4 +27,4 @@ RUN pip install accelerate
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install -e .
 
-CMD ["python3", "jaws_pullhf.py"]
+CMD ["python3", "jaws/jaws_pullhf.py"]
