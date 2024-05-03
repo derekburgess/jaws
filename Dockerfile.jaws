@@ -1,0 +1,30 @@
+FROM nvidia/cuda:12.4.1-base-ubuntu20.04
+
+RUN echo 'Acquire::ForceIPv4 "true";' | tee /etc/apt/apt.conf.d/99force-ipv4
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    git \
+    tshark
+
+ENV LOCAL_NEO4J_URI=${LOCAL_NEO4J_URI}
+ENV LOCAL_NEO4J_USERNAME=${LOCAL_NEO4J_USERNAME}
+ENV LOCAL_NEO4J_PASSWORD=${LOCAL_NEO4J_PASSWORD}
+ENV IPINFO_API_KEY=${IPINFO_API_KEY}
+ENV OPENAI_API_KEY=${OPENAI_API_KEY}
+ENV HUGGINGFACE_KEY=${HUGGINGFACE_KEY}
+ENV JAWS_SAVE_FIGS=/home
+# This does not use the host systems JAWS_SAVE_FIGS, but instead uses the container's /home directory
+
+WORKDIR /jaws
+
+RUN git clone https://github.com/derekburgess/jaws.git .
+RUN pip install -r requirements.txt
+RUN pip install torch
+RUN pip install accelerate
+RUN pip install -i https://pypi.org/simple/ bitsandbytes
+RUN pip install -e .
+
+CMD ["python3", "jaws_pullhf.py"]
