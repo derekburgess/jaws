@@ -34,6 +34,11 @@ Optional: By passing `--api transformers`, both scripts can pull and run local m
 - `HUGGINGFACE_KEY`
 
 
+Lastly, `jaws-finder` displays several plots using Matplot, but also saves those figures to a directory of your choice, using:
+
+- `JAWS_SAVE_FIGS`
+
+
 ### Installation
 
 Install dependencies:
@@ -74,7 +79,9 @@ Then run:
 
 ### JAWS Docker Container
 
-Currently work in progress. A fully containerized version of JAWS. Only works with the default parameters and OpenAI. From the root directory run:
+Currently a work in progress. A fully containerized version of JAWS. Only works with the default parameters and OpenAI.
+
+From the root directory run:
 
 `docker-compose up`
 
