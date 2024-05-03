@@ -27,4 +27,7 @@ RUN pip install accelerate
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install -e .
 
-#CMD ["python3", "jaws/jaws_pullhf.py"]
+RUN pip install -U "huggingface_hub[cli]"
+RUN huggingface-cli login --token $HUGGINGFACE_KEY
+RUN huggingface-cli download bigcode/starcoder2-3b
+RUN huggingface-cli download meta-llama/Meta-Llama-3-8B-Instruct
