@@ -1,19 +1,19 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a network analysis toolset that works with both CPU and GPU (CUDA), using Graph Databases (Neo4j currently) to provide: A shell pipeline for gathering network packets on a given interface and understanding various shapes of the network including scatter plots, DBSCAN outlier, subgraph analysis, and directed network graphs.
+JAWS is a shell pipeline for gathering network packets and storing them in a graph database (Neo4j), with the goal of understanding various shapes of the network including scatter plots, nearest neighbor, DBSCAN outlier, subgraph analysis, and directed network graphs.
 
 
 ## Setup
 
 JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
 
-JAWS also uses a Neo4j graph database. You can run the docker container, or install and run neo4j locally using their tool, https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
+JAWS also uses a Neo4j graph database. You can run the provided Neo4j docker container, or install and run neo4j locally using their tool: https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
 
 ### Set Environment Variables
 
-- `LOCAL_NEO4J_URI` (typically... bolt://localhost:7687)
-- `LOCAL_NEO4J_USERNAME` (default: neo4j)
+- `LOCAL_NEO4J_URI` (bolt://localhost:7687)
+- `LOCAL_NEO4J_USERNAME` (neo4j)
 - `LOCAL_NEO4J_PASSWORD` (you set)
 
 
@@ -29,7 +29,7 @@ Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-1
 - `OPENAI_API_KEY`
 
 
-Optional: By passing `--api transformers`, both scripts can pull and run local models. `jaws-compute` currently uses `bigcode/starcoder2-3b` and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct`. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
+Optional: By passing `--api transformers`, both scripts can pull and run local models from Hugging Face. `jaws-compute` currently uses `bigcode/starcoder2-3b` to create embeddings and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct` to return NLP. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
 
 - `HUGGINGFACE_KEY`
 
@@ -41,9 +41,9 @@ Install dependencies:
 `pip install -r requirements.txt`
 
 
-Note that JAWS was developed against CUDA 12+ but should work on CPU. On Linux/Mac and some systems (mainly embedded linux systems I have tested on) torch will fail to install through requirements.txt, so if you are also on one of these bespoke systsmes (such as arm/rpi), first run: `pip install torch`
+Note that JAWS was developed against Nvidia/CUDA but should also work on CPU. On Linux/Mac and some systems (mainly embedded linux systems I have tested on) torch will fail to install through requirements.txt, so if you are also on one of these bespoke systsmes (such as arm/rpi), first run: `pip install torch`
 
-On windows, runs: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
+On windows, run: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
 
 If you plan to run `--api transformers`, StarCoder2 is set to use 8-bit quanitzation. Install dependencies:
@@ -60,9 +60,9 @@ Finally, install JAWS:
 
 ### Neo4j Docker Container
 
-The Neo4j setup really only supports 1 container/dbms running at a time ("captures"), the commands currently do not support passing all of the configurations needed. All of the commands do accept the `--database` flag, which defaults to "captures". Run the commands and operating a single container, ignoring the --database flag altogether, should work. Changing "captures" in the dockerfile and in commands below, will require passing that database name with every command.
+The Neo4j setup really only supports 1 container/dbms running at a time ("captures"), the commands currently do not support passing all of the configurations needed. All of the commands do accept the `--database` flag, which defaults to "captures". Operating a single container and running the commands, ignoring the --database flag altogether, should just work out of the box. Changing "captures" in the dockerfile and in the commands below, will require passing that database name with every command.
 
-From the JAWS root directory run: 
+From the JAWS project directory run: 
 
 `docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t jaws_neodbms .` 
 
@@ -70,6 +70,21 @@ From the JAWS root directory run:
 Then run: 
 
 `docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms`
+
+
+### JAWS Docker Container
+
+Currently work in progress. A fully containerized version of JAWS. Only works with the default parameters and OpenAI. From the root directory run:
+
+`docker-compose up`
+
+Once the containers are running, run:
+
+`docker ps`
+
+Use the container id to then open a shell:
+
+`docker exec -it <container_id> bash`
 
 
 ## Running and Commands

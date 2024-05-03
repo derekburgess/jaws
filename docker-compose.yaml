@@ -21,7 +21,7 @@ services:
       LOCAL_NEO4J_PASSWORD: ${LOCAL_NEO4J_PASSWORD}
       IPINFO_API_KEY: ${IPINFO_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      HUGGINGFACE_KEY: ${HUGGINGFACE_KEY}
+      # HUGGINGFACE_KEY: ${HUGGINGFACE_KEY}
       DOWNLOAD_FOLDER: /home
       # This does not use the host systems DOWNLOAD_FOLDER, but instead uses the container's /home directory
     depends_on:
