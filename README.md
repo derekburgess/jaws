@@ -64,12 +64,12 @@ The Neo4j setup really only supports 1 container/dbms running at a time ("captur
 
 From the JAWS root directory run: 
 
-`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t neojawsdbms .` 
+`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t jaws_neodbms .` 
 
 
 Then run: 
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 neojawsdbms`
+`docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms`
 
 
 ## Running and Commands
