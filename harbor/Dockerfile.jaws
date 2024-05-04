@@ -21,14 +21,13 @@ ENV JAWS_SAVE_FIGS=/home
 WORKDIR /jaws
 
 RUN git clone https://github.com/derekburgess/jaws.git .
-RUN python3 -m pip install -r requirements.txt
-RUN python3 -m pip install torch
-RUN python3 -m pip install accelerate
-RUN python3 -m pip install -i https://pypi.org/simple/ bitsandbytes
-RUN python3 -m pip install .
+RUN pip install -r requirements.txt
+RUN pip install torch
+RUN pip install accelerate
+RUN pip install -i https://pypi.org/simple/ bitsandbytes
+RUN pip install .
 
-# Maybe someone with more experience can explain why this doesnt work.
-#RUN pip install -U "huggingface_hub[cli]"
+RUN pip install -U "huggingface_hub[cli]"
 #RUN huggingface-cli login --token $HUGGINGFACE_KEY
 #RUN huggingface-cli download bigcode/starcoder2-3b
 #RUN huggingface-cli download meta-llama/Meta-Llama-3-8B-Instruct
