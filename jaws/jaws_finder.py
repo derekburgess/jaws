@@ -88,7 +88,7 @@ def main():
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
     save_fig1 = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
-    plt.savefig(save_fig1)
+    plt.savefig(save_fig1, dpi=300)
 
     print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
@@ -119,7 +119,7 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
     save_fig2 = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
-    plt.savefig(save_fig2)
+    plt.savefig(save_fig2, dpi=300)
 
     print("Using Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
@@ -204,7 +204,7 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
-    plt.savefig(save_outliers)
+    plt.savefig(save_outliers, dpi=300)
 
     plt.show()
 
