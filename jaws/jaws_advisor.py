@@ -35,6 +35,15 @@ Instructions:
 """
 
 
+def pull_model_files():
+        huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
+        model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        try:
+            AutoModelForCausalLM.from_pretrained(model_name, token=huggingface_token)
+        except Exception as e:
+            print(f"{e}")
+
+
 def fetch_data(driver, database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -101,12 +110,6 @@ class SummarizeTransformers:
         response = outputs[0][input_ids.shape[-1]:]
         print(f"\nResponse from {self.model_name}:")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
-    
-    def pull_model_files(self):
-        try:
-            self.model
-        except Exception as e:
-            print(f"{e}")
 
 
 class SummarizeOpenAI:
@@ -138,7 +141,7 @@ def main():
     args = parser.parse_args()
 
     if args.pull:
-        SummarizeTransformers().pull_model_files()
+        pull_model_files()
         return
 
     df_json = fetch_data(driver, args.database)

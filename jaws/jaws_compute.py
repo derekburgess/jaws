@@ -14,6 +14,16 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
 
+def pull_model_files():
+        huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
+        quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+        model_name = "bigcode/starcoder2-3b"
+        try:
+            AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quantization_config, token=huggingface_token)
+        except Exception as e:
+            print(f"{e}")
+
+
 def fetch_packet_data(database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -134,12 +144,6 @@ class ComputeTransformers:
             self.process_transformer_org()
 
         self.driver.close()
-    
-    def pull_model_files(self):
-        try:
-            self.model
-        except Exception as e:
-            print(f"{e}")
 
 
 class ComputeOpenAI:
@@ -211,7 +215,7 @@ def main():
     args = parser.parse_args()
 
     if args.pull:
-        ComputeTransformers(None, None).pull_model_files()
+        pull_model_files()
         return
 
     if args.api == "transformers":

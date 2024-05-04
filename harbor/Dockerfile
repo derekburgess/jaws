@@ -7,14 +7,6 @@ ARG IPINFO_API_KEY
 ARG OPENAI_API_KEY
 ARG HUGGINGFACE_API_KEY
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    git \
-    tshark
-
 ENV NEO4J_URI=${NEO4J_URI}
 ENV NEO4J_USERNAME=${NEO4J_USERNAME}
 ENV NEO4J_PASSWORD=${NEO4J_PASSWORD}
@@ -23,6 +15,14 @@ ENV OPENAI_API_KEY=${OPENAI_API_KEY}
 ENV HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
 ENV JAWS_FINDER_ENDPOINT=/home
 # This does not use the host systems JAWS_FINDER_ENDPOINT, but instead uses the container's /home directory
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    git \
+    tshark
 
 RUN pip install -U "huggingface_hub[cli]"
 
@@ -33,6 +33,7 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
+#RUN jaws-capture --interface "eth0" --duration 3
+
 RUN jaws-compute --pull
 RUN jaws-advisor --pull
-RUN jaws-capture
