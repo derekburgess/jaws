@@ -19,7 +19,7 @@ def main():
     """)
 
     print("""
-    [gray70]You can skip this step and run JAWS on the host system, or build the JAWS container from the /jaws/jaws directory:[/]
+    [gray70]You can skip this step and run JAWS on the host system, or build the JAWS container from the /jaws/jaws/cage directory:[/]
     [grey100]docker-compose up[/]
     [grey100]docker ps[/]
     [grey100]docker exec -it <container_id> bash[/]
