@@ -28,3 +28,4 @@ services:
 # To enter a bash shell in the jaws container, run the following command:
 # docker ps
 # docker exec -it <container_id> bash
+# docker system prune
