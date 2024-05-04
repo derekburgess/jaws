@@ -35,8 +35,7 @@ def main():
 
     print("""
     [gray70]To process packets or organization sets into embeddings:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures' --pull[/]
-    [grey100]Note: Pass --pull by itself to download StarCoder2-3b[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures'[/]
     """)
    
     print("""

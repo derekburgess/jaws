@@ -3,8 +3,6 @@ FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 ARG NEO4J_URI
 ARG NEO4J_USERNAME
 ARG NEO4J_PASSWORD
-ARG IPINFO_API_KEY
-ARG OPENAI_API_KEY
 ARG HUGGINGFACE_API_KEY
 
 ENV NEO4J_URI=${NEO4J_URI}
@@ -37,3 +35,5 @@ RUN pip install .
 
 RUN jaws-compute --pull
 RUN jaws-advisor --pull
+
+CMD ["tail", "-f", "/dev/null"]

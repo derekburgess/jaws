@@ -14,16 +14,6 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
 
-def pull_model_files():
-        huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
-        quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-        model_name = "bigcode/starcoder2-3b"
-        try:
-            AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quantization_config, token=huggingface_token)
-        except Exception as e:
-            print(f"{e}")
-
-
 def fetch_packet_data(database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -208,15 +198,8 @@ def main():
                         help="Specify the embedding string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
-    parser.add_argument("--pull", action="store_true",
-                    help="Download model files from Hugging Face (default: False)")
-
 
     args = parser.parse_args()
-
-    if args.pull:
-        pull_model_files()
-        return
 
     if args.api == "transformers":
         transformer = ComputeTransformers(driver, args.database)

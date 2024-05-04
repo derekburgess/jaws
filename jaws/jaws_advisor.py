@@ -35,15 +35,6 @@ Instructions:
 """
 
 
-def pull_model_files():
-        huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
-        model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-        try:
-            AutoModelForCausalLM.from_pretrained(model_name, token=huggingface_token)
-        except Exception as e:
-            print(f"{e}")
-
-
 def fetch_data(driver, database):
     query = """
     MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
@@ -135,14 +126,8 @@ def main():
                         help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
-    parser.add_argument("--pull", action="store_true",
-                    help="Download model files from Hugging Face (default: False)")
 
     args = parser.parse_args()
-
-    if args.pull:
-        pull_model_files()
-        return
 
     df_json = fetch_data(driver, args.database)
 
