@@ -11,12 +11,14 @@ llama = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 def pull_starcoder():
         try:
+            AutoTokenizer.from_pretrained(starcoder, token=huggingface_token)
             AutoModelForCausalLM.from_pretrained(starcoder, quantization_config=quantization_config, token=huggingface_token)
         except Exception as e:
             print(f"{e}")
 
 def pull_llama():
         try:
+            AutoTokenizer.from_pretrained(llama, token=huggingface_token)
             AutoModelForCausalLM.from_pretrained(llama, token=huggingface_token)
         except Exception as e:
             print(f"{e}")
