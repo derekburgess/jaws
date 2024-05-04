@@ -4,9 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEO4J_URI: ${NEO4J_URI}
-        NEO4J_USERNAME: ${NEO4J_USERNAME}
-        NEO4J_PASSWORD: ${NEO4J_PASSWORD}
         HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
     network_mode: "host"
     privileged: true
