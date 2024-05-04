@@ -7,8 +7,6 @@ services:
         NEO4J_URI: ${NEO4J_URI}
         NEO4J_USERNAME: ${NEO4J_USERNAME}
         NEO4J_PASSWORD: ${NEO4J_PASSWORD}
-        IPINFO_API_KEY: ${IPINFO_API_KEY}
-        OPENAI_API_KEY: ${OPENAI_API_KEY}
         HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
     network_mode: "host"
     privileged: true
