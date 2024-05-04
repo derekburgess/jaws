@@ -93,6 +93,10 @@ Use the container id to then open a shell:
 
 `docker exec -it <container_id> bash`
 
+Authenticate Hugging Face using:
+
+`huggingface-cli login --token $HUGGINGFACE_KEY`
+
 
 ## Running and Commands
 

@@ -27,6 +27,5 @@ RUN pip install bitsandbytes
 RUN pip install .
 
 RUN pip install -U "huggingface_hub[cli]"
-#RUN huggingface-cli login --token $HUGGINGFACE_KEY
-#RUN huggingface-cli download bigcode/starcoder2-3b
-#RUN huggingface-cli download meta-llama/Meta-Llama-3-8B-Instruct
+
+RUN jaws-compute --pull

@@ -134,6 +134,14 @@ class ComputeTransformers:
             self.process_transformer_org()
 
         self.driver.close()
+    
+    def pull_model_files(self):
+        try:
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name,
+                                                              config=self.quantization_config,
+                                                              use_auth_token=self.huggingface_token)
+        except Exception as e:
+            print(f"{e}")
 
 
 class ComputeOpenAI:
@@ -198,8 +206,16 @@ def main():
                         help="Specify the embedding string type to pass (default: packet)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--pull", action="store_true",
+                    help="Download model files from Hugging Face (default: False)")
+
 
     args = parser.parse_args()
+
+    if args.pull:
+        transformer = ComputeTransformers(driver, args.database)
+        transformer.pull_model_files()
+        return
 
     if args.api == "transformers":
         transformer = ComputeTransformers(driver, args.database)
