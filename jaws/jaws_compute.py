@@ -213,7 +213,7 @@ def main():
     args = parser.parse_args()
 
     if args.pull:
-        transformer = ComputeTransformers(driver, args.database)
+        transformer = ComputeTransformers(None, None)
         transformer.pull_model_files()
         return
 
