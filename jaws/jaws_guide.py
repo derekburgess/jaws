@@ -13,14 +13,22 @@ def main():
     """)
 
     print("""
-    [gray70]From the JAWS project directory:[/]
+    [gray70]First build the dbms container from the /jaws/jaws directory:[/]
     [grey100]docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .[/]
     [grey100]docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms[/]
     """)
 
     print("""
-    [gray70]If you plan to use the local models for compute and advisor, consider:[/]
-    [grey100]jaws-anchor --model 'starcoder', 'llama', or 'all'[/]
+    [gray70]You can skip this step and run JAWS on the host system, or to build the JAWS container from the /jaws/harbor directory:[/]
+    [grey100]docker-compose up[/]
+    [grey100]docker ps[/]
+    [grey100]docker exec -it <container_id> bash[/]
+    """)
+
+    print("""
+    [gray70]Note: JAWS is set to run against the OpenAI API by default and does not require a specific CPU or GPU.[/]
+    [gray70]If you plan to run the local models on the host system or in the container, download them first:[/]
+    [grey100]jaws-anchor --model 'starcoder', 'llama', or 'all'[/] 
     """)
 
     print("""
@@ -39,8 +47,8 @@ def main():
     """)
 
     print("""
-    [gray70]To process packets or organization sets into embeddings:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures'[/]
+    [gray70]To compute embeddings from packets or organization sets:[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/StarCoder2') --type 'packet' (or 'org') --database 'captures'[/]
     """)
    
     print("""
@@ -50,7 +58,7 @@ def main():
           
     print("""
     [gray70]To generate an 'expert' analysis:[/]
-    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --database 'captures'[/]
+    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/Llama3') --database 'captures'[/]
     """)
           
     print("""

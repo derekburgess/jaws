@@ -24,31 +24,30 @@ To use `jaws-ipinfo`, you will need to sign up for an account with [ipinfo](http
 - `IPINFO_API_KEY`
 
 
-Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-16k) are set to use `--api "openai"` by default. These commands require that you have an OpenAI account and create an env variable for: 
+Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-16k) are set to pass `--api "openai"` by default. These commands require that you have an OpenAI account and create an env variable for: 
 
 - `OPENAI_API_KEY`
 
 
-Optional: By passing `--api transformers`, both scripts can pull and run local models from Hugging Face. `jaws-compute` currently uses `bigcode/starcoder2-3b` to create embeddings and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct` to return NLP. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
-
-- `HUGGINGFACE_API_KEY`
-
-
-Lastly, `jaws-finder` displays several plots using Matplot, but also saves those figures to a directory of your choice, using:
+Lastly, `jaws-finder` displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
 
 - `JAWS_FINDER_ENDPOINT`
 
 
-### Installation
+Optional: By passing `--api transformers`, 2 of the commands can pull and run local models from Hugging Face. `jaws-compute` currently uses `bigcode/starcoder2-3b` to create embeddings and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct` to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
 
-Install dependencies:
+- `HUGGINGFACE_API_KEY`
+
+
+### Loca/Host Installation
+
+From the jaws root directory, install dependencies:
 
 `pip install -r requirements.txt`
 
 
-Note that JAWS was developed against Nvidia/CUDA but should also work on CPU. On Linux/Mac and some systems (mainly embedded linux systems I have tested on) torch will fail to install through requirements.txt, so if you are also on one of these bespoke systsmes (such as arm/rpi), first run: `pip install torch`
-
 On windows, run: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
+
 
 Install support for Quantization:
 
@@ -62,9 +61,7 @@ Install JAWS using:
 
 ### Neo4j Docker Container
 
-The Neo4j setup really only supports 1 container/dbms running at a time ("captures"), the commands currently do not support passing all of the configurations needed. All of the commands do accept the `--database` flag, which defaults to "captures". Operating a single container and running the commands, ignoring the --database flag altogether, should just work out of the box. Changing "captures" in the dockerfile and in the commands below, will require passing that database name with every command.
-
-From the JAWS project directory run: 
+From the jaws project directory run: 
 
 `docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .` 
 
@@ -74,25 +71,23 @@ Then run:
 `docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms`
 
 
-### JAWS Docker Container
+### Experimental JAWS Docker Container
 
 The "harbor" directory is currently a work in progress...
 
 From the root directory run:
 
-`docker build --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg HUGGINGFACE_API_KEY .`
-
 `docker-compose up`
 
-Once the containers are running, run:
+Once the harbor-jaws container is running, run:
 
 `docker ps`
 
-Use the container id to then open a shell:
+Use the container id to then open a bash shell:
 
 `docker exec -it <container_id> bash`
 
 
 ## Running and Commands
 
-Run `jaws-guide` for instructions and commend overview.
+Run `jaws-guide` for the rest of the instructions and commend overview.

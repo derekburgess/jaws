@@ -33,7 +33,6 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
-RUN jaws-anchor --model "starcoder"
-RUN jaws-anchor --model "llama"
+RUN jaws-guide
 
 CMD ["tail", "-f", "/dev/null"]
