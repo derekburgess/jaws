@@ -73,13 +73,13 @@ Then run:
 
 ### Experimental JAWS Docker Container
 
-The docker-compose file in the /jaws/jaws/cage directory is currently a work in progress...
+The docker-compose file in the /jaws/jaws/ocean directory is currently a work in progress...
 
 From the /jaws/jaws directory run:
 
 `docker-compose up`
 
-Once the cage-jaws container is running, run:
+Once the ocean-jaws container is running, run:
 
 `docker ps`
 
