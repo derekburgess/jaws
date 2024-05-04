@@ -6,7 +6,7 @@ JAWS is a shell pipeline for gathering network packets and storing them in a gra
 
 ## Setup
 
-JAWS uses `pyshark` which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
+JAWS uses pyshark which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
 
 JAWS also uses a Neo4j graph database. You can run the provided Neo4j docker container, or install and run neo4j locally using their tool: https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
 
@@ -24,7 +24,7 @@ To use jaws-ipinfo, you will need to sign up for an account with [ipinfo](https:
 - `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass `--api "openai"` by default. These commands require that you have an OpenAI account and create an env variable for: 
+Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass --api openai by default. These commands require that you have an OpenAI account and create an env variable for: 
 
 - `OPENAI_API_KEY`
 
@@ -34,19 +34,23 @@ Lastly, jaws-finder displays several plots using Matplot, but also saves those p
 - `JAWS_FINDER_ENDPOINT`
 
 
-Optional: By passing `--api transformers`, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses `bigcode/starcoder2-3b` to create embeddings and jaws-advisor currently uses `meta-llama/Meta-Llama-3-8B-Instruct` to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
+Optional: By passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
 
 - `HUGGINGFACE_API_KEY`
 
 
 ### Loca/Host Installation
 
+On windows, run: 
+
+`pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121`
+
+Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
+
+
 From the /jaws root directory, install dependencies:
 
 `pip install -r requirements.txt`
-
-
-On windows, run: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
 
 Install support for Quantization:
@@ -69,6 +73,8 @@ From the /jaws/harbor directory run:
 Then run: 
 
 `docker run --name captures -p 7474:7474 -p 7687:7687 jaws-neodbms`
+
+This will build a basic Neo4j Docker container that can communicate with a host system running JAWS, or the "JAWS container" mentioned below.
 
 
 ### Experimental JAWS Docker Container
