@@ -31,9 +31,6 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
-#RUN jaws-capture --interface "eth0" --duration 3
-
-RUN jaws-compute --pull
-RUN jaws-advisor --pull
+RUN jaws-anchor --model "both"
 
 CMD ["tail", "-f", "/dev/null"]
