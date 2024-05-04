@@ -41,7 +41,7 @@ Optional: By passing `--api transformers`, 2 of the commands can pull and run lo
 
 ### Loca/Host Installation
 
-From the jaws root directory, install dependencies:
+From the /jaws root directory, install dependencies:
 
 `pip install -r requirements.txt`
 
@@ -61,7 +61,7 @@ Install JAWS using:
 
 ### Neo4j Docker Container
 
-From the jaws project directory run: 
+From the /jaws/harbor directory run: 
 
 `docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .` 
 
@@ -73,13 +73,13 @@ Then run:
 
 ### Experimental JAWS Docker Container
 
-The "harbor" directory is currently a work in progress...
+The docker-compose file in the /jaws/jaws directory is currently a work in progress...
 
-From the root directory run:
+From the /jaws/jaws directory run:
 
 `docker-compose up`
 
-Once the harbor-jaws container is running, run:
+Once the jaws-jaws container is running, run:
 
 `docker ps`
 
