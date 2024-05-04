@@ -50,7 +50,9 @@ Note that JAWS was developed against Nvidia/CUDA but should also work on CPU. On
 
 On windows, run: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121` -- Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
-If you plan to run `--api transformers`, Note that StarCoder2-3b is set to use 8-bit quanitzation and on some systems, mainly windows(?), you may need to use: `pip install -i https://pypi.org/simple/ bitsandbytes`.
+Install support for Quantization:
+
+`pip install -i https://pypi.org/simple/ bitsandbytes`
 
 
 Install JAWS using:

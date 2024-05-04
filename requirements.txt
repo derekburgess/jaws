@@ -6,7 +6,6 @@ scikit-learn
 kneed
 transformers
 accelerate
-bitsandbytes
 openai
 matplotlib
 requests
