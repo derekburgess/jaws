@@ -12,9 +12,9 @@ JAWS also uses a Neo4j graph database. You can run the provided Neo4j docker con
 
 ### Set Environment Variables
 
-- `LOCAL_NEO4J_URI` (bolt://localhost:7687)
-- `LOCAL_NEO4J_USERNAME` (neo4j)
-- `LOCAL_NEO4J_PASSWORD` (you set)
+- `NEO4J_URI` (bolt://localhost:7687)
+- `NEO4J_USERNAME` (neo4j)
+- `NEO4J_PASSWORD` (you set)
 
 
 ### Additional Services
@@ -31,12 +31,12 @@ Both `jaws-compute` (text-embedding-3-large) and `jaws-advisor` (gpt-3.5-turbo-1
 
 Optional: By passing `--api transformers`, both scripts can pull and run local models from Hugging Face. `jaws-compute` currently uses `bigcode/starcoder2-3b` to create embeddings and `jaws-advisor` currently uses `meta-llama/Meta-Llama-3-8B-Instruct` to return NLP. Both of the local models require a Hugging Face account and that you request access to use each model. Feel free to adjust the model usage, but either way create an env variable for:
 
-- `HUGGINGFACE_KEY`
+- `HUGGINGFACE_API_KEY`
 
 
 Lastly, `jaws-finder` displays several plots using Matplot, but also saves those figures to a directory of your choice, using:
 
-- `JAWS_SAVE_FIGS`
+- `JAWS_FINDER_ENDPOINT`
 
 
 ### Installation
@@ -64,7 +64,7 @@ The Neo4j setup really only supports 1 container/dbms running at a time ("captur
 
 From the JAWS project directory run: 
 
-`docker build --build-arg LOCAL_NEO4J_USERNAME --build-arg LOCAL_NEO4J_PASSWORD -t jaws_neodbms .` 
+`docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .` 
 
 
 Then run: 
@@ -87,10 +87,6 @@ Once the containers are running, run:
 Use the container id to then open a shell:
 
 `docker exec -it <container_id> bash`
-
-Authenticate Hugging Face using:
-
-`huggingface-cli login --token $HUGGINGFACE_KEY`
 
 
 ## Running and Commands

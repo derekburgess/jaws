@@ -8,9 +8,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 
 
-uri = os.getenv("LOCAL_NEO4J_URI")
-username = os.getenv("LOCAL_NEO4J_USERNAME")
-password = os.getenv("LOCAL_NEO4J_PASSWORD")
+uri = os.getenv("NEO4J_URI")
+username = os.getenv("NEO4J_USERNAME")
+password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 system_prompt = """
@@ -73,14 +73,10 @@ def fetch_data(driver, database):
 class SummarizeTransformers:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
+        self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
         self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
-            torch_dtype=torch.bfloat16,
-            device_map="auto"
-        )
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, torch_dtype=torch.bfloat16, device_map="auto")
 
     def generate_summary_from_transformers(self, system_prompt, df_json):
         messages = [
@@ -105,6 +101,12 @@ class SummarizeTransformers:
         response = outputs[0][input_ids.shape[-1]:]
         print(f"\nResponse from {self.model_name}:")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
+    
+    def pull_model_files(self):
+        try:
+            self.model
+        except Exception as e:
+            print(f"{e}")
 
 
 class SummarizeOpenAI:
@@ -130,8 +132,15 @@ def main():
                         help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
     parser.add_argument("--database", default="captures", 
                         help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--pull", action="store_true",
+                    help="Download model files from Hugging Face (default: False)")
 
     args = parser.parse_args()
+
+    if args.pull:
+        SummarizeTransformers().pull_model_files()
+        return
+
     df_json = fetch_data(driver, args.database)
 
     if args.api == "transformers":

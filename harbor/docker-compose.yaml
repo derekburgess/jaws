@@ -2,7 +2,7 @@ services:
   neo4j:
     image: neo4j:latest
     environment:
-      NEO4J_AUTH: ${LOCAL_NEO4J_USERNAME}/${LOCAL_NEO4J_PASSWORD}
+      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
       NEO4J_initial_dbms_default__database: captures
     network_mode: "host"
     privileged: true
@@ -16,13 +16,13 @@ services:
       context: .
       dockerfile: Dockerfile.jaws
     environment:
-      LOCAL_NEO4J_URI: ${LOCAL_NEO4J_URI}
-      LOCAL_NEO4J_USERNAME: ${LOCAL_NEO4J_USERNAME}
-      LOCAL_NEO4J_PASSWORD: ${LOCAL_NEO4J_PASSWORD}
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
       IPINFO_API_KEY: ${IPINFO_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      HUGGINGFACE_KEY: ${HUGGINGFACE_KEY}
-      JAWS_SAVE_FIGS: /home
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+      JAWS_FINDER_ENDPOINT: /home
       # This does not use the host systems DOWNLOAD_FOLDER, but instead uses the container's /home directory
     depends_on:
       - neo4j
@@ -30,8 +30,8 @@ services:
     privileged: true
     command: ["tail", "-f", "/dev/null"]
     volumes:
-      - ${JAWS_SAVE_FIGS}:/home
-      # This uses the host systems JAWS_SAVE_FIGS, but mounts it to the container's /home directory
+      - ${JAWS_FINDER_ENDPOINT}:/home
+      # This uses the host systems JAWS_FINDER_ENDPOINT, but mounts it to the container's /home directory
       # This allows the files created by the container to be downloaded to the host system
 
 

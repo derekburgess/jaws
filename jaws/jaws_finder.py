@@ -63,12 +63,12 @@ def main():
                         help="Specify the Neo4j database to connect to (default: captures)")
     
     args = parser.parse_args()
-    uri = os.getenv("LOCAL_NEO4J_URI")
-    username = os.getenv("LOCAL_NEO4J_USERNAME")
-    password = os.getenv("LOCAL_NEO4J_PASSWORD")
+    uri = os.getenv("NEO4J_URI")
+    username = os.getenv("NEO4J_USERNAME")
+    password = os.getenv("NEO4J_PASSWORD")
     driver = GraphDatabase.driver(uri, auth=(username, password))
     embeddings, data = fetch_data(driver, args.database, args.type)
-    save_fig_directory = os.getenv("JAWS_SAVE_FIGS")
+    jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
     # Plot the size of packets over source ports
     fig1 = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
@@ -87,7 +87,7 @@ def main():
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
-    save_fig1 = os.path.join(save_fig_directory, 'size_over_port.png')
+    save_fig1 = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
     plt.savefig(save_fig1)
 
     print(f"\nPerforming PCA on Embeddings")
@@ -118,7 +118,7 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_fig2 = os.path.join(save_fig_directory, 'sorted_k_distance.png')
+    save_fig2 = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
     plt.savefig(save_fig2)
 
     print("Using Kneed to recommend EPS")
@@ -203,7 +203,7 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_outliers = os.path.join(save_fig_directory, 'pca_dbscan_outliers.png')
+    save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers)
 
     plt.show()

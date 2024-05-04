@@ -7,9 +7,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from openai import OpenAI
 
 
-uri = os.getenv("LOCAL_NEO4J_URI")
-username = os.getenv("LOCAL_NEO4J_USERNAME")
-password = os.getenv("LOCAL_NEO4J_PASSWORD")
+uri = os.getenv("NEO4J_URI")
+username = os.getenv("NEO4J_USERNAME")
+password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 
@@ -82,7 +82,7 @@ class ComputeTransformers:
         self.driver = driver
         self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.huggingface_token = os.getenv("HUGGINGFACE_KEY")
+        self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
         self.model_name = "bigcode/starcoder2-3b"
         self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
@@ -137,9 +137,7 @@ class ComputeTransformers:
     
     def pull_model_files(self):
         try:
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name,
-                                                              config=self.quantization_config,
-                                                              use_auth_token=self.huggingface_token)
+            self.model
         except Exception as e:
             print(f"{e}")
 
@@ -213,8 +211,7 @@ def main():
     args = parser.parse_args()
 
     if args.pull:
-        transformer = ComputeTransformers(None, None)
-        transformer.pull_model_files()
+        ComputeTransformers(None, None).pull_model_files()
         return
 
     if args.api == "transformers":

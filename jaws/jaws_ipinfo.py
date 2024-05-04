@@ -4,9 +4,9 @@ from neo4j import GraphDatabase
 import requests
 
 
-uri = os.getenv("LOCAL_NEO4J_URI")
-username = os.getenv("LOCAL_NEO4J_USERNAME")
-password = os.getenv("LOCAL_NEO4J_PASSWORD")
+uri = os.getenv("NEO4J_URI")
+username = os.getenv("NEO4J_USERNAME")
+password = os.getenv("NEO4J_PASSWORD")
 ipinfo_api_key = os.getenv("IPINFO_API_KEY")
 
 

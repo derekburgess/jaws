@@ -2,9 +2,9 @@ import os
 import argparse
 from neo4j import GraphDatabase
 
-uri = os.getenv("LOCAL_NEO4J_URI")
-username = os.getenv("LOCAL_NEO4J_USERNAME")
-password = os.getenv("LOCAL_NEO4J_PASSWORD")
+uri = os.getenv("NEO4J_URI")
+username = os.getenv("NEO4J_USERNAME")
+password = os.getenv("NEO4J_PASSWORD")
 
 
 def connect_to_database(uri, username, password, database):
