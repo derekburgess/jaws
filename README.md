@@ -79,7 +79,7 @@ Then run:
 
 ### JAWS Docker Container
 
-Currently a work in progress....
+The "harbor" directory is currently a work in progress...
 
 From the root directory run:
 
