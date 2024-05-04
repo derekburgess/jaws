@@ -1,20 +1,8 @@
 services:
-  neo4j:
-    image: neo4j:latest
-    environment:
-      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
-      NEO4J_initial_dbms_default__database: captures
-    network_mode: "host"
-    privileged: true
-    expose:
-      - 7474
-      - 7473
-      - 7687
-
   jaws:
     build:
       context: .
-      dockerfile: Dockerfile.jaws
+      dockerfile: Dockerfile
     environment:
       NEO4J_URI: ${NEO4J_URI}
       NEO4J_USERNAME: ${NEO4J_USERNAME}
@@ -24,11 +12,16 @@ services:
       HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
       JAWS_FINDER_ENDPOINT: /home
       # This does not use the host systems DOWNLOAD_FOLDER, but instead uses the container's /home directory
-    depends_on:
-      - neo4j
     network_mode: "host"
     privileged: true
     command: ["tail", "-f", "/dev/null"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     volumes:
       - ${JAWS_FINDER_ENDPOINT}:/home
       # This uses the host systems JAWS_FINDER_ENDPOINT, but mounts it to the container's /home directory

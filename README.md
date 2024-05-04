@@ -80,6 +80,8 @@ The "harbor" directory is currently a work in progress...
 
 From the root directory run:
 
+`docker build --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg HUGGINGFACE_API_KEY .`
+
 `docker-compose up`
 
 Once the containers are running, run:

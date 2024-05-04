@@ -1,4 +1,4 @@
-FROM nvidia/cuda
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 ARG NEO4J_URI
 ARG NEO4J_USERNAME
@@ -33,6 +33,6 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
-#RUN jaws-compute --pull
-#RUN jaws-advisor --pull
-#RUN jaws-capture
+RUN jaws-compute --pull
+RUN jaws-advisor --pull
+RUN jaws-capture
