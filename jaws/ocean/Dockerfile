@@ -24,8 +24,6 @@ RUN apt-get update && apt-get install -y \
     git \
     tshark
 
-RUN pip install -U "huggingface_hub[cli]"
-
 WORKDIR /jaws
 
 RUN git clone https://github.com/derekburgess/jaws.git .
