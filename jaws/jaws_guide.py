@@ -14,8 +14,8 @@ def main():
 
     print("""
     [gray70]First build the dbms container from the /jaws/harbor directory:[/]
-    [grey100]docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .[/]
-    [grey100]docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms[/]
+    [grey100]docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws-neodbms .[/]
+    [grey100]docker run --name captures -p 7474:7474 -p 7687:7687 jaws-neodbms[/]
     """)
 
     print("""

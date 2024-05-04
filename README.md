@@ -63,12 +63,12 @@ Install JAWS using:
 
 From the /jaws/harbor directory run: 
 
-`docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws_neodbms .` 
+`docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws-neodbms .` 
 
 
 Then run: 
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 jaws_neodbms`
+`docker run --name captures -p 7474:7474 -p 7687:7687 jaws-neodbms`
 
 
 ### Experimental JAWS Docker Container
