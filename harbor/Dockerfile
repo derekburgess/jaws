@@ -29,6 +29,5 @@ RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
 RUN jaws-anchor --model "all"
-RUN jaws-guide
 
-CMD ["/bin/bash"]
+CMD ["tail", "-f", "/dev/null"]
