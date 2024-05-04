@@ -19,6 +19,11 @@ def main():
     """)
 
     print("""
+    [gray70]If you plan to use the local models for compute and advisor, consider:[/]
+    [grey100]jaws-anchor --model 'starcoder', 'llama', or 'all'[/]
+    """)
+
+    print("""
     [gray70]To capture packets:[/]
     [grey100]jaws-capture[/] [gray70]OPTIONAL[/] [grey100]--interface 'Ethernet' --duration 10 --database 'captures'[/]
     """)
