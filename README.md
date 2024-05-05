@@ -82,7 +82,7 @@ This will build a basic Neo4j Docker container that can communicate with a host 
 
 The docker-compose file in the /jaws/ocean directory is currently a work in progress...
 
-From the /jaws/jaws directory run:
+From the /jaws/ocean directory run:
 
 `docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
