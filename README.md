@@ -1,31 +1,35 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a shell pipeline for gathering network packets and storing them in a graph database (Neo4j), with the goal of understanding various shapes of the network including scatter plots, nearest neighbor, DBSCAN outlier, subgraph analysis, and directed network graphs.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j). It also provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is indended to be run locally using open models, but is set to run using OpenAI by default for demos and easy of use.
 
 
 ## Setup
 
-JAWS uses pyshark which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/).
-
-JAWS also uses a Neo4j graph database. You can run the provided Neo4j docker container, or install and run neo4j locally using their tool: https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
+JAWS uses pyshark which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/). Or by installing the tshark package.
 
 
-### Set Environment Variables
+JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/).
+
+
+As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/).
+
+
+### Set Neo4j Environment Variables
 
 - `NEO4J_URI` (bolt://localhost:7687)
 - `NEO4J_USERNAME` (neo4j)
 - `NEO4J_PASSWORD` (you set)
 
 
-### Additional Services
+### Set Environment Variables for Additional Services
 
-To use jaws-ipinfo, you will need to sign up for an account with [ipinfo](https://ipinfo.io/), and create an env variable for:
+To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](https://ipinfo.io/), and create an env variable for:
 
 - `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass --api openai by default. These commands require that you have an OpenAI account and create an env variable for: 
+Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass --api openai by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
 
 - `OPENAI_API_KEY`
 
@@ -35,14 +39,14 @@ Lastly, jaws-finder displays several plots using Matplot, but also saves those p
 - `JAWS_FINDER_ENDPOINT`
 
 
-Optional: By passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
+Optional: Since OpenAI is not free, by passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
 
 - `HUGGINGFACE_API_KEY`
 
 
-### Loca/Host Installation
+### Install the JAWS Python Package
 
-On windows, run: 
+On Windows, run: 
 
 `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121`
 
@@ -63,37 +67,51 @@ Install JAWS using:
 
 `pip install .`
 
+If you are using the Neo4j dbms and GUI, that is it, you can skip Docker and run `jaws-guide` for the rest of the instructions and commend overview.
+
 
 ### Neo4j Docker Container
 
+This Docker container operates as a local/headless Neo4j database. You can run all commands against it by default and easily connect to and view the graph using the Neo4j GUI.
+
 From the /jaws/harbor directory run: 
 
-`docker build -t jaws-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD .` 
+`docker build -t jaws-harbor-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD .` 
 
 
 Then run: 
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 jaws-neodbms`
-
-This will build a basic Neo4j Docker container that can communicate with a host system running JAWS, or the "JAWS container" mentioned below.
+`docker run --name captures -p 7474:7474 -p 7687:7687 jaws-harbor-neodbms`
 
 
-### Experimental JAWS Docker Container
+If you plan to pull and run the models on your local machine that is it, you can run `jaws-guide` for the rest of the instructions and commend overview.
 
-The docker-compose file in the /jaws/ocean directory is currently a work in progress...
+
+### JAWS Compute Docker Container
+
+This Docker container operates as a full instance of JAWS. However, the intended purpose is for providing a deployable container for compute.
+
 
 From the /jaws/ocean directory run:
 
-`docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
+`docker build -t jaws-compute-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
-`docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume PATH:/home --name jaws-container --detach jaws-image`
+`docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume PATH:/home --name jaws-compute --detach jaws-compute-image`
+
+Note that PATH should be the location you want the plots to download to.
 
 
 Open a bash shell:
 
-`docker exec -it jaws-container bash`
+`docker exec -it jaws-compute bash`
 
 
-## Running and Commands
+To pull Hugging Face models run `jaws-anchor` to pull everything, or `--model "starcoder` or `llama`.
 
-Run `jaws-guide` for the rest of the instructions and commend overview.
+
+Or without creating a bash shell, run: `docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
+
+
+## Usage
+
+The Neo4j Docker Container acts as the central graph. JAWS is then run a host to collect packets. The jaws-compute container can be deployed to manage models and compute resourses.
