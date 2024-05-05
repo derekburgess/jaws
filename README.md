@@ -10,6 +10,7 @@ JAWS uses pyshark which requires tshark, which can be installed with [Wireshark]
 
 JAWS also uses a Neo4j graph database. You can run the provided Neo4j docker container, or install and run neo4j locally using their tool: https://neo4j.com/product/developer-tools/ -- The scripts all point to the default Neo4j setup using env variables, so either way, configure:
 
+
 ### Set Environment Variables
 
 - `NEO4J_URI` (bolt://localhost:7687)
@@ -79,19 +80,18 @@ This will build a basic Neo4j Docker container that can communicate with a host 
 
 ### Experimental JAWS Docker Container
 
-The docker-compose file in the /jaws/jaws/ocean directory is currently a work in progress...
+The docker-compose file in the /jaws/ocean directory is currently a work in progress...
 
 From the /jaws/jaws directory run:
 
-`docker-compose up`
+`docker build -t jaws-image .`
 
-Once the ocean-jaws container is running, run:
+`docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume JAWS_FINDER_ENDPOINT:/home --name jaws-container --detach jaws-image`
 
-`docker ps`
 
-Use the container id to then open a bash shell:
+Open a bash shell:
 
-`docker exec -it <container_id> bash`
+`docker exec -it jaws-container bash`
 
 
 ## Running and Commands

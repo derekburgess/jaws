@@ -1,12 +1,5 @@
 FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
-ARG NEO4J_URI
-ARG NEO4J_USERNAME
-ARG NEO4J_PASSWORD
-ARG IPINFO_API_KEY
-ARG OPENAI_API_KEY
-ARG HUGGINGFACE_API_KEY
-
 ENV NEO4J_URI=${NEO4J_URI}
 ENV NEO4J_USERNAME=${NEO4J_USERNAME}
 ENV NEO4J_PASSWORD=${NEO4J_PASSWORD}
@@ -32,3 +25,6 @@ RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
 CMD ["tail", "-f", "/dev/null"]
+
+#docker build -t jaws-image .
+#docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume JAWS_FINDER_ENDPOINT:/home --name jaws-container --detach jaws-image

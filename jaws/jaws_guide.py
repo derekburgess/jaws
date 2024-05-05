@@ -19,10 +19,10 @@ def main():
     """)
 
     print("""
-    [gray70]You can skip this step and run JAWS on the host system, or build the JAWS container from the /jaws/jaws/ocean directory:[/]
-    [grey100]docker-compose up[/]
-    [grey100]docker ps[/]
-    [grey100]docker exec -it <container_id> bash[/]
+    [gray70]You can skip this step and run JAWS on the host system, or build the JAWS container from the /jaws/ocean directory:[/]
+    [grey100]docker build -t jaws-image .[/]
+    [grey100]docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume JAWS_FINDER_ENDPOINT:/home --name jaws-container --detach jaws-image[/]
+    [grey100]docker exec -it jaws-container bash[/]
     """)
 
     print("""
