@@ -94,7 +94,7 @@ From the /jaws/ocean directory run:
 `docker build -t jaws-compute-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
 
-`docker run --gpus 1 --name jaws-compute --detach jaws-compute-image`
+`docker run --gpus 1 --network host --name jaws-compute --detach jaws-compute-image`
 
 
 Note that PATH should be the location you want the plots to download to.
