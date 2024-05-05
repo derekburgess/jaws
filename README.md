@@ -76,7 +76,7 @@ This Docker container operates as a local/headless Neo4j database. You can run a
 
 From the /jaws/harbor directory run: 
 
-`docker build -t jaws-harbor-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD .` 
+`docker build -t jaws-harbor-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg DEFAULT_DATABASE=captures .` 
 
 
 Then run: 
