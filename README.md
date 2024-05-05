@@ -68,7 +68,7 @@ Install JAWS using:
 
 From the /jaws/harbor directory run: 
 
-`docker build --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD -t jaws-neodbms .` 
+`docker build -t jaws-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD .` 
 
 
 Then run: 
@@ -84,7 +84,7 @@ The docker-compose file in the /jaws/ocean directory is currently a work in prog
 
 From the /jaws/jaws directory run:
 
-`docker build -t jaws-image .`
+`docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
 `docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume JAWS_FINDER_ENDPOINT:/home --name jaws-container --detach jaws-image`
 
