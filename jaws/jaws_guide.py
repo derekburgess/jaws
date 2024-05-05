@@ -16,6 +16,7 @@ def main():
     [gray70]Note: JAWS is set to run against the OpenAI API by default and does not require a specific CPU or GPU.[/]
     [gray70]If you plan to run the local models on the host system or in the container, download them first:[/]
     [grey100]jaws-anchor --model 'starcoder', 'llama', or 'all'[/] 
+    [gray100]docker exec -it jaws-anchor +/- --model 'starcoder' or 'llama'[/]
     """)
 
     print("""
@@ -36,6 +37,7 @@ def main():
     print("""
     [gray70]To compute embeddings from packets or organization sets:[/]
     [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/StarCoder2') --type 'packet' (or 'org') --database 'captures'[/]
+    [gray100]docker exec -it jaws-compute --api 'transformers'[/]
     """)
    
     print("""
@@ -46,6 +48,7 @@ def main():
     print("""
     [gray70]To generate an 'expert' analysis:[/]
     [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/Llama3') --database 'captures'[/]
+    [gray100]docker exec -it jaws-advisor --api 'transformers'[/]
     """)
           
     print("""

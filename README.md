@@ -78,7 +78,7 @@ From the /jaws/harbor directory run:
 
 Then run: 
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 jaws-harbor-neodbms`
+`docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-harbor-neodbms`
 
 
 If you plan to pull and run the models on your local machine that is it, you can run `jaws-guide` for the rest of the instructions and commend overview.
@@ -94,7 +94,7 @@ From the /jaws/ocean directory run:
 `docker build -t jaws-compute-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
 
-`docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume PATH:/home --name jaws-compute --detach jaws-compute-image`
+`docker run --gpus 1 --name jaws-compute --detach jaws-compute-image`
 
 
 Note that PATH should be the location you want the plots to download to.
@@ -106,7 +106,11 @@ Open a bash shell:
 
 To pull Hugging Face models run `jaws-anchor` to pull everything, or `--model "starcoder` or `llama`.
 
-Or without creating a bash shell, run: `docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
+
+Or without creating a bash shell, run: `docker exec -it jaws-anchor` +/- `--model "starcoder` or `llama`
+
+
+To use the container run: `docker exec -it jaws-compute --api "transformers"` and `docker exec -it jaws-advisor --api "transformers"`
 
 
 ## Usage
