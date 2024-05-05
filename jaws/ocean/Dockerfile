@@ -31,4 +31,4 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
-CMD ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]

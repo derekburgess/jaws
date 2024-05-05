@@ -12,6 +12,8 @@ services:
         HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
     network_mode: "host"
     privileged: true
+    ports:
+      - "5297:5297"
     deploy:
       resources:
         reservations:
