@@ -21,7 +21,7 @@ def main():
     print("""
     [gray70]You can skip this step and run JAWS on the host system, or build the JAWS container from the /jaws/ocean directory:[/]
     [grey100]docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .[/]
-    [grey100]docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume JAWS_FINDER_ENDPOINT:/home --name jaws-container --detach jaws-image[/]
+    [grey100]docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume PATH:/home --name jaws-container --detach jaws-image[/]
     [grey100]docker exec -it jaws-container bash[/]
     """)
 
