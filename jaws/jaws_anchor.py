@@ -11,19 +11,17 @@ llama = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 def pull_starcoder():
     try:
-        starcoder_tokenizer = AutoTokenizer.from_pretrained(starcoder, token=huggingface_token)
-        starcoder_model = AutoModelForCausalLM.from_pretrained(starcoder, quantization_config=quantization_config, token=huggingface_token)
-        return starcoder_tokenizer, starcoder_model
+        AutoTokenizer.from_pretrained(starcoder, token=huggingface_token, use_fast=False)
+        AutoModelForCausalLM.from_pretrained(starcoder, quantization_config=quantization_config, token=huggingface_token)
     except Exception as e:
-        print(f"{e}")
+        print(f"Failed to download: {e}")
 
 def pull_llama():
     try:
-        llama_tokenizer = AutoTokenizer.from_pretrained(llama, token=huggingface_token)
-        llama_model = AutoModelForCausalLM.from_pretrained(llama, token=huggingface_token)
-        return llama_tokenizer, llama_model
+        AutoTokenizer.from_pretrained(llama, token=huggingface_token, use_fast=False)
+        AutoModelForCausalLM.from_pretrained(llama, token=huggingface_token)
     except Exception as e:
-        print(f"{e}")
+        print(f"Failed to download: {e}")
 
 
 def pull_model_files(model):
