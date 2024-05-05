@@ -25,10 +25,3 @@ services:
       - ${JAWS_FINDER_ENDPOINT}:/home
       # This uses the host systems JAWS_FINDER_ENDPOINT, but mounts it to the container's /home directory
       # This allows the files created by the container to be downloaded to the host system
-
-
-# To enter a bash shell in the jaws container, run the following command:
-# docker ps
-# docker exec -it <container_id> bash
-
-# Download the Hugging Face models first by running: jaws-anchor --model "all"
