@@ -8,9 +8,7 @@ JAWS is a Python based shell pipeline for analyzing the shape and activity of ne
 
 JAWS uses pyshark which requires tshark, which can be installed with [Wireshark](https://www.wireshark.org/). Or by installing the tshark package.
 
-
 JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/).
-
 
 As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/).
 
@@ -51,7 +49,6 @@ On Windows, run:
 `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121`
 
 Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
-
 
 From the /jaws root directory, install dependencies:
 
@@ -96,10 +93,11 @@ From the /jaws/ocean directory run:
 
 `docker build -t jaws-compute-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
+
 `docker run --gpus 1 --network host --privileged --publish 5297:5297 --volume PATH:/home --name jaws-compute --detach jaws-compute-image`
 
-Note that PATH should be the location you want the plots to download to.
 
+Note that PATH should be the location you want the plots to download to.
 
 Open a bash shell:
 
@@ -107,7 +105,6 @@ Open a bash shell:
 
 
 To pull Hugging Face models run `jaws-anchor` to pull everything, or `--model "starcoder` or `llama`.
-
 
 Or without creating a bash shell, run: `docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
 
