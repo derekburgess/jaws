@@ -4,7 +4,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 
 huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
-quantization_config = BitsAndBytesConfig(load_in_8bit=True)
 starcoder = "bigcode/starcoder2-3b"
 llama = "meta-llama/Meta-Llama-3-8B-Instruct"
 
@@ -12,7 +11,7 @@ llama = "meta-llama/Meta-Llama-3-8B-Instruct"
 def pull_starcoder():
     try:
         AutoTokenizer.from_pretrained(starcoder, token=huggingface_token, use_fast=False)
-        AutoModelForCausalLM.from_pretrained(starcoder, quantization_config=quantization_config, token=huggingface_token)
+        AutoModelForCausalLM.from_pretrained(starcoder, token=huggingface_token)
     except Exception as e:
         print(f"Failed to download: {e}")
 
