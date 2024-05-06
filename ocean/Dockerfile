@@ -18,13 +18,18 @@ ENV JAWS_FINDER_ENDPOINT=/home
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN adduser --disabled-password --gecos '' firstmate
+USER firstmate
+WORKDIR /home/firstmate
+
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     git \
     tshark
 
-WORKDIR /jaws
+RUN python3 -m venv venv
+RUN ./venv/bin/pip install --upgrade pip
 
 RUN git clone https://github.com/derekburgess/jaws.git .
 RUN pip install -r requirements.txt
