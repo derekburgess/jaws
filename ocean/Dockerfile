@@ -31,4 +31,6 @@ RUN pip install -r requirements.txt
 RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
+RUN jaws-anchor
+
 CMD ["tail", "-f", "/dev/null"]
