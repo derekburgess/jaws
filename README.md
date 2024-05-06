@@ -50,12 +50,13 @@ On Windows, run:
 
 Or visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
+
 From the /jaws root directory, install dependencies:
 
 `pip install -r requirements.txt`
 
 
-Install support for Quantization:
+Install support for Quantization(StarCoder):
 
 `pip install -i https://pypi.org/simple/ bitsandbytes`
 
@@ -64,7 +65,8 @@ Install JAWS using:
 
 `pip install .`
 
-If you are using the Neo4j dbms and GUI, that is it, you can skip Docker and run `jaws-guide` for the rest of the instructions and commend overview.
+
+If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run `jaws-guide` for the rest of the instructions and commend overview.
 
 
 ### Neo4j Docker Container
@@ -81,12 +83,12 @@ Then run:
 `docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-harbor-neodbms`
 
 
-If you plan to pull and run the models on your local machine that is it, you can run `jaws-guide` for the rest of the instructions and commend overview.
+If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run `jaws-guide` for the rest of the instructions and commend overview.
 
 
 ### JAWS Compute Docker Container
 
-This Docker container operates as a full instance of JAWS. However, the intended purpose is for providing a deployable container for compute.
+This Docker container operates as a full instance of JAWS. However, the intended purpose is for providing a deployable container for compute resources.
 
 
 From the /jaws/ocean directory run:
@@ -97,14 +99,14 @@ From the /jaws/ocean directory run:
 `docker run --gpus 1 --network host --name jaws-compute --detach jaws-compute-image`
 
 
-Note that PATH should be the location you want the plots to download to.
+Note that the PATH should be the location you want the plots to download to.
 
 Open a bash shell:
 
 `docker exec -it jaws-compute bash`
 
 
-To pull Hugging Face models run jaws-anchor to pull everything, or append --model "starcoder or llama.
+To pull the Hugging Face models, run jaws-anchor, which will pull everything by default, or append --model starcoder or llama.
 
 `jaws-anchor` or `jaws-anchor --model`
 
@@ -114,9 +116,13 @@ Or without creating a bash shell, run:
 `docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
 
 
-To use the container run: 
+To use the container run:
+
+`jaws-compute --api "transformers"`
+
 
 `docker exec -it jaws-compute jaws-compute --api "transformers"`
+
 
 `docker exec -it jaws-compute jaws-advisor --api "transformers"`
 
