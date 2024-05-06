@@ -15,31 +15,35 @@ As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/).
 
 ### Set Neo4j Environment Variables
 
-- `NEO4J_URI` (bolt://localhost:7687)
-- `NEO4J_USERNAME` (neo4j)
-- `NEO4J_PASSWORD` (you set)
+`NEO4J_URI` (bolt://localhost:7687)
+
+
+`NEO4J_USERNAME` (neo4j)
+
+
+`NEO4J_PASSWORD` (you set)
 
 
 ### Set Environment Variables for Additional Services
 
 To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](https://ipinfo.io/), and create an env variable for:
 
-- `IPINFO_API_KEY`
+`IPINFO_API_KEY`
 
 
 Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass --api openai by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
 
-- `OPENAI_API_KEY`
+`OPENAI_API_KEY`
 
 
 Lastly, jaws-finder displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
 
-- `JAWS_FINDER_ENDPOINT`
+`JAWS_FINDER_ENDPOINT`
 
 
 Optional: Since OpenAI is not free, by passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
 
-- `HUGGINGFACE_API_KEY`
+`HUGGINGFACE_API_KEY`
 
 
 ### Install the JAWS Python Package
