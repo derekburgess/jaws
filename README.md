@@ -104,13 +104,21 @@ Open a bash shell:
 `docker exec -it jaws-compute bash`
 
 
-To pull Hugging Face models run `jaws-anchor` to pull everything, or `--model "starcoder` or `llama`.
+To pull Hugging Face models run jaws-anchor to pull everything, or append --model "starcoder or llama.
+
+`jaws-anchor` or `jaws-anchor --model`
 
 
-Or without creating a bash shell, run: `docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
+Or without creating a bash shell, run: 
+
+`docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
 
 
-To use the container run: `docker exec -it jaws-compute jaws-compute --api "transformers"` and `docker exec -it jaws-compute jaws-advisor --api "transformers"`
+To use the container run: 
+
+`docker exec -it jaws-compute jaws-compute --api "transformers"`
+
+`docker exec -it jaws-compute jaws-advisor --api "transformers"`
 
 
 ## Usage
