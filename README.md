@@ -66,7 +66,7 @@ Install JAWS using:
 `pip install .`
 
 
-If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run `jaws-guide` for the rest of the instructions and commend overview.
+If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run jaws-guide for the rest of the instructions and commend overview.
 
 
 ### Neo4j Docker Container
@@ -83,7 +83,7 @@ Then run:
 `docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-harbor-neodbms`
 
 
-If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run `jaws-guide` for the rest of the instructions and commend overview.
+If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run jaws-guide for the rest of the instructions and commend overview.
 
 
 ### JAWS Compute Docker Container
