@@ -21,24 +21,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    python3-venv \
     git \
     tshark
 
-RUN adduser --disabled-password --gecos '' firstmate
-USER firstmate
-WORKDIR /home/firstmate
+WORKDIR /jaws
 
-RUN python3 -m venv venv
-RUN ./venv/bin/pip install --upgrade pip
-
-RUN mkdir jaws && git clone https://github.com/derekburgess/jaws.git jaws
-WORKDIR /home/firstmate/jaws
-
-RUN ./../venv/bin/pip install -r requirements.txt
-RUN ./../venv/bin/pip install -i https://pypi.org/simple/ bitsandbytes
-RUN ./../venv/bin/pip install .
-
-RUN jaws-anchor --model "all"
+RUN git clone https://github.com/derekburgess/jaws.git .
+RUN pip install -r requirements.txt
+RUN pip install -i https://pypi.org/simple/ bitsandbytes
+RUN pip install .
 
 CMD ["tail", "-f", "/dev/null"]
