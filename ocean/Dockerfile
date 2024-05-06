@@ -32,10 +32,12 @@ WORKDIR /home/firstmate
 RUN python3 -m venv venv
 RUN ./venv/bin/pip install --upgrade pip
 
-RUN git clone https://github.com/derekburgess/jaws.git .
-RUN pip install -r requirements.txt
-RUN pip install -i https://pypi.org/simple/ bitsandbytes
-RUN pip install .
+RUN mkdir jaws && git clone https://github.com/derekburgess/jaws.git jaws
+WORKDIR /home/firstmate/jaws
+
+RUN ./../venv/bin/pip install -r requirements.txt
+RUN ./../venv/bin/pip install -i https://pypi.org/simple/ bitsandbytes
+RUN ./../venv/bin/pip install .
 
 RUN jaws-anchor --model "all"
 
