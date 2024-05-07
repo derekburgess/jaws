@@ -71,7 +71,6 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
-
     # Plot the size of packets over source ports
     portsize_matplot = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
@@ -92,7 +91,6 @@ def main():
     save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
     plt.savefig(save_portsize, dpi=300)
 
-   
     print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
@@ -147,7 +145,6 @@ def main():
             eps_value = float(user_input)
         except ValueError:
             print("Invalid input. Using the recommended EPS value...")
-
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
@@ -219,7 +216,6 @@ def main():
     plt.tight_layout()
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=300)
-
     plt.show()
 
 
