@@ -10,6 +10,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+import plotille
 
 
 def fetch_data(driver, database, type):
@@ -70,6 +71,7 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
+
     # Plot the size of packets over source ports
     fig1 = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
@@ -90,12 +92,13 @@ def main():
     save_fig1 = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
     plt.savefig(save_fig1, dpi=300)
 
+   
     print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
 
-    print("Measuring K-Distance")
+    print("Measuring K-Distance", "\n")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
 
@@ -121,7 +124,22 @@ def main():
     save_fig2 = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
     plt.savefig(save_fig2, dpi=300)
 
-    print("Using Kneed to recommend EPS")
+
+    # Plot the sorted K-Distance using Plotille
+    kdistance_plotille = plotille.Figure()
+    kdistance_plotille.x_label = 'INDEX'
+    kdistance_plotille.y_label = 'K-DISTANCE'
+    kdistance_plotille.color_mode = 'byte'
+    kdistance_plotille.width = 80
+    kdistance_plotille.height = 20
+    kdistance_plotille.set_x_limits(min_=0)
+    kdistance_plotille.set_y_limits(min_=0)
+    plotille_plot_x = list(range(len(sorted_k_distances)))
+    kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
+    print(kdistance_plotille.show(legend=False))
+
+
+    print("\nUsing Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
     eps_value = float(eps_value)
@@ -132,11 +150,9 @@ def main():
         except ValueError:
             print("Invalid input. Using the recommended EPS value...")
 
+
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
-
-    print("\nList of ports and packet sizes:")
-    
 
     print("\nList of outliers:")
     for i, item in enumerate(data):
