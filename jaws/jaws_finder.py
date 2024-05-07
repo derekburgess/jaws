@@ -73,7 +73,7 @@ def main():
 
 
     # Plot the size of packets over source ports
-    fig1 = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
+    portsize_matplot = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -89,8 +89,8 @@ def main():
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
-    save_fig1 = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
-    plt.savefig(save_fig1, dpi=300)
+    save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
+    plt.savefig(save_portsize, dpi=300)
 
    
     print(f"\nPerforming PCA on Embeddings")
@@ -113,7 +113,7 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     
     # Plot the sorted K-Distance
-    fig2 = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
+    kdistance_matplot = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xlabel('INDEX', fontsize=8, color='#666666')
@@ -121,9 +121,8 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_fig2 = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
-    plt.savefig(save_fig2, dpi=300)
-
+    save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
+    plt.savefig(save_kdistance, dpi=300)
 
     # Plot the sorted K-Distance using Plotille
     kdistance_plotille = plotille.Figure()
@@ -137,7 +136,6 @@ def main():
     plotille_plot_x = list(range(len(sorted_k_distances)))
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
     print(kdistance_plotille.show(legend=False))
-
 
     print("\nUsing Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
@@ -161,7 +159,7 @@ def main():
             print(annotation_text, "\n")
 
     # Plot the PCA/DBSCAN Outliers
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    dbscan_outlier_matplot = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
     non_outlier_scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                         c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='o', s=50, alpha=0.1, zorder=2)
