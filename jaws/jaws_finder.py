@@ -259,12 +259,6 @@ def main():
     outlier_plotille.scatter(clustered_indices_pc1, clustered_indices_pc2, marker="^")
     outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
     print(outlier_plotille.show(legend=False))
-
-    print("\nList of outliers:")
-    for i, item in enumerate(data):
-        if clusters[i] == -1:
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
-            print(annotation_text, "\n")
     
     outlier_data = [
         {
@@ -278,6 +272,12 @@ def main():
             'protocol': item['protocol']
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
+
+    print("\nList of outliers:")
+    for item in outlier_data:
+        outlier_list = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
+        print(outlier_list, "\n")
+
     update_neo4j(outlier_data, driver, args.database)
 
     plt.show()

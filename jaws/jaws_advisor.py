@@ -70,7 +70,6 @@ def fetch_data(driver, database):
         return df_json
 
 
-
 class SummarizeTransformers:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
