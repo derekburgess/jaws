@@ -71,9 +71,8 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
-
     # Plot the size of packets over source ports
-    fig1 = plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
+    plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
     for i, item in enumerate(data):
         size = item.get('size')
@@ -89,10 +88,26 @@ def main():
     plt.yticks(fontsize=8)
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
-    save_fig1 = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
-    plt.savefig(save_fig1, dpi=300)
+    save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
+    plt.savefig(save_portsize, dpi=300)
 
-   
+    # Plot the Size and Port scatter using Plotille
+    portsize_plotille = plotille.Figure()
+    portsize_plotille.x_label = 'SIZE'
+    portsize_plotille.y_label = 'PORT'
+    portsize_plotille.color_mode = 'byte'
+    portsize_plotille.width = 80
+    portsize_plotille.height = 20
+    portsize_plotille.set_x_limits(min_=0)
+    portsize_plotille.set_y_limits(min_=0)
+    for item in data:
+        size = item.get('size')
+        src_port = item.get('src_port')
+        dst_port = item.get('dst_port')
+        portsize_plotille.scatter([size], [src_port], marker=">")
+        portsize_plotille.scatter([size], [dst_port], marker="<")
+    print(portsize_plotille.show(legend=False))
+
     print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca = PCA(n_components=2)
@@ -113,7 +128,7 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     
     # Plot the sorted K-Distance
-    fig2 = plt.figure(num='Sorted K-Distance', figsize=(6, 2))
+    plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xlabel('INDEX', fontsize=8, color='#666666')
@@ -121,9 +136,8 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_fig2 = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
-    plt.savefig(save_fig2, dpi=300)
-
+    save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
+    plt.savefig(save_kdistance, dpi=300)
 
     # Plot the sorted K-Distance using Plotille
     kdistance_plotille = plotille.Figure()
@@ -138,7 +152,6 @@ def main():
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
     print(kdistance_plotille.show(legend=False))
 
-
     print("\nUsing Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     eps_value = sorted_k_distances[kneedle.knee]
@@ -150,25 +163,19 @@ def main():
         except ValueError:
             print("Invalid input. Using the recommended EPS value...")
 
-
+    print(f"Using user input EPS: {eps_value}", "\n")
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    print("\nList of outliers:")
-    for i, item in enumerate(data):
-        if clusters[i] == -1:
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
-            print(annotation_text, "\n")
-
     # Plot the PCA/DBSCAN Outliers
-    fig2 = plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
-    non_outlier_scatter = plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='o', s=50, alpha=0.1, zorder=2)
+    plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
+                        c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
 
     outlier_indices = clusters == -1
-    outlier_scatter = plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
-                color='red', marker='^', s=50, label='Outliers', alpha=0.8, zorder=10)
+    plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
+                color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     position_options = {
         'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},
@@ -214,13 +221,30 @@ def main():
                         zorder=10)
 
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
-    plt.xlabel('PC-1', fontsize=8, color='#666666')
-    plt.ylabel('PC-2', fontsize=8, color='#666666')
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=300)
+
+    # Plot the Size and Port scatter using Plotille
+    outlier_plotille = plotille.Figure()
+    outlier_plotille.color_mode = 'byte'
+    outlier_plotille.width = 80
+    outlier_plotille.height = 20
+    clustered_indices_pc1 = principal_components[clustered_indices, 0]
+    clustered_indices_pc2 = principal_components[clustered_indices, 1]
+    outlier_indices_pc1 = principal_components[outlier_indices, 0]
+    outlier_indices_pc2 = principal_components[outlier_indices, 1]
+    outlier_plotille.scatter(clustered_indices_pc1, clustered_indices_pc2, marker="^")
+    outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
+    print(outlier_plotille.show(legend=False))
+
+    print("\nList of outliers:")
+    for i, item in enumerate(data):
+        if clusters[i] == -1:
+            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
+            print(annotation_text, "\n")
 
     plt.show()
 

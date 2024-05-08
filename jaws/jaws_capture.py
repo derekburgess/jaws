@@ -33,24 +33,34 @@ def add_packet_to_neo4j(driver, packet_data, database):
 def process_packet(packet, driver, database):
     packet_data = {
         "protocol": packet.highest_layer,
-        "src_ip": "0.0.0.0",
-        "src_port": 0,
-        "src_mac": packet.eth.src if 'ETH' in packet else "00:00:00:00:00:00",
-        "dst_ip": "0.0.0.0",
-        "dst_port": 0,
-        "dst_mac": packet.eth.dst if 'ETH' in packet else "00:00:00:00:00:00",
+        "src_ip": None,
+        "src_port": None,
+        "src_mac": None,
+        "dst_ip": None,
+        "dst_port": None,
+        "dst_mac": None,
         "size": len(packet),
-        "payload": packet.tcp.payload if 'TCP' in packet and hasattr(packet.tcp, 'payload') else "no_payload",
+        "payload": None,
         "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
 
+    if 'ETH' in packet:
+        packet_data["src_mac"] = packet.eth.src
+        packet_data["dst_mac"] = packet.eth.dst
+
     if 'IP' in packet:
-
         packet_data["src_ip"] = packet.ip.src
-        packet_data["src_port"] = int(packet[packet.transport_layer].srcport) if hasattr(packet, 'transport_layer') and packet.transport_layer and packet[packet.transport_layer].srcport.isdigit() else 0
-
         packet_data["dst_ip"] = packet.ip.dst
-        packet_data["dst_port"] = int(packet[packet.transport_layer].dstport) if hasattr(packet, 'transport_layer') and packet.transport_layer and packet[packet.transport_layer].dstport.isdigit() else 0
+
+    if 'TCP' in packet:
+        packet_data["src_port"] = int(packet.tcp.srcport) if packet.tcp.srcport.isdigit() else 0
+        packet_data["dst_port"] = int(packet.tcp.dstport) if packet.tcp.dstport.isdigit() else 0
+        packet_data["payload"] = packet.tcp.payload if hasattr(packet.tcp, 'payload') else None
+        
+    if 'UDP' in packet:
+        packet_data["src_port"] = int(packet.udp.srcport) if packet.udp.srcport.isdigit() else 0
+        packet_data["dst_port"] = int(packet.udp.dstport) if packet.udp.dstport.isdigit() else 0
+        packet_data["payload"] = packet.udp.payload if hasattr(packet.udp, 'payload') else None
 
     print(f"<<< PACKET CAPTURED {packet_data['src_ip']}:{packet_data['src_port']}({packet_data['src_mac']}) -> {packet_data['dst_ip']}:{packet_data['dst_port']}({packet_data['dst_mac']}) {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED] >>>")
 
