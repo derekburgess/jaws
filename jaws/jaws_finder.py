@@ -56,6 +56,26 @@ def fetch_data(driver, database, type):
         return embeddings, data
 
 
+def update_neo4j(outlier_list, driver, database):
+    query = """
+    UNWIND $outliers AS outlier
+    MATCH (org:ORGANIZATION {org: outlier.org})
+    MERGE (outlierNode:OUTLIER {
+        src_ip: outlier.src_ip,
+        src_port: outlier.src_port,
+        dst_ip: outlier.dst_ip,
+        dst_port: outlier.dst_port,
+        size: outlier.size,
+        protocol: outlier.protocol,
+        location: outlier.location
+    })
+    MERGE (org)-[:ANOMALY]->(outlierNode)
+    """
+    parameters = {'outliers': outlier_list}
+    with driver.session(database=database) as session:
+        session.run(query, parameters)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
     parser.add_argument("--type", choices=["packet", "org"], default="packet",
@@ -245,6 +265,20 @@ def main():
         if clusters[i] == -1:
             annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
             print(annotation_text, "\n")
+    
+    outlier_data = [
+        {
+            'org': item['org'],
+            'location': item['location'],
+            'src_ip': item['src_ip'],
+            'src_port': item['src_port'],
+            'dst_ip': item['dst_ip'],
+            'dst_port': item['dst_port'],
+            'size': item['size'],
+            'protocol': item['protocol']
+        } for i, item in enumerate(data) if clusters[i] == -1
+    ]
+    update_neo4j(outlier_data, driver, args.database)
 
     plt.show()
 

@@ -37,37 +37,38 @@ Instructions:
 
 def fetch_data(driver, database):
     query = """
-    MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
-    OPTIONAL MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
-    RETURN DISTINCT src.src_address AS src_ip, 
-        src.src_port AS src_port,
-        dst.dst_address AS dst_ip,  
-        dst.dst_port AS dst_port,
-        p.protocol AS protocol, 
-        p.size AS size,
-        org.name AS org,
-        org.hostname AS hostname
+    MATCH (org:ORGANIZATION)-[:ANOMALY]->(outlier:OUTLIER)
+    RETURN org.org AS org,
+        org.hostname AS hostname,
+        outlier.src_ip AS src_ip,
+        outlier.src_port AS src_port,
+        outlier.dst_ip AS dst_ip,
+        outlier.dst_port AS dst_port,
+        outlier.size AS size,
+        outlier.protocol AS protocol,
+        outlier.location AS location
     """
     with driver.session(database=database) as session:
         result = session.run(query)
         data = []
         for record in result:
             data.append({
+                'org': record['org'],
+                'hostname': record['hostname'],
                 'src_ip': record['src_ip'],
                 'src_port': record['src_port'],
                 'dst_ip': record['dst_ip'],
                 'dst_port': record['dst_port'],
-                'protocol': record['protocol'],
                 'size': record['size'],
-                'org': record['org'],
-                'hostname': record['hostname'],
+                'protocol': record['protocol'],
+                'location': record['location']
             })
         df = pd.DataFrame(data)
-        print(f"\nPassing {df.shape[0]} packets (snapshot below):")
-        df = df.sample(frac=1)
+        print(f"\nFetched {df.shape[0]} outlier records (snapshot below):")
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
         return df_json
+
 
 
 class SummarizeTransformers:
