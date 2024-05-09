@@ -69,6 +69,7 @@ def main():
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
     ip_addresses = fetch_data(driver, args.database)
+    print(f"\n{len(ip_addresses)} IP addresses without organization information", "\n")
     for ip_address in ip_addresses:
         ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:

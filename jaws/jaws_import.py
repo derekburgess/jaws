@@ -76,9 +76,9 @@ def main():
 
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
-
     capture = pyshark.FileCapture(args.capture_file)
-
+    
+    print(f"\nImporting packets from {args.capture_file}", "\n")
     for packet in capture:
         process_packet(packet, driver, args.database)
 

@@ -98,17 +98,18 @@ class ComputeTransformers:
         return embeddings
 
     def process_transformer_packet(self, df):
+        print(f"\nComputing packet-embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
             packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_transformer_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print(f"Computed packet-embedding({self.model_name})")
                 print(packet_string, "\n")
 
     def process_transformer_org(self):
         df = fetch_org_data(self.database)
+        print(f"\nComputing org-embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
             org_string = f"""
             Organization: {row['org']}
@@ -121,8 +122,7 @@ class ComputeTransformers:
             embedding = self.compute_transformer_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print(f"Computed org-embedding({self.model_name})")
-                print(org_string, "\n")
+                print(org_string,)
 
     def transform(self, transform_type):
         if transform_type == 'packet':
@@ -153,17 +153,18 @@ class ComputeOpenAI:
             return None
 
     def process_openai_packet(self, df):
+        print(f"\nComputing packet-embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print(f"Computed packet-embedding(OpenAI {self.model})")
                 print(packet_string, "\n")
 
     def process_openai_org(self):
         df = fetch_org_data(self.database)
+        print(f"\nComputing org-embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             org_string = f"""
             Organization: {row['org']}
@@ -176,7 +177,6 @@ class ComputeOpenAI:
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print(f"Computed org-embedding(OpenAI {self.model})")
                 print(org_string, "\n")
 
     def transform(self, transform_type):
@@ -193,6 +193,7 @@ class ComputeOpenAI:
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=UserWarning)
     
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai",

@@ -82,7 +82,8 @@ def main():
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
     capture = pyshark.LiveCapture(interface=args.interface)
-
+    
+    print(f"\nCapturing packets on {args.interface} for {args.duration} seconds", "\n")
     start_time = time.time()
     for packet in capture.sniff_continuously():
         process_packet(packet, driver, args.database)
