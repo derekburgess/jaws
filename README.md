@@ -79,12 +79,12 @@ This Docker container operates as a local/headless Neo4j database. You can run a
 
 From the /jaws/harbor directory run: 
 
-`docker build -t jaws-harbor-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg DEFAULT_DATABASE=captures .` 
+`docker build -t jaws-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg DEFAULT_DATABASE=captures .` 
 
 
 Then run: 
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-harbor-neodbms`
+`docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-neodbms`
 
 
 If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run jaws-guide for the rest of the instructions and commend overview.
@@ -97,10 +97,10 @@ This Docker container operates as a full instance of JAWS. However, the intended
 
 From the /jaws/ocean directory run:
 
-`docker build -t jaws-compute-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
+`docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
 
 
-`docker run --gpus 1 --network host --name jaws-compute --detach jaws-compute-image`
+`docker run --gpus 1 --network host --name jaws-container --detach jaws-image`
 
 
 Note that the PATH should be the location you want the plots to download to.
