@@ -3,7 +3,7 @@ from rich import print
 
 def main():
     print(r"""
-    [bold turquoise2]
+    [cyan1]
         o   O   o       o  o-o
         |  / \  |       | |
         | o---o o   o   o  o-o
@@ -13,10 +13,15 @@ def main():
     """)
 
     print("""
-    [gray70]JAWS is set to run against the OpenAI API by default and does not require a specific GPU.[/]
+    [green1]JAWS is set to run against the OpenAI API by default and does not require a specific GPU.
+    You can in theory simply run: jaws-capture > jaws-ipinfo > jaws-compute > etc. with no options.[/]
+    """)
+
+    print("""
     [gray70]If you plan to run the Hugging Face models locally, on the host system or in the container, you can download them first using:[/]
     [grey100]jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/] 
     [gray100]docker exec -it jaws-compute jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/]
+    [gold1]WARNING: This will download a large amount of data and may take some time.[/]
     """)
 
     print("""
@@ -54,6 +59,7 @@ def main():
     print("""
     [gray70]To clear the database:[/]
     [grey100]jaws-clear[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
+    [gold1]WARNING: This will erase all data![/]
     """)
 
     print("""
