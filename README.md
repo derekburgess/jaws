@@ -103,9 +103,6 @@ From the /jaws/ocean directory run:
 `docker run --gpus 1 --network host --name jaws-container --detach jaws-image`
 
 
-Note that the PATH should be the location you want the plots to download to.
-
-
 To pull the Hugging Face models, run jaws-anchor, which will pull everything by default, or append --model starcoder or llama.
 
 
