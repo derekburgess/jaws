@@ -13,10 +13,10 @@ def main():
     """)
 
     print("""
-    [gray70]Note: JAWS is set to run against the OpenAI API by default and does not require a specific CPU or GPU.[/]
-    [gray70]If you plan to run the local models on the host system or in the container, download them first:[/]
-    [grey100]jaws-anchor --model 'starcoder', 'llama', or 'all'[/] 
-    [gray100]docker exec -it jaws-anchor +/- --model 'starcoder' or 'llama'[/]
+    [gray70]JAWS is set to run against the OpenAI API by default and does not require a specific GPU.[/]
+    [gray70]If you plan to run the Hugging Face models locally, on the host system or in the container, you can download them first using:[/]
+    [grey100]jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/] 
+    [gray100]docker exec -it jaws-compute jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/]
     """)
 
     print("""
@@ -30,14 +30,14 @@ def main():
     """)
 
     print("""
-    [gray70]To investigate IP Addresses:[/]
+    [gray70]To investigate IP Addresses and build Organization nodes:[/]
     [grey100]jaws-ipinfo[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
     """)
 
     print("""
     [gray70]To compute embeddings from packets or organization sets:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/StarCoder2') --type 'packet' (or 'org') --database 'captures'[/]
-    [gray100]docker exec -it jaws-compute jaws-compute --api 'transformers'[/]
+    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures'[/]
+    [gray100]docker exec -it jaws-compute jaws-compute --api 'transformers' --type 'packet' (or 'org')[/]
     """)
    
     print("""
@@ -47,7 +47,7 @@ def main():
           
     print("""
     [gray70]To generate an 'expert' analysis:[/]
-    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers/Llama3') --database 'captures'[/]
+    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --database 'captures'[/]
     [gray100]docker exec -it jaws-compute jaws-advisor --api 'transformers'[/]
     """)
           
