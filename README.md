@@ -105,32 +105,23 @@ From the /jaws/ocean directory run:
 
 Note that the PATH should be the location you want the plots to download to.
 
-Open a bash shell:
-
-`docker exec -it jaws-compute bash`
-
 
 To pull the Hugging Face models, run jaws-anchor, which will pull everything by default, or append --model starcoder or llama.
 
-`jaws-anchor` or `jaws-anchor --model`
 
-
-Or without creating a bash shell, run: 
-
-`docker exec -it jaws-compute jaws-anchor` +/- `--model "starcoder` or `llama`
+`docker exec -it jaws-container jaws-anchor`
 
 
 To use the container run:
 
-`jaws-compute --api "transformers"`
+`docker exec -it jaws-container jaws-compute --api "transformers"`
 
 
-`docker exec -it jaws-compute jaws-compute --api "transformers"`
-
-
-`docker exec -it jaws-compute jaws-advisor --api "transformers"`
+`docker exec -it jaws-container jaws-advisor --api "transformers"`
 
 
 ## Usage
+
+`jaws-guide`
 
 The Neo4j Docker Container acts as the central graph. JAWS is then run a host to collect packets. The jaws-compute container can be deployed to manage models and compute resourses.

@@ -31,7 +31,7 @@ def main():
           
     [aquamarine1]jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all', 'starcoder, 'llama'[/] 
           
-    [turquoise2][Docker][/] [gray100]docker exec -it jaws-compute jaws-anchor[/]
+    [turquoise2][Docker][/] [gray100]docker exec -it jaws-container jaws-anchor[/]
     [gold1][WARNING] This will download a large amount of data and may take some time.[/]
     """)
 
@@ -58,7 +58,7 @@ def main():
           
     [aquamarine1]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai', 'transformers' --type 'packet', 'org' --database 'captures'[/]
           
-    [turquoise2][Docker][/] [gray100]docker exec -it jaws-compute jaws-compute --api 'transformers'[/]
+    [turquoise2][Docker][/] [gray100]docker exec -it jaws-container jaws-compute --api 'transformers'[/]
     """)
    
     print("""
@@ -71,7 +71,8 @@ def main():
     [gray100]To generate an 'expert' analysis from outliers:[/]
           
     [aquamarine1]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai', 'transformers' --database 'captures'[/]
-    [gray100]docker exec -it jaws-compute jaws-advisor --api 'transformers'[/]
+          
+    [turquoise2][Docker][/] [gray100]docker exec -it jaws-container jaws-advisor --api 'transformers'[/]
     """)
           
     print("""
