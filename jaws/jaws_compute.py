@@ -1,5 +1,6 @@
 import os
 import argparse
+import warnings
 from neo4j import GraphDatabase
 import pandas as pd
 import torch
@@ -191,6 +192,8 @@ class ComputeOpenAI:
         self.driver.close()
 
 def main():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    
     parser = argparse.ArgumentParser(description="Process embeddings using either OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai",
                         help="Specify the api to use for computing embeddings, either openai or transformers (default: openai)")
