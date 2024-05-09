@@ -1,5 +1,6 @@
 import os
 import argparse
+import warnings
 from neo4j import GraphDatabase
 import pandas as pd
 import numpy as np
@@ -121,6 +122,8 @@ class SummarizeOpenAI:
 
 
 def main():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    
     parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai",
                         help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
