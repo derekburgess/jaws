@@ -3,7 +3,7 @@ from rich import print
 
 def main():
     print(r"""
-    [cyan1]
+    [dark_turquoise]
         o   O   o       o  o-o
         |  / \  |       | |
         | o---o o   o   o  o-o
@@ -12,54 +12,73 @@ def main():
     [/]
     """)
 
+    
     print("""
-    [green1]JAWS is set to run against the OpenAI API by default and does not require a specific GPU.
-    You can in theory simply run: jaws-capture > jaws-ipinfo > jaws-compute > etc. with no options.[/]
+    [gray100]JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
+    the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
+    It also provides a set of commands to transform and process packets into plots and reports using: 
+    K-means, DBSCAN, OpenAI, StarCoder2, and Llama3.[/]
+    """)
+    
+    
+    print("""
+    [sea_green3]While JAWS is indended to be run locally using open models, is set to run against the OpenAI API by 
+    default and does not require a specific GPU. You can in theory simply run the commands with no options.[/]
     """)
 
     print("""
-    [gray70]If you plan to run the Hugging Face models locally, on the host system or in the container, you can download them first using:[/]
-    [grey100]jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/] 
-    [gray100]docker exec -it jaws-compute jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all' (or 'starcoder/llama')[/]
-    [gold1]WARNING: This will download a large amount of data and may take some time.[/]
+    [gray100]If you plan to run the models locally, it is recommended that you download them first:[/]
+          
+    [aquamarine1]jaws-anchor[/] [gray70]OPTIONAL[/] [grey100]--model 'all', 'starcoder, 'llama'[/] 
+          
+    [turquoise2][Docker][/] [gray100]docker exec -it jaws-compute jaws-anchor[/]
+    [gold1][WARNING] This will download a large amount of data and may take some time.[/]
     """)
 
     print("""
-    [gray70]To capture packets:[/]
-    [grey100]jaws-capture[/] [gray70]OPTIONAL[/] [grey100]--interface 'Ethernet' --duration 10 --database 'captures'[/]
+    [gray100]To capture packets:[/]
+          
+    [aquamarine1]jaws-capture[/] [gray70]OPTIONAL[/] [grey100]--interface 'Ethernet' --duration 10 --database 'captures'[/]
     """)
 
     print("""
-    [gray70]To import packets from capture files (pcapng):[/]
-    [grey100]jaws-import --file PATH [gray70]OPTIONAL[/] --database 'captures'[/]
+    [gray100]To import packets from capture files (pcapng):[/]
+          
+    [aquamarine1]jaws-import --file PATH[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
     """)
 
     print("""
-    [gray70]To investigate IP Addresses and build Organization nodes:[/]
-    [grey100]jaws-ipinfo[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
+    [gray100]To investigate IP addresses and build organization nodes:[/]
+          
+    [aquamarine1]jaws-ipinfo[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
     """)
 
     print("""
-    [gray70]To compute embeddings from packets or organization sets:[/]
-    [grey100]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --type 'packet' (or 'org') --database 'captures'[/]
-    [gray100]docker exec -it jaws-compute jaws-compute --api 'transformers' --type 'packet' (or 'org')[/]
+    [gray100]To compute embeddings from packets or organization sets:[/]
+          
+    [aquamarine1]jaws-compute[/] [gray70]OPTIONAL[/] [grey100]--api 'openai', 'transformers' --type 'packet', 'org' --database 'captures'[/]
+          
+    [turquoise2][Docker][/] [gray100]docker exec -it jaws-compute jaws-compute --api 'transformers'[/]
     """)
    
     print("""
-    [gray70]To view cluster plots of embeddings:[/]
-    [grey100]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packet' (or 'org') --database 'captures'[/]
+    [gray100]To view cluster plots of embeddings and build outlier nodes:[/]
+          
+    [aquamarine1]jaws-finder[/] [gray70]OPTIONAL[/] [grey100]--type 'packet', 'org' --database 'captures'[/]
     """)
           
     print("""
-    [gray70]To generate an 'expert' analysis:[/]
-    [grey100]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai' (or 'transformers') --database 'captures'[/]
+    [gray100]To generate an 'expert' analysis from outliers:[/]
+          
+    [aquamarine1]jaws-advisor[/] [gray70]OPTIONAL[/] [grey100]--api 'openai', 'transformers' --database 'captures'[/]
     [gray100]docker exec -it jaws-compute jaws-advisor --api 'transformers'[/]
     """)
           
     print("""
-    [gray70]To clear the database:[/]
-    [grey100]jaws-clear[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
-    [gold1]WARNING: This will erase all data![/]
+    [gray100]To clear the database:[/]
+          
+    [aquamarine1]jaws-clear[/] [gray70]OPTIONAL[/] [grey100]--database 'captures'[/]
+    [gold1][WARNING] This will erase all data![/]
     """)
 
     print("""
