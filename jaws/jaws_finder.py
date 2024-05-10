@@ -91,6 +91,8 @@ def main():
     embeddings, data = fetch_data(driver, args.database, args.type)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
+    print("\nPlotting the Size of Packets over Ports", "\n")
+
     # Plot the size of packets over source ports
     plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
 
@@ -128,8 +130,8 @@ def main():
         portsize_plotille.scatter([size], [dst_port], marker="<")
     print(portsize_plotille.show(legend=False))
 
-    print(f"\nPerforming PCA on Embeddings")
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
+    print(f"\nPerforming PCA on {len(embeddings_scaled)} Embeddings")
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
 
@@ -183,7 +185,7 @@ def main():
         except ValueError:
             print("Invalid input. Using the recommended EPS value...")
 
-    print(f"Using user input EPS: {eps_value}", "\n")
+    print(f"Using EPS: {eps_value}", "\n")
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
@@ -273,7 +275,7 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
-    print("\nList of outliers:")
+    print(f"\nFound {len(outlier_data)} outliers:", "\n")
     for item in outlier_data:
         outlier_list = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
         print(outlier_list, "\n")

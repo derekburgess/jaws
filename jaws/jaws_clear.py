@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
 
-    print("Clearing the Neo4j database...")
+    print("\nClearing the Neo4j database...")
     clear_database(driver, args.database)
 
     driver.close()

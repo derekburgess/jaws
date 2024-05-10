@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j). It also provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is indended to be run locally using open models, but is set to run using OpenAI by default for demos and easy of use.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j). It also provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using open models, but is set to run using OpenAI by default for demos and easy of use.
 
 
 ## Setup

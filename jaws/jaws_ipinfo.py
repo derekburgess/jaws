@@ -69,12 +69,12 @@ def main():
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
     ip_addresses = fetch_data(driver, args.database)
-    print(f"\n{len(ip_addresses)} IP addresses without organization information", "\n")
+    print(f"\nFound {len(ip_addresses)} IP addresses without organization nodes", "\n")
     for ip_address in ip_addresses:
         ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:
             update_neo4j(ip_address, ip_info, driver, args.database)
-            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
+            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}", "\n")
 
 
 if __name__ == "__main__":

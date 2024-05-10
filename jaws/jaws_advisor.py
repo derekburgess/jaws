@@ -65,7 +65,7 @@ def fetch_data(driver, database):
                 'location': record['location']
             })
         df = pd.DataFrame(data)
-        print(f"\nFetched {df.shape[0]} outlier records (snapshot below):")
+        print(f"\nSending {df.shape[0]} outlier records (snapshot below):", "\n")
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
         return df_json
@@ -100,7 +100,7 @@ class SummarizeTransformers:
             top_p=0.9,
         )
         response = outputs[0][input_ids.shape[-1]:]
-        print(f"\nResponse from {self.model_name}:")
+        print(f"\nResponse from {self.model_name}:", "\n")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
 
@@ -117,7 +117,7 @@ class SummarizeOpenAI:
                 {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
             ]
         )
-        print(f"\nResponse from {self.model_name}")
+        print(f"\nResponse from {self.model_name}", "\n")
         print(completion.choices[0].message.content, "\n")
 
 

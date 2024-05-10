@@ -60,7 +60,7 @@ def process_packet(packet, driver, database):
         packet_data["dst_port"] = int(packet.udp.dstport) if packet.udp.dstport.isdigit() else 0
         packet_data["payload"] = packet.udp.payload if hasattr(packet.udp, 'payload') else None
 
-    print(f"<<< PACKET CAPTURED {packet_data['src_ip']}:{packet_data['src_port']}({packet_data['src_mac']}) -> {packet_data['dst_ip']}:{packet_data['dst_port']}({packet_data['dst_mac']}) {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED] >>>")
+    print(f"<<< PACKET CAPTURED {packet_data['src_ip']}:{packet_data['src_port']} ({packet_data['src_mac']}) -> {packet_data['dst_ip']}:{packet_data['dst_port']} ({packet_data['dst_mac']}) <> {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED] >>>", "\n")
 
     try:
         add_packet_to_neo4j(driver, packet_data, database)
