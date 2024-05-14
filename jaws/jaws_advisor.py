@@ -107,7 +107,7 @@ class SummarizeTransformers:
 class SummarizeOpenAI:
     def __init__(self, client):
         self.client = client
-        self.model_name = "gpt-3.5-turbo-16k"
+        self.model_name = "gpt-4o"
 
     def generate_summary_from_openai(self, system_prompt, df_json):
         completion = self.client.chat.completions.create(

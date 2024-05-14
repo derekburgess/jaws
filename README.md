@@ -31,7 +31,7 @@ To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](ht
 `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-3.5-turbo-16k) are set to pass --api openai by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
+Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-4o) are set to pass --api openai by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
 
 `OPENAI_API_KEY`
 
