@@ -34,15 +34,9 @@ def main():
     [/]""")
 
     print("""[gray100]
-    [grey85]To capture packets:[/]
+    [grey85]To capture or import packets:[/]
           
-    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' --duration 10 --database 'captures'
-    [/]""")
-
-    print("""[gray100]
-    [grey85]To import packets from a capture file (pcapng):[/]
-          
-    [green1][CLI][/] jaws-import --file PATH [grey50]OPTIONAL[/] --database 'captures'
+    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' --file PATH --duration 10 --database 'captures'
     [/]""")
 
     print("""[gray100]

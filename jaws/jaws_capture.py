@@ -33,20 +33,20 @@ def add_packet_to_neo4j(driver, packet_data, database):
 def process_packet(packet, driver, database):
     packet_data = {
         "protocol": packet.highest_layer,
-        "src_ip": None,
+        "src_ip": '0.0.0.0',
         "src_port": 0,
-        "src_mac": None,
-        "dst_ip": None,
+        "src_mac": '00:00:00:00:00:00',
+        "dst_ip": '0.0.0.0',
         "dst_port": 0,
-        "dst_mac": None,
+        "dst_mac": '00:00:00:00:00:00',
         "size": len(packet),
-        "payload": None,
+        "payload": 'No Payload',
         "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
 
     if 'IP' in packet:
         packet_data["src_ip"] = packet.ip.src
-        packet_data["dst_ip"] = packet.ip.ds
+        packet_data["dst_ip"] = packet.ip.dst
 
     if 'ETH' in packet:
         packet_data["src_mac"] = packet.eth.src
@@ -74,6 +74,7 @@ def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database")
     parser.add_argument("--interface", default="Ethernet",
                         help="Specify the network interface to use (default: Ethernet)")
+    parser.add_argument("--file", dest="capture_file", help="Path to the Wireshark capture file")
     parser.add_argument("--duration", type=int, default=10,
                         help="Specify the duration of the capture in seconds (default: 10)")
     parser.add_argument("--database", default="captures",
@@ -81,14 +82,20 @@ def main():
 
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
-    capture = pyshark.LiveCapture(interface=args.interface)
+    interface_capture = pyshark.LiveCapture(interface=args.interface)
     
-    print(f"\nCapturing packets on {args.interface} for {args.duration} seconds", "\n")
-    start_time = time.time()
-    for packet in capture.sniff_continuously():
-        process_packet(packet, driver, args.database)
-        if time.time() - start_time > args.duration:
-            break
+    if args.capture_file:
+        print(f"\nImporting packets from {args.capture_file}", "\n")
+        file_capture = pyshark.FileCapture(args.capture_file)
+        for packet in file_capture:
+            process_packet(packet, driver, args.database)
+    else:
+        print(f"\nCapturing packets on {args.interface} for {args.duration} seconds", "\n")
+        start_time = time.time()
+        for packet in interface_capture.sniff_continuously():
+            process_packet(packet, driver, args.database)
+            if time.time() - start_time > args.duration:
+                break
 
     driver.close()
 
