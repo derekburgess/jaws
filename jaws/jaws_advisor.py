@@ -100,7 +100,9 @@ class SummarizeTransformers:
             top_p=0.9,
         )
         response = outputs[0][input_ids.shape[-1]:]
-        print(f"\nAnalysis from {self.model_name}:", "\n")
+        print(f"""
+              \nAnalysis from {self.model_name}:
+              """, "\n")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
 

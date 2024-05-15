@@ -98,7 +98,7 @@ class ComputeTransformers:
         return embeddings
 
     def process_transformer_packet(self, df):
-        print(f"\nComputing packet-embeddings using {self.model_name} for {len(df)} packets", "\n")
+        print(f"\nComputing {len(df)} packet-embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
             packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
@@ -109,7 +109,7 @@ class ComputeTransformers:
 
     def process_transformer_org(self):
         df = fetch_org_data(self.database)
-        print(f"\nComputing org-embeddings using {self.model_name} for {len(df)} organizations", "\n")
+        print(f"\nComputing {len(df)} org-embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
             org_string = f"""
             Organization: {row['org']}
@@ -153,7 +153,7 @@ class ComputeOpenAI:
             return None
 
     def process_openai_packet(self, df):
-        print(f"\nComputing packet-embeddings using OpenAI {self.model} for {len(df)} packets", "\n")
+        print(f"\nComputing {len(df)} packet-embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             packet_string = f"(NODE ORGANIZATION: {row['org']}, hostname: {row['hostname']}, location: {row['location']}) - [OWNERSHIP] -> (NODE SRC_IP: {row['src_ip']}:{row['src_port']}({row['src_mac']})) - [PACKET: procotol: {row['protocol']} size:{row['size']}] -> (NODE DST_IP: {row['dst_ip']}:{row['dst_port']}({row['dst_mac']}))"
 
@@ -164,7 +164,7 @@ class ComputeOpenAI:
 
     def process_openai_org(self):
         df = fetch_org_data(self.database)
-        print(f"\nComputing org-embeddings using OpenAI {self.model} for {len(df)} organizations", "\n")
+        print(f"\nComputing {len(df)} org-embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             org_string = f"""
             Organization: {row['org']}

@@ -33,8 +33,8 @@ def main():
     driver = connect_to_database(uri, username, password, args.database)
 
     record_count = preview_database(driver, args.database)
-    confirm = input(f"\nAre you sure you want to clear the {record_count} records from the database? Enter 'Yes' to confirm: ")
-    if confirm == 'Yes':
+    confirm = input(f"\nAre you sure you want to clear the {record_count} records from the database? Enter 'YES' to confirm: ")
+    if confirm == 'YES':
         print("\nClearing the Neo4j database...")
         clear_database(driver, args.database)
 
