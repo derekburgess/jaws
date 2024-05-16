@@ -16,6 +16,8 @@ username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
+jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
+image_to_encode = f"{jaws_finder_endpoint}pca_dbscan_outliers.png"
 system_prompt = """
 As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs and reports of networking traffic to identify patterns and suggest improvements for firewall configurations. Please analyze the provided network traffic data and make recommendations for enhancing firewall security, returning a brief report in the following format:
 
@@ -39,8 +41,6 @@ Additional Instructions:
 - Ensure recommendations are specific and supported by data from the provided logs.
 - Avoid too much formatting.
 """
-jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
-image_to_encode = f"{jaws_finder_endpoint}pca_dbscan_outliers.png"
 
 
 def fetch_data(driver, database):
@@ -84,6 +84,7 @@ def encode_image(image_path):
     return base64.b64encode(image_file.read()).decode('utf-8')
 base64_image = encode_image(image_to_encode)
 
+
 class SummarizeTransformers:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -113,9 +114,7 @@ class SummarizeTransformers:
             top_p=0.9,
         )
         response = outputs[0][input_ids.shape[-1]:]
-        print(f"""
-              \nAnalysis from {self.model_name}:
-              """, "\n")
+        print(f"\nAnalysis from {self.model_name}:", "\n")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
 
