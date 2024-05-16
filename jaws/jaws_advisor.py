@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
+import base64
+import requests
 
 
 uri = os.getenv("NEO4J_URI")
@@ -15,10 +17,11 @@ password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 system_prompt = """
-As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs of networking traffic to identify patterns and suggest improvements for firewall configurations. Your analysis should focus on:
+As an expert IT Professional, Sysadmin, and Analyst, you are tasked with reviewing logs and reports of networking traffic to identify patterns and suggest improvements for firewall configurations. Please analyze the provided network traffic data and make recommendations for enhancing firewall security, returning a brief report in the following format:
 
 Traffic Analysis:
-1. Identify common traffic patterns. Summarize these using a diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., ( org, hostname ) - [ ownership ] -> ( src_ip:src_port ) - [ packet size ] -> ( dst_ip:dst_port ).
+
+1. Identify common traffic patterns. Summarize these using an ASCII based diagrammatic notation that includes organizations, hostnames, IP addresses, port numbers, and traffic size (e.g., ( org, hostname ) - [ ownership ] -> ( src_ip:src_port ) - [ packet size ] -> ( dst_ip:dst_port ).
 
 2. Highlight any anomalies or unusual patterns.
 
@@ -28,12 +31,16 @@ Firewall Recommendations:
 
 2. Provide a rationale for each recommendation, explaining why it addresses a specific issue identified in the traffic analysis.
 
-Instructions:
+Additional Instructions:
 
+- Begin with an executive summary of the traffic analysis.
 - Use clear, concise language.
-- Utilize diagrams to represent traffic flows effectively.
+- Utilize ASCII diagrams to represent traffic flows effectively.
 - Ensure recommendations are specific and supported by data from the provided logs.
+- Avoid too much formatting.
 """
+jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
+image_to_encode = f"{jaws_finder_endpoint}pca_dbscan_outliers.png"
 
 
 def fetch_data(driver, database):
@@ -69,7 +76,13 @@ def fetch_data(driver, database):
         print(df.head(), "\n")
         df_json = df.to_json(orient="records")
         return df_json
+    
 
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    print(f"\nEncoding and sending image from: {image_path}")
+    return base64.b64encode(image_file.read()).decode('utf-8')
+base64_image = encode_image(image_to_encode)
 
 class SummarizeTransformers:
     def __init__(self):
@@ -116,8 +129,23 @@ class SummarizeOpenAI:
             model=self.model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Snapshot of network traffic: {df_json}"}
-            ]
+                {"role": "user",
+                 "content": [
+                    {
+                        "type": "text",
+                        "text": f"Snapshot of network traffic: {df_json}"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}",
+                            "detail": "high"
+                        }
+                    }
+                ]
+            }  
+        ]      
+
         )
         print(f"\nAnalysis from {self.model_name}", "\n")
         print(completion.choices[0].message.content, "\n")

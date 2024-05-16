@@ -111,7 +111,7 @@ def main():
     plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
     plt.tight_layout()
     save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
-    plt.savefig(save_portsize, dpi=300)
+    plt.savefig(save_portsize, dpi=90)
 
     # Plot the Size and Port scatter using Plotille
     portsize_plotille = plotille.Figure()
@@ -159,7 +159,7 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
     save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
-    plt.savefig(save_kdistance, dpi=300)
+    plt.savefig(save_kdistance, dpi=90)
 
     # Plot the sorted K-Distance using Plotille
     kdistance_plotille = plotille.Figure()
@@ -247,7 +247,7 @@ def main():
     plt.yticks(fontsize=8)
     plt.tight_layout()
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
-    plt.savefig(save_outliers, dpi=300)
+    plt.savefig(save_outliers, dpi=90)
 
     # Plot the Size and Port scatter using Plotille
     outlier_plotille = plotille.Figure()
