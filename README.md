@@ -114,9 +114,6 @@ To use the container run:
 `docker exec -it jaws-container jaws-compute --api "transformers"`
 
 
-`docker exec -it jaws-container jaws-advisor --api "transformers"`
-
-
 ## Usage
 
 `jaws-guide`
