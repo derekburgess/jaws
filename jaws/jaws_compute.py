@@ -85,12 +85,12 @@ class ComputeTransformers:
         self.model_name = "bigcode/starcoder2-3b"
         self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token)
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token, low_cpu_mem_usage=True)
 
-    def compute_transformer_embedding(self, packet_string):
-        inputs = self.tokenizer(packet_string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
+    def compute_transformer_embedding(self, string):
+        inputs = self.tokenizer(string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
         with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
+            outputs = self.model(**inputs, output_hidden_states=True, use_cache=False)
         last_hidden_states = outputs.hidden_states[-1]
         embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
         return embeddings

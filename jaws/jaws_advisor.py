@@ -92,7 +92,7 @@ class SummarizeTransformers:
         self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
         self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, token=self.huggingface_token, torch_dtype=torch.bfloat16, device_map="auto")
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, token=self.huggingface_token, torch_dtype=torch.bfloat16)
 
     def generate_summary_from_transformers(self, system_prompt, df_json):
         messages = [
@@ -105,7 +105,7 @@ class SummarizeTransformers:
             add_generation_prompt=True,
             return_tensors="pt"
         ).to(self.model.device)
-
+        
         outputs = self.model.generate(
             input_ids,
             max_length=8192,
