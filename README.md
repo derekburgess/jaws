@@ -23,18 +23,20 @@ Wireshark will ask you about adding non-root users to the Wireshark group. It is
 
 `sudo dpkg-reconfigure wireshark-common`
 
-In addition, if you come back and say YES, you may also need to run:
+In addition, the installation and adding non-root users is suppose to add your user to the Wireshark group and set permissions, but I have found that it doesn't always do this. You may need to run:
 
-`sudo adduser $USER wireshark`
-
-`sudo chmod +x /usr/bin/dumpcap`
+`sudo adduser $USER wireshark` and `sudo chmod +x /usr/bin/dumpcap`
 
 
 ### Neo4j DBMS
 
-JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/). I wont cover the Ubuntu installation in detail, it's easy enough. In short, they provide an AppImage, make it executable:
+JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/) on Windows and Mac.
 
-`sudo chmod +x file` and run it. You can use that same AppImage to launch the Neo4j GUI as needed.
+On Ubuntu, you can follow these instructions for installing the package: https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debian-installation
+
+To use the desktop application on Linux, you will need to download the app image from: https://neo4j.com/product/developer-tools/ -- Ubuntu may complain about lack of FUSE, see here: https://github.com/AppImage/AppImageKit/wiki/FUSE
+
+Ubuntu may also complain about lack of sandbox... So far I have only found running the app image with `--no-sandbox` appended.
 
 
 ### Conda/Anaconda/Miniconda
