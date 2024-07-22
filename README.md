@@ -58,6 +58,12 @@ Finally, I like to use the navigator GUI, which can be installed using:
 
 `conda install anaconda-navigator`
 
+Some other useful Conda commands:
+
+`conda activate env` and `conda deactivate`
+
+`conda env config vars list` and `conda env config vars set my_var=value`
+
 
 ### Docker
 
@@ -96,7 +102,7 @@ Somewhat Optional: Since OpenAI is not free, by passing --api transformers, 2 of
 
 In addition, you will want to install the Hugging Face CLI, found here: https://huggingface.co/docs/huggingface_hub/en/guides/cli and login.
 
-`pip install -U "huggingface_hub[cli]"`
+`pip3 install -U "huggingface_hub[cli]"`
 
 `huggingface-cli login`
 
@@ -105,17 +111,17 @@ In addition, you will want to install the Hugging Face CLI, found here: https://
 
 Visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
 
-`pip3 install torch torchvision torchaudio`
-
-
-From the /jaws root directory, install dependencies:
-
-`pip3 install -r requirements.txt`
+`pip3 install torch`
 
 
 Install support for Quantization(StarCoder):
 
 `pip3 install -i https://pypi.org/simple/ bitsandbytes`
+
+
+From the /jaws root directory, install dependencies:
+
+`pip3 install -r requirements.txt`
 
 
 Install JAWS using:
