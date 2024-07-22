@@ -6,9 +6,12 @@ JAWS is a Python based shell pipeline for analyzing the shape and activity of ne
 
 ## Prerequisites and initial setup
 
+This part of the guide is assuming a clean install and mainly exists as a guide for myself when setting up new systems.
+
+
 ### CUDA Support
 
-If you plan on running local models against a NVIDIA GPU, you will need the CUDA Toolkit installed. You can configure an installer or guide using this link: https://developer.nvidia.com/cuda-downloads -- On Ubuntu, you can run:
+If you plan on running local models against a NVIDIA GPU, you will need the CUDA Toolkit installed. [You can configure an installer or guide here](https://developer.nvidia.com/cuda-downloads) -- On Ubuntu, if you installed the additional drivers for NVIDIA, you can run:
 
 `sudo apt install nvidia-cuda-toolkit`
 
@@ -30,18 +33,30 @@ In addition, the installation and adding non-root users is suppose to add your u
 
 ### Neo4j DBMS
 
-JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/) on Windows and Mac.
+JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j DBMS/Desktop app](https://neo4j.com/product/developer-tools/) on Windows/Mac/Linux.
 
-On Ubuntu, you can follow these instructions for installing the package: https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debian-installation
+On Ubuntu, you can follow these instructions for installing the package: 
 
-To use the desktop application on Linux, you will need to download the app image from: https://neo4j.com/product/developer-tools/ -- Ubuntu may complain about lack of FUSE, see here: https://github.com/AppImage/AppImageKit/wiki/FUSE
+https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debian-installation
+
+To use the desktop application on Linux, you will need to set its permissions:
+
+`sudo chmod +x neo4j...`
+
+Ubuntu may complain about lack of [FUSE](https://github.com/AppImage/AppImageKit/wiki/FUSE).
 
 Ubuntu may also complain about lack of sandbox... So far I have only found running the app image with `--no-sandbox` appended.
 
 
 ### Conda/Anaconda/Miniconda
 
+I tend to use [Anaconda](https://www.anaconda.com/download/success) and prefer their installation script over the guide...
 
+If you used the installation script, add Conda to bash: `nano ~/.bashrc` and append `export PATH=~/anaconda3/bin:$PATH` to the end of the file, replacing /anaconda3/bin with your actual installation path.
+
+Finally, I like to use the navigator GUI, which can be installed using: 
+
+`conda install anaconda-navigator`
 
 
 ### Docker
