@@ -6,27 +6,45 @@ JAWS is a Python based shell pipeline for analyzing the shape and activity of ne
 
 ## Prerequisites and initial setup
 
-JAWS uses pyshark which requires termshark, which can be installed with [Wireshark](https://www.wireshark.org/). Or by installing the termshark package.
+### CUDA Support
 
-On Linux, Wireshark will ask you about adding non-root users to the Wireshark group. It is recommended that you say Yes. If you said No, then you can run:
+If you plan on running local models against a NVIDIA GPU, you will need the CUDA Toolkit installed. You can configure an installer or guide using this link: https://developer.nvidia.com/cuda-downloads -- On Ubuntu, you can run:
+
+`sudo apt install nvidia-cuda-toolkit`
+
+
+### Wireshark
+
+JAWS uses pyshark which requires termshark, which can be installed with [Wireshark](https://www.wireshark.org/). Termshark is an optional installation and bundled with the executables for Windows and Mac. On Ubuntu you can install both using:
+
+`sudo apt install wireshark` and `sudo apt install termshark`
+
+Wireshark will ask you about adding non-root users to the Wireshark group. It is recommended that you say Yes. If you said No, then you can run:
 
 `sudo dpkg-reconfigure wireshark-common`
 
-This is suppose to add your user to the Wireshark group, but I have found that is not always true. You can run:
+In addition, if you come back and say YES, you may also need to run:
 
 `sudo adduser $USER wireshark`
 
 `sudo chmod +x /usr/bin/dumpcap`
 
-To install Terminalshark on Ubuntu run `apt install termshark`
+
+### Neo4j DBMS
 
 JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j dbms and GUI](https://neo4j.com/product/developer-tools/). I wont cover the Ubuntu installation in detail, it's easy enough. In short, they provide an AppImage, make it executable:
 
 `sudo chmod +x file` and run it. You can use that same AppImage to launch the Neo4j GUI as needed.
 
-As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/). Again, easy enough to figure out.
 
-Create your environment of choice... Python env, Conda, etc.
+### Conda/Anaconda/Miniconda
+
+
+
+
+### Docker
+
+As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/). Again, easy enough to figure out.
 
 
 ### Set Neo4j Environment Variables
