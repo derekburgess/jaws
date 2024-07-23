@@ -89,7 +89,7 @@ base64_image = encode_image(image_to_encode)
 class SummarizeTransformers:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}", "\n")
+        print(f"\nUsing device: {self.device}")
         self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
         self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)

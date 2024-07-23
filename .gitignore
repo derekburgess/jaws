@@ -1,5 +1,6 @@
+.env
 /jaws/__pycache__
 /JAWS.egg-info
-.env
-logs/
 __pycache__/
+/build/
+/logs/

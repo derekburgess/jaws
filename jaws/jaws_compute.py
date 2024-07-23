@@ -81,7 +81,7 @@ class ComputeTransformers:
         self.driver = driver
         self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}", "\n")
+        print(f"\nUsing device: {self.device}")
         self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
         self.model_name = "bigcode/starcoder2-3b"
         self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
