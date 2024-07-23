@@ -47,6 +47,10 @@ Ubuntu may complain about lack of [FUSE](https://github.com/AppImage/AppImageKit
 
 Ubuntu may also complain about lack of sandbox... So far I have only found running the app image with `--no-sandbox` appended.
 
+Additionally, the problem appears to stem from changes made to Ubuntu 24.04, this command, recommended in the Docker documentation, which appears to disable "AppArmor", also resolves the issue:
+
+`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
+
 
 ### Conda/Anaconda/Miniconda
 
