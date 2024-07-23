@@ -54,15 +54,17 @@ I tend to use [Anaconda](https://www.anaconda.com/download/success) and prefer t
 
 If you used the installation script, add Conda to bash: `nano ~/.bashrc` and append `export PATH=~/anaconda3/bin:$PATH` to the end of the file, replacing /anaconda3/bin with your actual installation path.
 
-Finally, if you want to use the navigator GUI, it can be installed using: 
-
-`conda install anaconda-navigator`
-
 Some other useful(and basic) Conda commands:
 
-`conda activate env` and `conda deactivate`
+`conda create --name env_name python=version`
 
-`conda env config vars list` and `conda env config vars set my_var=value`
+`conda activate env_name` and `conda deactivate`
+
+`conda env config vars list` and `conda env config vars set ENV_VAR=value`
+
+Finally, if you want to use the navigator GUI, it can be installed using: 
+
+`conda install anaconda-navigator` and `anaconda-navigator`
 
 
 ### Docker
