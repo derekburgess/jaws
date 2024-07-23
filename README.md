@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as Graph RAG utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It also provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using open models, but is set to run using OpenAI by default for demos and easy of use.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
 
 ## Prerequisites and initial setup
@@ -54,11 +54,11 @@ I tend to use [Anaconda](https://www.anaconda.com/download/success) and prefer t
 
 If you used the installation script, add Conda to bash: `nano ~/.bashrc` and append `export PATH=~/anaconda3/bin:$PATH` to the end of the file, replacing /anaconda3/bin with your actual installation path.
 
-Finally, I like to use the navigator GUI, which can be installed using: 
+Finally, if you want to use the navigator GUI, it can be installed using: 
 
 `conda install anaconda-navigator`
 
-Some other useful Conda commands:
+Some other useful(and basic) Conda commands:
 
 `conda activate env` and `conda deactivate`
 
@@ -91,11 +91,6 @@ Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-4o) are set to 
 `OPENAI_API_KEY`
 
 
-The command jaws-finder displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
-
-`JAWS_FINDER_ENDPOINT`
-
-
 Somewhat Optional: Since OpenAI is not free, by passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
 
 `HUGGINGFACE_API_KEY`
@@ -105,6 +100,11 @@ In addition, you will want to install the Hugging Face CLI, found here: https://
 `pip3 install -U "huggingface_hub[cli]"`
 
 `huggingface-cli login`
+
+
+The command jaws-finder displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
+
+`JAWS_FINDER_ENDPOINT`
 
 
 ### Install the JAWS Python Package
@@ -174,5 +174,3 @@ To use the container run:
 ## Usage
 
 `jaws-guide`
-
-The Neo4j Docker Container acts as the central graph. JAWS is then run a host to collect packets. The jaws-compute container can be deployed to manage models and compute resourses.
