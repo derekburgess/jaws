@@ -75,6 +75,16 @@ Finally, if you want to use the navigator GUI, it can be installed using:
 
 As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/). Again, easy enough to figure out.
 
+Some useful (and basic) Docker commands:
+
+`docker ps -a` and `docker volume ls`
+
+`docker inspect` and `docker stop`
+
+`docker rm` and `docker volume rm`
+
+`docker system prune -a --volumes`
+
 
 ### Set Neo4j Environment Variables
 
