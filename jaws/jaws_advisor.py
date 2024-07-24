@@ -165,16 +165,16 @@ def main():
     df, df_json = fetch_data(driver, args.database)
 
     if args.api == "transformers":
-        print(f"\nSending {df.shape[0]} outliers (snapshot below):", "\n")
-        print(df.head(), "\n")
         transformer = SummarizeTransformers()
+        print(f"\nSending {df.shape[0]} outliers to {transformer.model_name} (snapshot below):", "\n")
+        print(df.head(), "\n")
         transformer.generate_summary_from_transformers(system_prompt, df_json)
     elif args.api == "openai":
+        openai = SummarizeOpenAI(client)
         print(f"\nEncoding and sending image from: {image_to_encode}")
-        print(f"\nSending {df.shape[0]} outliers (snapshot below):", "\n")
+        print(f"\nSending {df.shape[0]} outliers to {openai.model_name} (snapshot below):", "\n")
         print(df.head(), "\n")
-        transformer = SummarizeOpenAI(client)
-        transformer.generate_summary_from_openai(system_prompt, df_json)
+        openai.generate_summary_from_openai(system_prompt, df_json)
     else:
         print("Invalid API specified. Try openai or transformers.")
 

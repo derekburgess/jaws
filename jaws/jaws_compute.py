@@ -104,7 +104,7 @@ class ComputeTransformers:
             embedding = self.compute_transformer_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print(packet_string, "\n")
+                print(packet_string)
 
     def process_transformer_org(self):
         df = fetch_org_data(self.database)
@@ -121,7 +121,7 @@ class ComputeTransformers:
             embedding = self.compute_transformer_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print(org_string,)
+                print(org_string)
 
     def transform(self, transform_type):
         if transform_type == 'packet':
@@ -159,7 +159,7 @@ class ComputeOpenAI:
             embedding = self.compute_openai_embedding(packet_string)
             if embedding is not None:
                 update_packet(row['packet_id'], embedding, self.database)
-                print(packet_string, "\n")
+                print(packet_string)
 
     def process_openai_org(self):
         df = fetch_org_data(self.database)
@@ -176,7 +176,7 @@ class ComputeOpenAI:
             embedding = self.compute_openai_embedding(org_string)
             if embedding is not None:
                 update_org(row['org'], embedding, self.database)
-                print(org_string, "\n")
+                print(org_string)
 
     def transform(self, transform_type):
         if transform_type == 'packet':

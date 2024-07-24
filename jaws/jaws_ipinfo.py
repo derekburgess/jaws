@@ -73,7 +73,7 @@ def main():
         ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:
             update_neo4j(ip_address, ip_info, driver, args.database)
-            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}", "\n")
+            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
 
 
 if __name__ == "__main__":
