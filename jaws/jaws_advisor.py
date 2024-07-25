@@ -5,6 +5,7 @@ from neo4j import GraphDatabase
 import pandas as pd
 import numpy as np
 import torch
+import transformers
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 import base64
@@ -91,7 +92,7 @@ class SummarizeTransformers:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"\nUsing device: {self.device}")
         self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
-        self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        self.model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, token=self.huggingface_token, torch_dtype=torch.bfloat16).to(self.device)
 
@@ -100,7 +101,7 @@ class SummarizeTransformers:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Snapshot of network traffic: {df_json}"},
         ]
-
+        
         inputs = self.tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
@@ -111,9 +112,9 @@ class SummarizeTransformers:
             inputs,
             max_length=8192,
             pad_token_id=self.tokenizer.eos_token_id,
-            do_sample=True,
-            temperature=0.6,
-            top_p=0.9,
+            #do_sample=True,
+            #temperature=0.6,
+            #top_p=0.9,
         )
         response = outputs[0][inputs.shape[-1]:]
         print(f"\nAnalysis from {self.model_name}:", "\n")

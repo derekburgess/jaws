@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
 starcoder = "bigcode/starcoder2-3b"
-llama = "meta-llama/Meta-Llama-3-8B-Instruct"
+llama = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
 
 def pull_starcoder():
