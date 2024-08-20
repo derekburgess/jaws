@@ -25,53 +25,41 @@ def main():
 
     print("""[gray100]
     [grey85]If you plan to run the models locally, it is recommended that you download them first:[/]
-          
     [green1][green1][CLI][/][/] jaws-anchor [grey50]OPTIONAL[/] --model 'all', 'starcoder, 'llama' 
-          
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-anchor
-          
     [orange1][WARNING][/] This will download a large amount of data and may take some time.
     [/]""")
 
     print("""[gray100]
     [grey85]To capture or import packets:[/]
-          
     [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' --file PATH --duration 10 --database 'captures'
     [/]""")
 
     print("""[gray100]
     [grey85]To investigate IP addresses and build organization nodes:[/]
-          
     [green1][CLI][/] jaws-ipinfo [grey50]OPTIONAL[/] --database 'captures'
     [/]""")
 
     print("""[gray100]
     [grey85]To compute embeddings from packets or organization sets:[/]
-          
     [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --type 'packet', 'org' --database 'captures'
-          
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
     [/]""")
    
     print("""[gray100]
     [grey85]To view cluster plots of embeddings and build outlier nodes:[/]
-          
     [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --type 'packet', 'org' --database 'captures'
     [/]""")
           
     print("""[gray100]
-    [grey85]To generate an 'expert' analysis from outliers:[/]
-          
-    [green1][CLI][/] jaws-advisor [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database 'captures'
-          
+    [grey85]To generate an 'expert' analysis from outliers:[/] 
+    [green1][CLI][/] jaws-advisor [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database 'captures'  
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-advisor --api 'transformers'
     [/]""")
           
     print("""[gray100]
     [grey85]To clear the database:[/]
-          
     [green1][CLI][/] jaws-clear [grey50]OPTIONAL[/] --database 'captures'
-          
     [orange1][WARNING][/] This will erase all data!
     [/]""")
 
