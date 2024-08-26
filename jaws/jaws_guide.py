@@ -42,13 +42,13 @@ def main():
 
     print("""[gray100]
     [grey85]To compute embeddings from packets or organization sets:[/]
-    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --type 'packet', 'org' --database 'captures'
+    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database 'captures'
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
     [/]""")
    
     print("""[gray100]
     [grey85]To view cluster plots of embeddings and build outlier nodes:[/]
-    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --type 'packet', 'org' --database 'captures'
+    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database 'captures'
     [/]""")
           
     print("""[gray100]

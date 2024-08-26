@@ -17,27 +17,22 @@ def connect_to_database(uri, username, password, database):
 def get_ip_info(ip_address, ipinfo_api_key):
     general_info_url = f"https://ipinfo.io/{ip_address}/json"
     headers = {'Authorization': f'Bearer {ipinfo_api_key}'}
-    ip_info = {}
-
     try:
         response = requests.get(general_info_url, headers=headers)
         if response.status_code == 200:
-            ip_info.update(response.json())
+            return response.json()
         else:
-            print(f"Error fetching general info for {ip_address}: {response.status_code}")
+            print(f"Error fetching info for {ip_address}: {response.status_code}")
     except requests.RequestException as e:
         print(f"Request failed for {ip_address}: {e}")
+    return None
 
-    if ip_info:
-        return ip_info
-    else:
-        return None
 
-#Removed the WHERE NOT (src)-[:OWNERSHIP]->(:ORGANIZATION) as it was causing warnings.
 def fetch_data(driver, database):
     query = """
-    MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
-    RETURN DISTINCT src.src_address AS ip_address
+    MATCH (ip:IP)
+    WHERE NOT (ip)-[:OWNERSHIP]->(:ORGANIZATION)
+    RETURN DISTINCT ip.address AS ip_address
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -46,24 +41,23 @@ def fetch_data(driver, database):
 
 def update_neo4j(ip_address, ip_info, driver, database):
     query = """
-    MATCH (src:SRC_IP {src_address: $ip_address})
+    MATCH (ip:IP {address: $ip_address})
     MERGE (org:ORGANIZATION {org: $org})
-    MERGE (src)-[:OWNERSHIP]->(org)
+    MERGE (ip)-[:OWNERSHIP]->(org)
     SET org.hostname = $hostname, org.location = $location
     """
     with driver.session(database=database) as session:
         session.run(query, {
             'ip_address': ip_address,
-            'org': ip_info.get('org', 'None'),
-            'hostname': ip_info.get('hostname', 'None'),
-            'location': ip_info.get('loc', 'None')
+            'org': ip_info.get('org', 'Unknown'),
+            'hostname': ip_info.get('hostname', 'Unknown'),
+            'location': ip_info.get('loc', 'Unknown')
         })
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update Neo4j database with IP information from ipinfo.io")
-    parser.add_argument("--database", default="captures", 
-                        help="Specify the Neo4j database to connect to (default: captures)")
+    parser = argparse.ArgumentParser(description="Update Neo4j database with IP organization information from ipinfo.io")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
     
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
@@ -73,8 +67,7 @@ def main():
         ip_info = get_ip_info(ip_address, ipinfo_api_key)
         if ip_info:
             update_neo4j(ip_address, ip_info, driver, args.database)
-            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'None')}, {ip_info.get('hostname', 'None')}, {ip_info.get('loc', 'None')}")
-
+            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}")
 
 if __name__ == "__main__":
     main()

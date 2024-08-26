@@ -26,8 +26,7 @@ def clear_database(driver, database):
 
 def main():
     parser = argparse.ArgumentParser(description="Clear the Neo4j database")
-    parser.add_argument("--database", default="captures",
-                        help="Specify the Neo4j database to clear (default: captures)")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to clear (default: captures)")
 
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)
@@ -39,7 +38,6 @@ def main():
         clear_database(driver, args.database)
 
     driver.close()
-
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 import os
 import argparse
 import warnings
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
@@ -9,44 +9,39 @@ starcoder = "bigcode/starcoder2-3b"
 llama = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
 
-def pull_starcoder():
+def pull_model(model_name, model_path):
     try:
-        AutoTokenizer.from_pretrained(starcoder, token=huggingface_token, use_fast=False)
-        AutoModelForCausalLM.from_pretrained(starcoder, token=huggingface_token)
+        AutoTokenizer.from_pretrained(model_path, token=huggingface_token, use_fast=False)
+        AutoModelForCausalLM.from_pretrained(model_path, token=huggingface_token)
+        print(f"\nSuccessfully downloaded {model_name}", "\n")
     except Exception as e:
-        print(f"Failed to download: {e}")
-
-def pull_llama():
-    try:
-        AutoTokenizer.from_pretrained(llama, token=huggingface_token, use_fast=False)
-        AutoModelForCausalLM.from_pretrained(llama, token=huggingface_token)
-    except Exception as e:
-        print(f"Failed to download: {e}")
+        print(f"\nFailed to download {model_name}: {e}", "\n")
 
 
 def pull_model_files(model):
-    if model == "starcoder":
-        pull_starcoder()
-    elif model == "llama":
-        pull_llama()
-    elif model == "all":
-        pull_starcoder()
-        pull_llama()
+    models = {
+        "starcoder": starcoder,
+        "llama": llama
+    }
+    
+    if model == "all":
+        for name, path in models.items():
+            pull_model(name, path)
+    elif model in models:
+        pull_model(model, models[model])
     else:
-        print("Invalid model name. Please choose either 'starcoder' or 'llama'.")
+        print("Invalid model name. Please choose 'starcoder', 'llama', or 'all'.")
 
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
     
     parser = argparse.ArgumentParser(description="Download model files from Hugging Face, either StarCoder2-3b or Llama-3-8B-Instruct.")
-    parser.add_argument("--model", choices=["starcoder", "llama", "all"], default="all",
-                    help="Specify which model to download, either starcoder or llama (default: all)")
+    parser.add_argument("--model", choices=["starcoder", "llama", "all"], default="all", help="Specify which model to download, either starcoder or llama (default: all)")
 
     args = parser.parse_args()
 
     pull_model_files(args.model)
-
 
 if __name__ == "__main__":
     main()

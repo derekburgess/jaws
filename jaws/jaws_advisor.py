@@ -23,25 +23,26 @@ You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review
 
 ---
 
-### Executive Summary
+Executive Summary:
 
 A concise summary of the traffic analysis, including a description of the cluster plot.
 
-### Traffic Analysis
+Traffic Analysis:
 
-1. **Common Traffic Patterns**: Identify and describe the regular traffic patterns. Highlight any anomalies or unusual patterns.
+1. Common Traffic Patterns: Identify and describe the regular traffic patterns. Highlight any anomalies or unusual patterns.
    
-2. **Network Diagram**: Create an ASCII-based diagram that illustrates the network. Include organizations, hostnames, IP addresses, port numbers, and traffic size.
+2. Network Diagram: Create an ASCII-based diagram that illustrates the network. Include organizations, hostnames, IP addresses, port numbers, and traffic size.
 
-### Firewall Recommendations
+Firewall Recommendations:
 
-1. **Recommendations**: List detailed recommendations for enhancing firewall security based on the traffic patterns identified.
+1. Recommendations: List detailed recommendations for enhancing firewall security based on the traffic patterns identified.
    
-2. **Rationale**: Provide a rationale for each recommendation, explaining how it addresses specific issues identified in the traffic analysis.
+2. Rationale: Provide a rationale for each recommendation, explaining how it addresses specific issues identified in the traffic analysis.
 
-### Additional Instructions
+Additional Instructions:
 
 - Use clear, concise language.
+- Avoid markdown formatting, this is a CLI tool.
 - Utilize ASCII diagrams to represent traffic flows effectively.
 - Ensure recommendations are specific and supported by data from the provided logs.
 - Avoid excessive formatting.
@@ -50,16 +51,19 @@ A concise summary of the traffic analysis, including a description of the cluste
 
 def fetch_data(driver, database):
     query = """
-    MATCH (org:ORGANIZATION)-[:ANOMALY]->(outlier:OUTLIER)
+    MATCH (org:ORGANIZATION)
+    WHERE org.is_anomaly = true
+    MATCH (ip:IP)-[:OWNERSHIP]->(org)
+    MATCH (ip)-[p:PACKET]->(dst:IP)
     RETURN org.org AS org,
         org.hostname AS hostname,
-        outlier.src_ip AS src_ip,
-        outlier.src_port AS src_port,
-        outlier.dst_ip AS dst_ip,
-        outlier.dst_port AS dst_port,
-        outlier.size AS size,
-        outlier.protocol AS protocol,
-        outlier.location AS location
+        ip.address AS src_ip,
+        p.src_port AS src_port,
+        dst.address AS dst_ip,
+        p.dst_port AS dst_port,
+        p.size AS size,
+        p.protocol AS protocol,
+        org.location AS location
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -79,7 +83,7 @@ def fetch_data(driver, database):
         df = pd.DataFrame(data)
         df_json = df.to_json(orient="records")
         return df, df_json
-    
+
 
 def encode_image(image_path):
   with open(image_path, "rb") as image_file:
@@ -147,7 +151,6 @@ class SummarizeOpenAI:
                 ]
             }  
         ]      
-
         )
         print(f"\nAnalysis from {self.model_name}", "\n")
         print(completion.choices[0].message.content, "\n")
@@ -156,29 +159,26 @@ class SummarizeOpenAI:
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
     
-    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analsysis using OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai",
-                        help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
-    parser.add_argument("--database", default="captures", 
-                        help="Specify the Neo4j database to connect to (default: captures)")
+    parser = argparse.ArgumentParser(description="Pass data snapshot and return network analysis using OpenAI or Transformers.")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
 
     args = parser.parse_args()
     df, df_json = fetch_data(driver, args.database)
 
     if args.api == "transformers":
         transformer = SummarizeTransformers()
-        print(f"\nSending {df.shape[0]} outliers to {transformer.model_name} (snapshot below):", "\n")
+        print(f"\nSending {df.shape[0]} packets to {transformer.model_name} (snapshot below):", "\n")
         print(df.head(), "\n")
         transformer.generate_summary_from_transformers(system_prompt, df_json)
     elif args.api == "openai":
         openai = SummarizeOpenAI(client)
         print(f"\nEncoding and sending image from: {image_to_encode}")
-        print(f"\nSending {df.shape[0]} outliers to {openai.model_name} (snapshot below):", "\n")
+        print(f"\nSending {df.shape[0]} packets to {openai.model_name} (snapshot below):", "\n")
         print(df.head(), "\n")
         openai.generate_summary_from_openai(system_prompt, df_json)
     else:
         print("Invalid API specified. Try openai or transformers.")
-
 
 if __name__ == "__main__":
     main()

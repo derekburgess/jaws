@@ -13,28 +13,18 @@ import matplotlib.pyplot as plt
 import plotille
 
 
-def fetch_data(driver, database, type):
-    if type == "org":
-        embedding = "org.org_embedding"
-        where_clause = "org IS NOT NULL AND org.org_embedding IS NOT NULL"
-    else:
-        embedding = "p.packet_embedding"
-        where_clause = "p.packet_embedding IS NOT NULL"
+def connect_to_database(uri, username, password):
+    return GraphDatabase.driver(uri, auth=(username, password))
 
-    query = f"""
-    MATCH (src:SRC_IP)-[p:PACKET]->(dst:DST_IP)
-    MATCH (src)-[:OWNERSHIP]->(org:ORGANIZATION)
-    WHERE {where_clause}
-    RETURN src.src_address AS src_ip, 
-        src.src_port AS src_port,
-        dst.dst_address AS dst_ip,  
-        dst.dst_port AS dst_port, 
-        p.protocol AS protocol,
-        p.size AS size,
-        org.org AS org,
-        org.hostname AS hostname,
-        org.location AS location,
-        {embedding} AS embedding
+
+def fetch_data_for_dbscan(driver, database):
+    query = """
+    MATCH (org:ORGANIZATION)
+    WHERE org.org_embedding IS NOT NULL
+    RETURN org.org AS org,
+           org.hostname AS hostname,
+           org.location AS location,
+           org.org_embedding AS embedding
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -43,12 +33,6 @@ def fetch_data(driver, database, type):
         for record in result:
             embeddings.append(np.array(record['embedding']))
             data.append({
-                'src_ip': record['src_ip'],
-                'dst_ip': record['dst_ip'],
-                'src_port': record['src_port'],
-                'dst_port': record['dst_port'],
-                'protocol': record['protocol'],
-                'size': record['size'],
                 'org': record['org'],
                 'hostname': record['hostname'],
                 'location': record['location'],
@@ -56,52 +40,36 @@ def fetch_data(driver, database, type):
         return embeddings, data
 
 
+def fetch_data_for_portsize(driver, database):
+    query = """
+    MATCH (ip:IP)-[p:PACKET]->(dst:IP)
+    RETURN p.size AS size, p.src_port AS src_port, p.dst_port AS dst_port
+    """
+    with driver.session(database=database) as session:
+        result = session.run(query)
+        plot_data = [{'size': record['size'], 'src_port': record['src_port'], 'dst_port': record['dst_port']} 
+                     for record in result]
+    return plot_data
+
+
 def update_neo4j(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
     MATCH (org:ORGANIZATION {org: outlier.org})
-    MERGE (outlierNode:OUTLIER {
-        src_ip: outlier.src_ip,
-        src_port: outlier.src_port,
-        dst_ip: outlier.dst_ip,
-        dst_port: outlier.dst_port,
-        size: outlier.size,
-        protocol: outlier.protocol,
-        location: outlier.location
-    })
-    MERGE (org)-[:ANOMALY]->(outlierNode)
+    SET org.is_anomaly = true
     """
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
         session.run(query, parameters)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from Neo4j.")
-    parser.add_argument("--type", choices=["packet", "org"], default="packet",
-                        help="Specify the packet string type to pass (default: packet)")
-    parser.add_argument("--database", default="captures", 
-                        help="Specify the Neo4j database to connect to (default: captures)")
-    
-    args = parser.parse_args()
-    uri = os.getenv("NEO4J_URI")
-    username = os.getenv("NEO4J_USERNAME")
-    password = os.getenv("NEO4J_PASSWORD")
-    driver = GraphDatabase.driver(uri, auth=(username, password))
-    embeddings, data = fetch_data(driver, args.database, args.type)
-    jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
-
+def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     print("\nPlotting the Size of Packets over Ports", "\n")
 
-    # Plot the size of packets over source ports
     plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
-
-    for i, item in enumerate(data):
-        size = item.get('size')
-        src_port = item.get('src_port')
-        dst_port = item.get('dst_port')
-        plt.scatter(size, src_port, c=size, cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
-        plt.scatter(size, dst_port, c=size, cmap='ocean', marker='^', s=50, alpha=0.1, zorder=10)
+    for item in plot_data:
+        plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
+        plt.scatter(item['size'], item['dst_port'], c=item['size'], cmap='ocean', marker='^', s=50, alpha=0.1, zorder=10)
 
     plt.xlabel('SIZE', fontsize=8, color='#666666')
     plt.ylabel('SRC_PORT / DST_PORT', fontsize=8, color='#666666')
@@ -113,7 +81,6 @@ def main():
     save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
     plt.savefig(save_portsize, dpi=90)
 
-    # Plot the Size and Port scatter using Plotille
     portsize_plotille = plotille.Figure()
     portsize_plotille.x_label = 'SIZE'
     portsize_plotille.y_label = 'PORT'
@@ -122,34 +89,13 @@ def main():
     portsize_plotille.height = 20
     portsize_plotille.set_x_limits(min_=0)
     portsize_plotille.set_y_limits(min_=0)
-    for item in data:
-        size = item.get('size')
-        src_port = item.get('src_port')
-        dst_port = item.get('dst_port')
-        portsize_plotille.scatter([size], [src_port], marker=">")
-        portsize_plotille.scatter([size], [dst_port], marker="<")
+    for item in plot_data:
+        portsize_plotille.scatter([item['size']], [item['src_port']], marker=">")
+        portsize_plotille.scatter([item['size']], [item['dst_port']], marker="<")
     print(portsize_plotille.show(legend=False))
 
-    embeddings_scaled = StandardScaler().fit_transform(embeddings)
-    print(f"\nPerforming PCA on {len(embeddings_scaled)} Embeddings")
-    pca = PCA(n_components=2)
-    principal_components = pca.fit_transform(embeddings_scaled)
 
-    print("Measuring K-Distance", "\n")
-    min_samples = 2
-    nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
-
-    if args.type == "packet":
-        nearest_neighbors.fit(principal_components)
-        distances, _ = nearest_neighbors.kneighbors(principal_components)
-    elif args.type == "org":
-        nearest_neighbors.fit(embeddings_scaled)
-        distances, _ = nearest_neighbors.kneighbors(embeddings_scaled)
-
-    k_distances = distances[:, min_samples - 1]
-    sorted_k_distances = np.sort(k_distances)
-    
-    # Plot the sorted K-Distance
+def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
@@ -161,7 +107,6 @@ def main():
     save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
     plt.savefig(save_kdistance, dpi=90)
 
-    # Plot the sorted K-Distance using Plotille
     kdistance_plotille = plotille.Figure()
     kdistance_plotille.x_label = 'INDEX'
     kdistance_plotille.y_label = 'K-DISTANCE'
@@ -174,62 +119,73 @@ def main():
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
     print(kdistance_plotille.show(legend=False))
 
+
+def main():
+    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    
+    args = parser.parse_args()
+    uri = os.getenv("NEO4J_URI")
+    username = os.getenv("NEO4J_USERNAME")
+    password = os.getenv("NEO4J_PASSWORD")
+    driver = connect_to_database(uri, username, password)
+    embeddings, data = fetch_data_for_dbscan(driver, args.database)
+    jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
+
+    # Always fetch and plot size and port data
+    plot_data = fetch_data_for_portsize(driver, args.database)
+    plot_size_over_ports(plot_data, jaws_finder_endpoint)
+
+    embeddings_scaled = StandardScaler().fit_transform(embeddings)
+    print(f"\nPerforming PCA on {len(embeddings_scaled)} Organization Embeddings")
+    pca = PCA(n_components=2)
+    principal_components = pca.fit_transform(embeddings_scaled)
+
+    print("Measuring K-Distance", "\n")
+    min_samples = 2
+    nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
+    nearest_neighbors.fit(principal_components)
+    distances, _ = nearest_neighbors.kneighbors(principal_components)
+    k_distances = distances[:, min_samples - 1]
+    sorted_k_distances = np.sort(k_distances)
+    plot_k_distances(sorted_k_distances, jaws_finder_endpoint)
+
     print("\nUsing Kneed to recommend EPS")
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
-    eps_value = sorted_k_distances[kneedle.knee]
-    eps_value = float(eps_value)
+    if kneedle.knee is not None:
+        eps_value = sorted_k_distances[kneedle.knee]
+        print(f"Knee point found at index: {kneedle.knee}")
+    else:
+        print("Knee point not found. Using default EPS.")
+        eps_value = np.median(sorted_k_distances)
+
     user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
     if user_input:
         try:
             eps_value = float(user_input)
         except ValueError:
-            print("Invalid input. Using the recommended EPS value...")
+            print("Invalid input. Using the recommended EPS value.")
 
     print(f"Using EPS: {eps_value}", "\n")
+
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
     # Plot the PCA/DBSCAN Outliers
-    plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    plt.figure(num=f'PCA/DBSCAN Outliers from Organization Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
     plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
-                        c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
+                c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
 
     outlier_indices = clusters == -1
     plt.scatter(principal_components[outlier_indices, 0], principal_components[outlier_indices, 1], 
                 color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
-    position_options = {
-        'top': {'offset': (0, 10), 'horizontalalignment': 'center', 'verticalalignment': 'bottom'},
-        'bottom': {'offset': (0, -10), 'horizontalalignment': 'center', 'verticalalignment': 'top'},
-        'right': {'offset': (10, 0), 'horizontalalignment': 'left', 'verticalalignment': 'center'},
-        'left': {'offset': (-10, 0), 'horizontalalignment': 'right', 'verticalalignment': 'center'}
-    }
-
     for i, item in enumerate(data):
-        if clusters[i] != -1:
-            # Non-Outlier
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
-            label_position_key = random.choice(list(position_options.keys()))
-            label_position = position_options[label_position_key]
-            
-            plt.annotate(annotation_text, 
-                        (principal_components[i, 0], principal_components[i, 1]), 
-                        fontsize=6,
-                        color='#999999',
-                        bbox=bbox_style,
-                        horizontalalignment=label_position['horizontalalignment'],
-                        verticalalignment=label_position['verticalalignment'],
-                        xytext=label_position['offset'],
-                        textcoords='offset points',
-                        alpha=0.8,
-                        zorder=1)
-        else:
+        annotation_text = f"{item['org']}\n{item['hostname']}\n{item['location']}"
+        if clusters[i] == -1:
             # Outlier
-            annotation_text = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
-            
             plt.annotate(annotation_text, 
                         (principal_components[i, 0], principal_components[i, 1]), 
                         fontsize=6,
@@ -241,6 +197,20 @@ def main():
                         textcoords='offset points',
                         alpha=0.9,
                         zorder=10)
+        else:
+            # Non-Outlier
+            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
+            plt.annotate(annotation_text, 
+                        (principal_components[i, 0], principal_components[i, 1]), 
+                        fontsize=6,
+                        color='#999999',
+                        bbox=bbox_style,
+                        horizontalalignment='center',
+                        verticalalignment='bottom',
+                        xytext=(0,10),
+                        textcoords='offset points',
+                        alpha=0.8,
+                        zorder=1)
 
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=8)
@@ -249,7 +219,7 @@ def main():
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
-    # Plot the Size and Port scatter using Plotille
+    # Plot using Plotille
     outlier_plotille = plotille.Figure()
     outlier_plotille.color_mode = 'byte'
     outlier_plotille.width = 80
@@ -265,25 +235,20 @@ def main():
     outlier_data = [
         {
             'org': item['org'],
-            'location': item['location'],
-            'src_ip': item['src_ip'],
-            'src_port': item['src_port'],
-            'dst_ip': item['dst_ip'],
-            'dst_port': item['dst_port'],
-            'size': item['size'],
-            'protocol': item['protocol']
+            'hostname': item['hostname'],
+            'location': item['location']
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
     print(f"\nFound {len(outlier_data)} outliers:", "\n")
     for item in outlier_data:
-        outlier_list = f"{item.get('org')}\n{item.get('location')}\n{item.get('src_ip')}:{item.get('src_port')} -> {item.get('dst_ip')}:{item.get('dst_port')}\n{item.get('size')} ({item.get('protocol')})"
+        outlier_list = f"{item['org']}\n{item['hostname']}\n{item['location']}"
         print(outlier_list, "\n")
 
     update_neo4j(outlier_data, driver, args.database)
 
     plt.show()
-
+    driver.close()
 
 if __name__ == "__main__":
     main()
