@@ -160,8 +160,8 @@ def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
     
     parser = argparse.ArgumentParser(description="Pass data snapshot and return network analysis using OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai)")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for network traffic analysis, either openai or transformers (default: openai).")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
 
     args = parser.parse_args()
     df, df_json = fetch_data(driver, args.database)

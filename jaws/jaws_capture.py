@@ -91,11 +91,11 @@ def list_interfaces():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database")
-    parser.add_argument("--interface", default="Ethernet", help="Specify the network interface to use (default: Ethernet)")
-    parser.add_argument("--file", dest="capture_file", help="Path to the Wireshark capture file")
-    parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10)")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database.")
+    parser.add_argument("--interface", default="Ethernet", help="Specify the network interface to use (default: Ethernet).")
+    parser.add_argument("--file", dest="capture_file", help="Path to the Wireshark capture file.")
+    parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
 
     args = parser.parse_args()

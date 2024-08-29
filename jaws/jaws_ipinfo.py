@@ -56,8 +56,8 @@ def update_neo4j(ip_address, ip_info, driver, database):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update Neo4j database with IP organization information from ipinfo.io")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    parser = argparse.ArgumentParser(description="Update Neo4j database with IP organization information from ipinfo.")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
     
     args = parser.parse_args()
     driver = connect_to_database(uri, username, password, args.database)

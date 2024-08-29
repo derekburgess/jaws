@@ -37,7 +37,7 @@ def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
     
     parser = argparse.ArgumentParser(description="Download model files from Hugging Face, either StarCoder2-3b or Llama-3-8B-Instruct.")
-    parser.add_argument("--model", choices=["starcoder", "llama", "all"], default="all", help="Specify which model to download, either starcoder or llama (default: all)")
+    parser.add_argument("--model", choices=["starcoder", "llama", "all"], default="all", help="Specify which model to download, either starcoder or llama (default: all).")
 
     args = parser.parse_args()
 

@@ -122,7 +122,7 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
     
     args = parser.parse_args()
     uri = os.getenv("NEO4J_URI")

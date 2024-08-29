@@ -119,8 +119,8 @@ def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     
     parser = argparse.ArgumentParser(description="Compute organization embeddings using either OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for computing embeddings, either openai or transformers (default: openai)")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures)")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for computing embeddings, either openai or transformers (default: openai).")
+    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
 
     args = parser.parse_args()
 
