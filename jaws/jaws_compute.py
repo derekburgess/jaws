@@ -2,6 +2,7 @@ import os
 import argparse
 import warnings
 from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
@@ -13,6 +14,21 @@ username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
+
+
+def check_database_exists(uri, username, password, database):
+    try:
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        with driver.session(database=database) as session:
+            session.run("RETURN 1")
+        return driver
+    except ServiceUnavailable:
+        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
+    except Exception as e:
+        if "database does not exist" in str(e).lower():
+            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
+        else:
+            raise
 
 
 def fetch_org_data(database):
@@ -124,13 +140,16 @@ def main():
 
     args = parser.parse_args()
 
+    try:
+        check_database_exists(uri, username, password, args.database)
+    except Exception as e:
+        print(f"\n{str(e)}\n")
+        return
+
     if args.api == "transformers":
         transformer = ComputeTransformers(driver, args.database)
-    elif args.api == "openai":
-        transformer = ComputeOpenAI(client, driver, args.database)
     else:
-        print("Invalid API specified. Try openai or transformers.")
-        exit(1)
+        transformer = ComputeOpenAI(client, driver, args.database)
 
     transformer.transform()
 

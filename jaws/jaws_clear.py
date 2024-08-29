@@ -29,12 +29,18 @@ def main():
     parser.add_argument("--database", default="captures", help="Specify the Neo4j database to clear (default: captures).")
 
     args = parser.parse_args()
-    driver = connect_to_database(uri, username, password, args.database)
 
-    record_count = preview_database(driver, args.database)
+    try:
+        driver = connect_to_database(uri, username, password, args.database)
+        record_count = preview_database(driver, args.database)
+    except Exception as e:
+        print(f"\n{args.database} not found.")
+        print("You either need to create the default 'captures' database or pass an existing database name.", "\n")
+        return
+
     confirm = input(f"\nAre you sure you want to clear the {record_count} records from the database? Enter 'YES' to confirm: ")
     if confirm == 'YES':
-        print("\nClearing the Neo4j database...")
+        print("\nClearing the Neo4j database...", "\n")
         clear_database(driver, args.database)
 
     driver.close()

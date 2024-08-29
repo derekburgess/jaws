@@ -2,6 +2,7 @@ import os
 import argparse
 import warnings
 from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 import pandas as pd
 import numpy as np
 import torch
@@ -18,6 +19,8 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 image_to_encode = f"{jaws_finder_endpoint}/pca_dbscan_outliers.png"
+
+
 system_prompt = """
 You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
 
@@ -47,6 +50,21 @@ Additional Instructions:
 - Ensure recommendations are specific and supported by data from the provided logs.
 - Avoid excessive formatting.
 """
+
+
+def check_database_exists(uri, username, password, database):
+    try:
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        with driver.session(database=database) as session:
+            session.run("RETURN 1")
+        return driver
+    except ServiceUnavailable:
+        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
+    except Exception as e:
+        if "database does not exist" in str(e).lower():
+            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
+        else:
+            raise
 
 
 def fetch_data(driver, database):
@@ -164,6 +182,13 @@ def main():
     parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
 
     args = parser.parse_args()
+
+    try:
+        check_database_exists(uri, username, password, args.database)
+    except Exception as e:
+        print(f"\n{str(e)}\n")
+        return
+
     df, df_json = fetch_data(driver, args.database)
 
     if args.api == "transformers":
@@ -171,14 +196,12 @@ def main():
         print(f"\nSending {df.shape[0]} packets to {transformer.model_name} (snapshot below):", "\n")
         print(df.head(), "\n")
         transformer.generate_summary_from_transformers(system_prompt, df_json)
-    elif args.api == "openai":
+    else:
         openai = SummarizeOpenAI(client)
         print(f"\nEncoding and sending image from: {image_to_encode}")
         print(f"\nSending {df.shape[0]} packets to {openai.model_name} (snapshot below):", "\n")
         print(df.head(), "\n")
         openai.generate_summary_from_openai(system_prompt, df_json)
-    else:
-        print("Invalid API specified. Try openai or transformers.")
 
 if __name__ == "__main__":
     main()

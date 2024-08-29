@@ -2,8 +2,10 @@ import os
 import argparse
 import time
 from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 import pandas as pd
 import pyshark
+from pyshark.capture.live_capture import UnknownInterfaceException
 import socket
 import psutil
 
@@ -14,7 +16,18 @@ password = os.getenv("NEO4J_PASSWORD")
 
 
 def connect_to_database(uri, username, password, database):
-    return GraphDatabase.driver(uri, auth=(username, password))
+    try:
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        with driver.session(database=database) as session:
+            session.run("RETURN 1")
+        return driver
+    except ServiceUnavailable:
+        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
+    except Exception as e:
+        if "database does not exist" in str(e).lower():
+            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
+        else:
+            raise
 
 
 def get_local_ip():
@@ -102,27 +115,40 @@ def main():
 
     if args.list:
         list_interfaces()
+        return
+
+    if args.capture_file and not os.path.isfile(args.capture_file):
+        print(f"\nFile not found, please check your file path.", "\n")
+        return
 
     local_ip = get_local_ip()
-    print(f"Local IP address: {local_ip}")
+    print(f"\nLocal IP address: {local_ip}")
 
-    driver = connect_to_database(uri, username, password, args.database)
-    interface_capture = pyshark.LiveCapture(interface=args.interface)
-    
-    if args.capture_file:
-        print(f"\nImporting packets from {args.capture_file}", "\n")
-        file_capture = pyshark.FileCapture(args.capture_file)
-        for packet in file_capture:
-            process_packet(packet, driver, args.database, local_ip)
-    else:
-        print(f"\nCapturing packets on {args.interface} for {args.duration} seconds", "\n")
-        start_time = time.time()
-        for packet in interface_capture.sniff_continuously():
-            process_packet(packet, driver, args.database, local_ip)
-            if time.time() - start_time > args.duration:
-                break
+    try:
+        driver = connect_to_database(uri, username, password, args.database)
+    except Exception as e:
+        print(f"\n{str(e)}", "\n")
+        return
 
-    driver.close()
+    try:
+        if args.capture_file:
+            print(f"\nImporting packets from {args.capture_file}", "\n")
+            file_capture = pyshark.FileCapture(args.capture_file)
+            for packet in file_capture:
+                process_packet(packet, driver, args.database, local_ip)
+        else:
+            interface_capture = pyshark.LiveCapture(interface=args.interface)
+            print(f"\nCapturing packets on {args.interface} for {args.duration} seconds", "\n")
+            start_time = time.time()
+            for packet in interface_capture.sniff_continuously():
+                process_packet(packet, driver, args.database, local_ip)
+                if time.time() - start_time > args.duration:
+                    break
+    except UnknownInterfaceException:
+        print(f"{args.interface} interface not found. Select an interface from the list below.")
+        list_interfaces()
+    finally:
+        driver.close()
 
 if __name__ == "__main__":
     main()

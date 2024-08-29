@@ -15,7 +15,8 @@ def pull_model(model_name, model_path):
         AutoModelForCausalLM.from_pretrained(model_path, token=huggingface_token)
         print(f"\nSuccessfully downloaded {model_name}", "\n")
     except Exception as e:
-        print(f"\nFailed to download {model_name}: {e}", "\n")
+        print(f"\nFailed to download: {model_name}", "\n")
+        print(e, "\n")
 
 
 def pull_model_files(model):
@@ -27,10 +28,8 @@ def pull_model_files(model):
     if model == "all":
         for name, path in models.items():
             pull_model(name, path)
-    elif model in models:
-        pull_model(model, models[model])
     else:
-        print("Invalid model name. Please choose 'starcoder', 'llama', or 'all'.")
+        pull_model(model, models[model])
 
 
 def main():

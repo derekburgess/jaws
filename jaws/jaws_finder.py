@@ -2,6 +2,7 @@ import os
 import random
 import argparse
 from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
@@ -13,8 +14,19 @@ import matplotlib.pyplot as plt
 import plotille
 
 
-def connect_to_database(uri, username, password):
-    return GraphDatabase.driver(uri, auth=(username, password))
+def connect_to_database(uri, username, password, database):
+    try:
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        with driver.session(database=database) as session:
+            session.run("RETURN 1")
+        return driver
+    except ServiceUnavailable:
+        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
+    except Exception as e:
+        if "database does not exist" in str(e).lower():
+            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
+        else:
+            raise
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -125,10 +137,17 @@ def main():
     parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
     
     args = parser.parse_args()
+
     uri = os.getenv("NEO4J_URI")
     username = os.getenv("NEO4J_USERNAME")
     password = os.getenv("NEO4J_PASSWORD")
-    driver = connect_to_database(uri, username, password)
+
+    try:
+        driver = connect_to_database(uri, username, password, args.database)
+    except Exception as e:
+        print(f"\n{str(e)}\n")
+        return
+    
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
@@ -248,6 +267,7 @@ def main():
     update_neo4j(outlier_data, driver, args.database)
 
     plt.show()
+    
     driver.close()
 
 if __name__ == "__main__":
