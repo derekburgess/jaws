@@ -41,18 +41,18 @@ def main():
     [/]""")
 
     print("""[gray100]
-    [grey85]To compute embeddings from packets or organization sets:[/]
+    [grey85]To compute embeddings:[/]
     [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database 'captures'
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
     [/]""")
    
     print("""[gray100]
-    [grey85]To view cluster plots of embeddings and build outlier nodes:[/]
+    [grey85]To view cluster plots of embeddings:[/]
     [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database 'captures'
     [/]""")
           
     print("""[gray100]
-    [grey85]To generate an 'expert' analysis from outliers:[/] 
+    [grey85]To generate an 'expert' analysis:[/] 
     [green1][CLI][/] jaws-advisor [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database 'captures'  
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-advisor --api 'transformers'
     [/]""")
