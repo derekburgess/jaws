@@ -31,14 +31,15 @@ def check_database_exists(uri, username, password, database):
             raise
 
 
-def fetch_org_data(database):
+def fetch_ip_data(database):
     query = """
     MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
-    WITH org, collect(ip) AS ip_nodes
-    RETURN org.org AS org,
-        org.hostname AS hostname,
-        org.location AS location,
-        [node in ip_nodes | node.address] AS ip_addresses
+    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
+    RETURN ip.address AS ip_address,
+           port.number AS port_number,
+           org.org AS org,
+           org.hostname AS hostname,
+           org.location AS location
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -46,13 +47,13 @@ def fetch_org_data(database):
     return df
 
 
-def update_org(org, embedding, database):
+def update_ip(ip_address, port_number, embedding, database):
     query = """
-    MATCH (org:ORGANIZATION {org: $org})
-    SET org.org_embedding = $embedding
+    MATCH (ip:IP {address: $ip_address})-[:PORT]->(port:Port {number: $port_number})
+    SET ip.embedding = $embedding
     """
     with driver.session(database=database) as session:
-        session.run(query, org=org, embedding=embedding)
+        session.run(query, ip_address=ip_address, port_number=port_number, embedding=embedding)
 
 
 class ComputeTransformers:
@@ -75,23 +76,24 @@ class ComputeTransformers:
         embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
         return embeddings
 
-    def process_transformer_org(self):
-        df = fetch_org_data(self.database)
-        print(f"\nComputing {len(df)} org-embeddings using {self.model_name}", "\n")
+    def process_transformer_ip(self):
+        df = fetch_ip_data(self.database)
+        print(f"\nComputing {len(df)} embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
-            org_string = f"""
+            ip_port_string = f"""
+            Address: {row['ip_address']}
+            Port: {row['port_number']}
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
-            IP Addresses: {', '.join(row['ip_addresses'])}
             """
-            embedding = self.compute_transformer_embedding(org_string)
+            embedding = self.compute_transformer_embedding(ip_port_string)
             if embedding is not None:
-                update_org(row['org'], embedding, self.database)
-                print(org_string)
+                update_ip(row['ip_address'], row['port_number'], embedding, self.database)
+                print(ip_port_string)
 
     def transform(self):
-        self.process_transformer_org()
+        self.process_transformer_ip()
         self.driver.close()
 
 
@@ -110,23 +112,24 @@ class ComputeOpenAI:
             print(f"An error occurred: {e}")
             return None
 
-    def process_openai_org(self):
-        df = fetch_org_data(self.database)
-        print(f"\nComputing {len(df)} org-embeddings using OpenAI {self.model}", "\n")
+    def process_openai_ip(self):
+        df = fetch_ip_data(self.database)
+        print(f"\nComputing {len(df)} embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
-            org_string = f"""
+            ip_port_string = f"""
+            Address: {row['ip_address']}
+            Port: {row['port_number']}
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
-            IP Addresses: {', '.join(row['ip_addresses'])}
             """
-            embedding = self.compute_openai_embedding(org_string)
+            embedding = self.compute_openai_embedding(ip_port_string)
             if embedding is not None:
-                update_org(row['org'], embedding, self.database)
-                print(org_string)
+                update_ip(row['ip_address'], row['port_number'], embedding, self.database)
+                print(ip_port_string)
 
     def transform(self):
-        self.process_openai_org()
+        self.process_openai_ip()
         self.driver.close()
 
 

@@ -31,12 +31,15 @@ def connect_to_database(uri, username, password, database):
 
 def fetch_data_for_dbscan(driver, database):
     query = """
-    MATCH (org:ORGANIZATION)
-    WHERE org.org_embedding IS NOT NULL
-    RETURN org.org AS org,
+    MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
+    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
+    WHERE ip.embedding IS NOT NULL
+    RETURN ip.address AS ip_address,
+           port.number AS port_number,
+           org.org AS org,
            org.hostname AS hostname,
            org.location AS location,
-           org.org_embedding AS embedding
+           ip.embedding AS embedding
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -45,6 +48,8 @@ def fetch_data_for_dbscan(driver, database):
         for record in result:
             embeddings.append(np.array(record['embedding']))
             data.append({
+                'ip_address': record['ip_address'],
+                'port_number': record['port_number'],
                 'org': record['org'],
                 'hostname': record['hostname'],
                 'location': record['location'],
@@ -54,8 +59,8 @@ def fetch_data_for_dbscan(driver, database):
 
 def fetch_data_for_portsize(driver, database):
     query = """
-    MATCH (ip:IP)-[p:PACKET]->(dst:IP)
-    RETURN p.size AS size, p.src_port AS src_port, p.dst_port AS dst_port
+    MATCH (src_port:Port)-[p:PACKET]->(dst_port:Port)
+    RETURN p.size AS size, src_port.number AS src_port, dst_port.number AS dst_port
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -67,8 +72,8 @@ def fetch_data_for_portsize(driver, database):
 def update_neo4j(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
-    MATCH (org:ORGANIZATION {org: outlier.org})
-    SET org.is_anomaly = true
+    MATCH (ip:IP {address: outlier.ip_address})-[:PORT]->(port:Port {number: outlier.port_number})
+    SET ip.is_anomaly = true
     """
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
@@ -76,15 +81,15 @@ def update_neo4j(outlier_list, driver, database):
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
-    print("\nPlotting the Size of Packets over Ports", "\n")
+    print("\nPlotting the Packet Size over Ports", "\n")
 
-    plt.figure(num='Packet Size over SRC/DST Port', figsize=(6, 4))
+    plt.figure(num='Packet Size over Ports', figsize=(6, 4))
     for item in plot_data:
         plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
         plt.scatter(item['size'], item['dst_port'], c=item['size'], cmap='ocean', marker='^', s=50, alpha=0.1, zorder=10)
 
     plt.xlabel('SIZE', fontsize=8, color='#666666')
-    plt.ylabel('SRC_PORT / DST_PORT', fontsize=8, color='#666666')
+    plt.ylabel('PORT', fontsize=8, color='#666666')
     plt.legend(['SRC_PORT', 'DST_PORT'], loc='upper right', fontsize=8)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
@@ -201,7 +206,7 @@ def main():
                 color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     for i, item in enumerate(data):
-        annotation_text = f"{item['org']}\n{item['hostname']}\n{item['location']}"
+        annotation_text = f"{item['ip_address']}:{item['port_number']}\n{item['org']}\n{item['hostname']}\n{item['location']}"
         if clusters[i] == -1:
             # Outlier
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
@@ -218,11 +223,11 @@ def main():
                         zorder=10)
         else:
             # Non-Outlier
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.1)
+            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.5)
             plt.annotate(annotation_text, 
                         (principal_components[i, 0], principal_components[i, 1]), 
                         fontsize=6,
-                        color='#999999',
+                        color='#666666',
                         bbox=bbox_style,
                         horizontalalignment='center',
                         verticalalignment='bottom',
@@ -253,6 +258,8 @@ def main():
     
     outlier_data = [
         {
+            'ip_address': item['ip_address'],
+            'port_number': item['port_number'],
             'org': item['org'],
             'hostname': item['hostname'],
             'location': item['location']
@@ -261,13 +268,13 @@ def main():
 
     print(f"\nFound {len(outlier_data)} outliers:", "\n")
     for item in outlier_data:
-        outlier_list = f"{item['org']}\n{item['hostname']}\n{item['location']}"
+        outlier_list = f"{item['ip_address']}:{item['port_number']}\n{item['org']}\n{item['hostname']}\n{item['location']}"
         print(outlier_list, "\n")
 
     update_neo4j(outlier_data, driver, args.database)
 
     plt.show()
-    
+
     driver.close()
 
 if __name__ == "__main__":

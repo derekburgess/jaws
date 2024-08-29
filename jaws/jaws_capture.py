@@ -44,17 +44,21 @@ def get_local_ip():
 def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
-        MERGE (src:IP {address: $src_ip})
-        MERGE (dst:IP {address: $dst_ip})
-        CREATE (src)-[p:PACKET]->(dst)
+        MERGE (src_ip:IP {address: $src_ip})
+        MERGE (src_port:Port {number: $src_port})
+        MERGE (dst_ip:IP {address: $dst_ip})
+        MERGE (dst_port:Port {number: $dst_port})
+        
+        MERGE (src_ip)-[:PORT]->(src_port)
+        MERGE (dst_ip)-[:PORT]->(dst_port)
+        
+        CREATE (src_port)-[p:PACKET]->(dst_port)
         SET p += { 
             protocol: $protocol,
-            src_port: $src_port,
-            dst_port: $dst_port,
+            size: $size,
             src_mac: $src_mac,
             dst_mac: $dst_mac,
-            size: $size,
-            payload: $payload, 
+            payload: $payload,
             timestamp: $timestamp
         }
         """, packet_data))
@@ -87,7 +91,7 @@ def process_packet(packet, driver, database, local_ip):
             "payload": packet.udp.payload if hasattr(packet.udp, 'payload') else None
         })
 
-    print(f"<<< [PACKET CAPTURED] {packet_data['src_ip']}:{packet_data['src_port']} ({packet_data['src_mac']}) -> {packet_data['dst_ip']}:{packet_data['dst_port']} ({packet_data['dst_mac']}) <> {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED] >>>")
+    print(f"[PACKET CAPTURED] {packet_data['src_ip']}:{packet_data['src_port']} -> {packet_data['dst_ip']}:{packet_data['dst_port']} | {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED]")
     try:
         add_packet_to_neo4j(driver, packet_data, database)
     except Exception as e:

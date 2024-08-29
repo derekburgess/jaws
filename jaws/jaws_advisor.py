@@ -69,18 +69,13 @@ def check_database_exists(uri, username, password, database):
 
 def fetch_data(driver, database):
     query = """
-    MATCH (org:ORGANIZATION)
-    WHERE org.is_anomaly = true
-    MATCH (ip:IP)-[:OWNERSHIP]->(org)
-    MATCH (ip)-[p:PACKET]->(dst:IP)
-    RETURN org.org AS org,
+    MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
+    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
+    RETURN DISTINCT
+        ip.address AS ip_address,
+        port.number AS port_number,
+        org.org AS org,
         org.hostname AS hostname,
-        ip.address AS src_ip,
-        p.src_port AS src_port,
-        dst.address AS dst_ip,
-        p.dst_port AS dst_port,
-        p.size AS size,
-        p.protocol AS protocol,
         org.location AS location
     """
     with driver.session(database=database) as session:
@@ -88,14 +83,10 @@ def fetch_data(driver, database):
         data = []
         for record in result:
             data.append({
+                'ip_address': record['ip_address'],
+                'port_number': record['port_number'],
                 'org': record['org'],
                 'hostname': record['hostname'],
-                'src_ip': record['src_ip'],
-                'src_port': record['src_port'],
-                'dst_ip': record['dst_ip'],
-                'dst_port': record['dst_port'],
-                'size': record['size'],
-                'protocol': record['protocol'],
                 'location': record['location']
             })
         df = pd.DataFrame(data)
@@ -193,14 +184,14 @@ def main():
 
     if args.api == "transformers":
         transformer = SummarizeTransformers()
-        print(f"\nSending {df.shape[0]} packets to {transformer.model_name} (snapshot below):", "\n")
-        print(df.head(), "\n")
+        print(f"\nSending {df.shape[0]} all unique addresses to {transformer.model_name} (snapshot below):", "\n")
+        print(df.to_string(index=False), "\n")
         transformer.generate_summary_from_transformers(system_prompt, df_json)
     else:
         openai = SummarizeOpenAI(client)
         print(f"\nEncoding and sending image from: {image_to_encode}")
-        print(f"\nSending {df.shape[0]} packets to {openai.model_name} (snapshot below):", "\n")
-        print(df.head(), "\n")
+        print(f"\nSending {df.shape[0]} all unique addresses to {openai.model_name} (snapshot below):", "\n")
+        print(df.to_string(index=False), "\n")
         openai.generate_summary_from_openai(system_prompt, df_json)
 
 if __name__ == "__main__":
