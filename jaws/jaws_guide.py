@@ -9,7 +9,6 @@ def main():
      o-o  o   o   o   o   o--o
     [/]""")
 
-
     print("""[gray100]
     JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
     the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
@@ -17,10 +16,10 @@ def main():
     K-means, DBSCAN, OpenAI, StarCoder2, and Llama3.
     [/]""")
     
-    
     print("""[gray100]
-    While JAWS is intended to run locally using open models, but is set to run against the OpenAI API by 
-    default, and does not require a specific GPU. You can in theory simply run the commands with no options.
+    JAWS is intended to run locally using 'open' models, it is set to run against the OpenAI API by 
+    default, and does not require a specific GPU. If you create the default captures database, you can 
+    in theory simply run the commands with no options.
     [/]""")
 
     print("""[gray100]
@@ -32,7 +31,8 @@ def main():
 
     print("""[gray100]
     [grey85]To capture or import packets:[/]
-    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' --file PATH --duration 10 --database 'captures'
+    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' OR --file PATH --duration 10 --database 'captures'
+    [grey85]You can use jaws-capture --list to list available interfaces.[/]
     [/]""")
 
     print("""[gray100]
@@ -67,7 +67,6 @@ def main():
     version 1.0.0 BETA, 2024
     https://github.com/derekburgess/jaws
     [/]""")
-
 
 if __name__ == "__main__":
     main()
