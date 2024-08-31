@@ -8,13 +8,11 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from openai import OpenAI
 
-
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
-
 
 def check_database_exists(uri, username, password, database):
     try:
@@ -30,31 +28,42 @@ def check_database_exists(uri, username, password, database):
         else:
             raise
 
-
 def fetch_ip_data(database):
     query = """
-    MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
-    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
-    RETURN ip.address AS ip_address,
-           port.number AS port_number,
+    MATCH (ip_address:IP_ADDRESS)-[:OWNERSHIP]->(org:ORGANIZATION)
+    OPTIONAL MATCH (ip_address)-[:PORT]->(port:Port)
+    OPTIONAL MATCH (port)-[p:PACKET]->()
+    WITH ip_address, port, org, sum(p.size) AS total_size
+    RETURN ip_address.ip_address AS ip_address,
+           port.port AS port,
            org.org AS org,
            org.hostname AS hostname,
-           org.location AS location
+           org.location AS location,
+           total_size
     """
     with driver.session(database=database) as session:
         result = session.run(query)
         df = pd.DataFrame([record.data() for record in result])
     return df
 
-
-def update_ip(ip_address, port_number, embedding, database):
+def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, database):
     query = """
-    MATCH (ip:IP {address: $ip_address})-[:PORT]->(port:Port {number: $port_number})
-    SET ip.embedding = $embedding
+    MATCH (ip_address:IP_ADDRESS {ip_address: $ip_address})
+    MERGE (traffic:Traffic {
+        ip_address: $ip_address,
+        port: $port
+    })
+    SET traffic.embedding = $embedding,
+        traffic.org = $org,
+        traffic.hostname = $hostname,
+        traffic.location = $location,
+        traffic.total_size = $total_size
+    MERGE (ip_address)-[:TRAFFIC]->(traffic)
     """
     with driver.session(database=database) as session:
-        session.run(query, ip_address=ip_address, port_number=port_number, embedding=embedding)
-
+        session.run(query, ip_address=ip_address, port=port, 
+                    embedding=embedding, org=org, hostname=hostname, 
+                    location=location, total_size=total_size)
 
 class ComputeTransformers:
     def __init__(self, driver, database):
@@ -81,21 +90,22 @@ class ComputeTransformers:
         print(f"\nComputing {len(df)} embeddings using {self.model_name}", "\n")
         for _, row in df.iterrows():
             ip_port_string = f"""
-            Address: {row['ip_address']}
-            Port: {row['port_number']}
+            IP Address: {row['ip_address']}
+            Port: {row['port']} ({row['total_size']})
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
             """
             embedding = self.compute_transformer_embedding(ip_port_string)
             if embedding is not None:
-                update_ip(row['ip_address'], row['port_number'], embedding, self.database)
+                add_traffic(row['ip_address'], row['port'], embedding, 
+                            row['org'], row['hostname'], row['location'], 
+                            row['total_size'], self.database)
                 print(ip_port_string)
 
     def transform(self):
         self.process_transformer_ip()
         self.driver.close()
-
 
 class ComputeOpenAI:
     def __init__(self, client, driver, database):
@@ -117,21 +127,22 @@ class ComputeOpenAI:
         print(f"\nComputing {len(df)} embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             ip_port_string = f"""
-            Address: {row['ip_address']}
-            Port: {row['port_number']}
+            IP Address: {row['ip_address']}
+            Port: {row['port']} ({row['total_size']})
             Organization: {row['org']}
             Hostname: {row['hostname']}
             Location: {row['location']}
             """
             embedding = self.compute_openai_embedding(ip_port_string)
             if embedding is not None:
-                update_ip(row['ip_address'], row['port_number'], embedding, self.database)
+                add_traffic(row['ip_address'], row['port'], embedding, 
+                            row['org'], row['hostname'], row['location'], 
+                            row['total_size'], self.database)
                 print(ip_port_string)
 
     def transform(self):
         self.process_openai_ip()
         self.driver.close()
-
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)

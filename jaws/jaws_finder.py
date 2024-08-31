@@ -13,7 +13,6 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
 
-
 def connect_to_database(uri, username, password, database):
     try:
         driver = GraphDatabase.driver(uri, auth=(username, password))
@@ -28,18 +27,16 @@ def connect_to_database(uri, username, password, database):
         else:
             raise
 
-
 def fetch_data_for_dbscan(driver, database):
     query = """
-    MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
-    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
-    WHERE ip.embedding IS NOT NULL
-    RETURN ip.address AS ip_address,
-           port.number AS port_number,
-           org.org AS org,
-           org.hostname AS hostname,
-           org.location AS location,
-           ip.embedding AS embedding
+    MATCH (traffic:Traffic)
+    RETURN traffic.ip_address AS ip_address,
+           traffic.port AS port_number,
+           traffic.org AS org,
+           traffic.hostname AS hostname,
+           traffic.location AS location,
+           traffic.embedding AS embedding,
+           traffic.total_size AS total_size
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -53,14 +50,14 @@ def fetch_data_for_dbscan(driver, database):
                 'org': record['org'],
                 'hostname': record['hostname'],
                 'location': record['location'],
+                'total_size': record['total_size'],
             })
         return embeddings, data
-
 
 def fetch_data_for_portsize(driver, database):
     query = """
     MATCH (src_port:Port)-[p:PACKET]->(dst_port:Port)
-    RETURN p.size AS size, src_port.number AS src_port, dst_port.number AS dst_port
+    RETURN p.size AS size, src_port.port AS src_port, dst_port.port AS dst_port
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -68,17 +65,15 @@ def fetch_data_for_portsize(driver, database):
                      for record in result]
     return plot_data
 
-
 def update_neo4j(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
-    MATCH (ip:IP {address: outlier.ip_address})-[:PORT]->(port:Port {number: outlier.port_number})
-    SET ip.is_anomaly = true
+    MATCH (traffic:Traffic {ip_address: outlier.ip_address, port: outlier.port_number})
+    SET traffic.anomaly = true
     """
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
         session.run(query, parameters)
-
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     print("\nPlotting the Packet Size over Ports", "\n")
@@ -111,7 +106,6 @@ def plot_size_over_ports(plot_data, jaws_finder_endpoint):
         portsize_plotille.scatter([item['size']], [item['dst_port']], marker="<")
     print(portsize_plotille.show(legend=False))
 
-
 def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
@@ -136,7 +130,6 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
     print(kdistance_plotille.show(legend=False))
 
-
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
     parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
@@ -156,7 +149,6 @@ def main():
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
     jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
-    # Always fetch and plot size and port data
     plot_data = fetch_data_for_portsize(driver, args.database)
     plot_size_over_ports(plot_data, jaws_finder_endpoint)
 
@@ -164,7 +156,6 @@ def main():
     print(f"\nPerforming PCA on {len(embeddings_scaled)} Organization Embeddings")
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
-
     print("Measuring K-Distance", "\n")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
@@ -195,7 +186,6 @@ def main():
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    # Plot the PCA/DBSCAN Outliers
     plt.figure(num=f'PCA/DBSCAN Outliers from Organization Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
     plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
@@ -206,7 +196,7 @@ def main():
                 color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     for i, item in enumerate(data):
-        annotation_text = f"{item['ip_address']}:{item['port_number']}\n{item['org']}\n{item['hostname']}\n{item['location']}"
+        annotation_text = f"{item['ip_address']}:{item['port_number']}({item['total_size']})\n{item['org']}\n{item['hostname']}\n{item['location']}"
         if clusters[i] == -1:
             # Outlier
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
@@ -243,7 +233,6 @@ def main():
     save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
-    # Plot using Plotille
     outlier_plotille = plotille.Figure()
     outlier_plotille.color_mode = 'byte'
     outlier_plotille.width = 80
@@ -262,13 +251,14 @@ def main():
             'port_number': item['port_number'],
             'org': item['org'],
             'hostname': item['hostname'],
-            'location': item['location']
+            'location': item['location'],
+            'total_size': item['total_size']
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
     print(f"\nFound {len(outlier_data)} outliers:", "\n")
     for item in outlier_data:
-        outlier_list = f"{item['ip_address']}:{item['port_number']}\n{item['org']}\n{item['hostname']}\n{item['location']}"
+        outlier_list = f"IP Address: {item['ip_address']}\nPort Number: {item['port_number']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
         print(outlier_list, "\n")
 
     update_neo4j(outlier_data, driver, args.database)

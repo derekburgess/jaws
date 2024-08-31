@@ -11,7 +11,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 import base64
 
-
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
@@ -20,37 +19,27 @@ client = OpenAI()
 jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 image_to_encode = f"{jaws_finder_endpoint}/pca_dbscan_outliers.png"
 
-
 system_prompt = """
 You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
-
 ---
-
 Executive Summary:
-
 A concise summary of the traffic analysis, including a description of the cluster plot.
 
 Traffic Analysis:
-
 1. Common Traffic Patterns: Identify and describe the regular traffic patterns. Highlight any anomalies or unusual patterns.
-   
 2. Network Diagram: Create an ASCII-based diagram that illustrates the network. Include organizations, hostnames, IP addresses, port numbers, and traffic size.
 
 Firewall Recommendations:
-
 1. Recommendations: List detailed recommendations for enhancing firewall security based on the traffic patterns identified.
-   
 2. Rationale: Provide a rationale for each recommendation, explaining how it addresses specific issues identified in the traffic analysis.
 
 Additional Instructions:
-
 - Use clear, concise language.
 - Avoid markdown formatting, this is a CLI tool.
 - Utilize ASCII diagrams to represent traffic flows effectively.
 - Ensure recommendations are specific and supported by data from the provided logs.
 - Avoid excessive formatting.
 """
-
 
 def check_database_exists(uri, username, password, database):
     try:
@@ -66,17 +55,17 @@ def check_database_exists(uri, username, password, database):
         else:
             raise
 
-
 def fetch_data(driver, database):
     query = """
-    MATCH (ip:IP)-[:OWNERSHIP]->(org:ORGANIZATION)
-    OPTIONAL MATCH (ip)-[:PORT]->(port:Port)
+    MATCH (traffic:Traffic)
     RETURN DISTINCT
-        ip.address AS ip_address,
-        port.number AS port_number,
-        org.org AS org,
-        org.hostname AS hostname,
-        org.location AS location
+        traffic.ip_address AS ip_address,
+        traffic.port AS port,
+        traffic.org AS org,
+        traffic.hostname AS hostname,
+        traffic.location AS location,
+        traffic.total_size AS total_size,
+        traffic.anomaly AS anomaly
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -84,21 +73,21 @@ def fetch_data(driver, database):
         for record in result:
             data.append({
                 'ip_address': record['ip_address'],
-                'port_number': record['port_number'],
+                'port': record['port'],
                 'org': record['org'],
                 'hostname': record['hostname'],
-                'location': record['location']
+                'location': record['location'],
+                'total_size': record['total_size'],
+                'anomaly': record['anomaly']
             })
         df = pd.DataFrame(data)
         df_json = df.to_json(orient="records")
         return df, df_json
 
-
 def encode_image(image_path):
   with open(image_path, "rb") as image_file:
     return base64.b64encode(image_file.read()).decode('utf-8')
 base64_image = encode_image(image_to_encode)
-
 
 class SummarizeTransformers:
     def __init__(self):
@@ -133,7 +122,6 @@ class SummarizeTransformers:
         print(f"\nAnalysis from {self.model_name}:", "\n")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
-
 class SummarizeOpenAI:
     def __init__(self, client):
         self.client = client
@@ -163,7 +151,6 @@ class SummarizeOpenAI:
         )
         print(f"\nAnalysis from {self.model_name}", "\n")
         print(completion.choices[0].message.content, "\n")
-
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)

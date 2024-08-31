@@ -9,11 +9,9 @@ from pyshark.capture.live_capture import UnknownInterfaceException
 import socket
 import psutil
 
-
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
-
 
 def connect_to_database(uri, username, password, database):
     try:
@@ -29,7 +27,6 @@ def connect_to_database(uri, username, password, database):
         else:
             raise
 
-
 def get_local_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -40,63 +37,49 @@ def get_local_ip():
     except Exception:
         return "127.0.0.1"
 
-
 def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
-        MERGE (src_ip:IP {address: $src_ip})
-        MERGE (src_port:Port {number: $src_port})
-        MERGE (dst_ip:IP {address: $dst_ip})
-        MERGE (dst_port:Port {number: $dst_port})
+        MERGE (src_ip_address:IP_ADDRESS {ip_address: $src_ip_address})
+        MERGE (dst_ip_address:IP_ADDRESS {ip_address: $dst_ip_address})
         
-        MERGE (src_ip)-[:PORT]->(src_port)
-        MERGE (dst_ip)-[:PORT]->(dst_port)
+        MERGE (src_ip_address)-[:PORT]->(src_port:Port {port: $src_port, ip_address: $src_ip_address})
+        MERGE (dst_ip_address)-[:PORT]->(dst_port:Port {port: $dst_port, ip_address: $dst_ip_address})
         
         CREATE (src_port)-[p:PACKET]->(dst_port)
         SET p += { 
             protocol: $protocol,
             size: $size,
-            src_mac: $src_mac,
-            dst_mac: $dst_mac,
             payload: $payload,
             timestamp: $timestamp
         }
         """, packet_data))
 
-
 def process_packet(packet, driver, database, local_ip):
     packet_data = {
         "protocol": packet.highest_layer,
-        "src_ip": packet.ip.src if hasattr(packet, 'ip') else '0.0.0.0',
+        "src_ip_address": packet.ip.src if hasattr(packet, 'ip') else '0.0.0.0',
         "src_port": 0,
-        "src_mac": packet.eth.src if hasattr(packet, 'eth') else '00:00:00:00:00:00',
-        "dst_ip": packet.ip.dst if hasattr(packet, 'ip') else '0.0.0.0',
+        "dst_ip_address": packet.ip.dst if hasattr(packet, 'ip') else '0.0.0.0',
         "dst_port": 0,
-        "dst_mac": packet.eth.dst if hasattr(packet, 'eth') else '00:00:00:00:00:00',
         "size": len(packet),
         "payload": None,
         "timestamp": float(packet.sniff_time.timestamp()) * 1000
     }
 
-    if hasattr(packet, 'tcp'):
+    if hasattr(packet, 'tcp') or hasattr(packet, 'udp'):
+        layer = packet.tcp if hasattr(packet, 'tcp') else packet.udp
         packet_data.update({
-            "src_port": int(packet.tcp.srcport) if packet.tcp.srcport.isdigit() else 0,
-            "dst_port": int(packet.tcp.dstport) if packet.tcp.dstport.isdigit() else 0,
-            "payload": packet.tcp.payload if hasattr(packet.tcp, 'payload') else None
-        })
-    elif hasattr(packet, 'udp'):
-        packet_data.update({
-            "src_port": int(packet.udp.srcport) if packet.udp.srcport.isdigit() else 0,
-            "dst_port": int(packet.udp.dstport) if packet.udp.dstport.isdigit() else 0,
-            "payload": packet.udp.payload if hasattr(packet.udp, 'payload') else None
+            "src_port": int(layer.srcport) if layer.srcport.isdigit() else 0,
+            "dst_port": int(layer.dstport) if layer.dstport.isdigit() else 0,
+            "payload": layer.payload if hasattr(layer, 'payload') else None
         })
 
-    print(f"[PACKET CAPTURED] {packet_data['src_ip']}:{packet_data['src_port']} -> {packet_data['dst_ip']}:{packet_data['dst_port']} | {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED]")
+    print(f"[PACKET CAPTURED] {packet_data['src_ip_address']}:{packet_data['src_port']} -> {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED]")
     try:
         add_packet_to_neo4j(driver, packet_data, database)
     except Exception as e:
         print(f"Failed to add packet to Neo4j: {e}")
-
 
 def list_interfaces():
     interfaces = psutil.net_if_addrs()
@@ -105,7 +88,6 @@ def list_interfaces():
         print(f"- {interface}")
     print("\n")
     exit(0)
-
 
 def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database.")

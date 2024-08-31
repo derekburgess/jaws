@@ -3,11 +3,9 @@ import argparse
 import warnings
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-
 huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
 starcoder = "bigcode/starcoder2-3b"
 llama = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-
 
 def pull_model(model_name, model_path):
     try:
@@ -17,7 +15,6 @@ def pull_model(model_name, model_path):
     except Exception as e:
         print(f"\nFailed to download: {model_name}", "\n")
         print(e, "\n")
-
 
 def pull_model_files(model):
     models = {
@@ -30,7 +27,6 @@ def pull_model_files(model):
             pull_model(name, path)
     else:
         pull_model(model, models[model])
-
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
