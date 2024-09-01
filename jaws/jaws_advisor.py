@@ -57,15 +57,15 @@ def check_database_exists(uri, username, password, database):
 
 def fetch_data(driver, database):
     query = """
-    MATCH (traffic:Traffic)
+    MATCH (traffic:TRAFFIC)
     RETURN DISTINCT
-        traffic.ip_address AS ip_address,
-        traffic.port AS port,
-        traffic.org AS org,
-        traffic.hostname AS hostname,
-        traffic.location AS location,
-        traffic.total_size AS total_size,
-        traffic.anomaly AS anomaly
+        traffic.IP_ADDRESS AS ip_address,
+        traffic.PORT AS port,
+        traffic.ORGANIZATION AS org,
+        traffic.HOSTNAME AS hostname,
+        traffic.LOCATION AS location,
+        traffic.TOTAL_SIZE AS total_size,
+        traffic.OUTLIER AS outlier
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -78,7 +78,7 @@ def fetch_data(driver, database):
                 'hostname': record['hostname'],
                 'location': record['location'],
                 'total_size': record['total_size'],
-                'anomaly': record['anomaly']
+                'outlier': record['outlier']
             })
         df = pd.DataFrame(data)
         df_json = df.to_json(orient="records")

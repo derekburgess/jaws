@@ -30,15 +30,15 @@ def check_database_exists(uri, username, password, database):
 
 def fetch_ip_data(database):
     query = """
-    MATCH (ip_address:IP_ADDRESS)-[:OWNERSHIP]->(org:ORGANIZATION)
-    OPTIONAL MATCH (ip_address)-[:PORT]->(port:Port)
+    MATCH (ip_address:IP_ADDRESS)<-[:OWNERSHIP]-(org:ORGANIZATION)
+    OPTIONAL MATCH (ip_address)-[:PORT]->(port:PORT)
     OPTIONAL MATCH (port)-[p:PACKET]->()
-    WITH ip_address, port, org, sum(p.size) AS total_size
-    RETURN ip_address.ip_address AS ip_address,
-           port.port AS port,
-           org.org AS org,
-           org.hostname AS hostname,
-           org.location AS location,
+    WITH ip_address, port, org, sum(p.SIZE) AS total_size
+    RETURN ip_address.IP_ADDRESS AS ip_address,
+           port.PORT AS port,
+           org.ORGANIZATION AS org,
+           org.HOSTNAME AS hostname,
+           org.LOCATION AS location,
            total_size
     """
     with driver.session(database=database) as session:
@@ -48,16 +48,16 @@ def fetch_ip_data(database):
 
 def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, database):
     query = """
-    MATCH (ip_address:IP_ADDRESS {ip_address: $ip_address})
-    MERGE (traffic:Traffic {
-        ip_address: $ip_address,
-        port: $port
+    MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
+    MERGE (traffic:TRAFFIC {
+        IP_ADDRESS: $ip_address,
+        PORT: $port
     })
-    SET traffic.embedding = $embedding,
-        traffic.org = $org,
-        traffic.hostname = $hostname,
-        traffic.location = $location,
-        traffic.total_size = $total_size
+    SET traffic.EMBEDDING = $embedding,
+        traffic.ORGANIZATION = $org,
+        traffic.HOSTNAME = $hostname,
+        traffic.LOCATION = $location,
+        traffic.TOTAL_SIZE = $total_size
     MERGE (ip_address)-[:TRAFFIC]->(traffic)
     """
     with driver.session(database=database) as session:

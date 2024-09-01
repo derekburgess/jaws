@@ -40,18 +40,18 @@ def get_local_ip():
 def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
-        MERGE (src_ip_address:IP_ADDRESS {ip_address: $src_ip_address})
-        MERGE (dst_ip_address:IP_ADDRESS {ip_address: $dst_ip_address})
+        MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: $src_ip_address})
+        MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: $dst_ip_address})
         
-        MERGE (src_ip_address)-[:PORT]->(src_port:Port {port: $src_port, ip_address: $src_ip_address})
-        MERGE (dst_ip_address)-[:PORT]->(dst_port:Port {port: $dst_port, ip_address: $dst_ip_address})
+        MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: $src_port, IP_ADDRESS: $src_ip_address})
+        MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: $dst_port, IP_ADDRESS: $dst_ip_address})
         
         CREATE (src_port)-[p:PACKET]->(dst_port)
         SET p += { 
-            protocol: $protocol,
-            size: $size,
-            payload: $payload,
-            timestamp: $timestamp
+            PROTOCOL: $protocol,
+            SIZE: $size,
+            PAYLOAD: $payload,
+            TIMESTAMP: $timestamp
         }
         """, packet_data))
 

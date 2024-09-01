@@ -29,14 +29,14 @@ def connect_to_database(uri, username, password, database):
 
 def fetch_data_for_dbscan(driver, database):
     query = """
-    MATCH (traffic:Traffic)
-    RETURN traffic.ip_address AS ip_address,
-           traffic.port AS port_number,
-           traffic.org AS org,
-           traffic.hostname AS hostname,
-           traffic.location AS location,
-           traffic.embedding AS embedding,
-           traffic.total_size AS total_size
+    MATCH (traffic:TRAFFIC)
+    RETURN traffic.IP_ADDRESS AS ip_address,
+           traffic.PORT AS port,
+           traffic.ORGANIZATION AS org,
+           traffic.HOSTNAME AS hostname,
+           traffic.LOCATION AS location,
+           traffic.EMBEDDING AS embedding,
+           traffic.TOTAL_SIZE AS total_size
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -46,7 +46,7 @@ def fetch_data_for_dbscan(driver, database):
             embeddings.append(np.array(record['embedding']))
             data.append({
                 'ip_address': record['ip_address'],
-                'port_number': record['port_number'],
+                'port': record['port'],
                 'org': record['org'],
                 'hostname': record['hostname'],
                 'location': record['location'],
@@ -56,8 +56,8 @@ def fetch_data_for_dbscan(driver, database):
 
 def fetch_data_for_portsize(driver, database):
     query = """
-    MATCH (src_port:Port)-[p:PACKET]->(dst_port:Port)
-    RETURN p.size AS size, src_port.port AS src_port, dst_port.port AS dst_port
+    MATCH (src_port:PORT)-[p:PACKET]->(dst_port:PORT)
+    RETURN p.SIZE AS size, src_port.PORT AS src_port, dst_port.PORT AS dst_port
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -68,8 +68,8 @@ def fetch_data_for_portsize(driver, database):
 def update_neo4j(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
-    MATCH (traffic:Traffic {ip_address: outlier.ip_address, port: outlier.port_number})
-    SET traffic.anomaly = true
+    MATCH (traffic:TRAFFIC {IP_ADDRESS: outlier.ip_address, PORT: outlier.port})
+    SET traffic.OUTLIER = true
     """
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
@@ -196,7 +196,7 @@ def main():
                 color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     for i, item in enumerate(data):
-        annotation_text = f"{item['ip_address']}:{item['port_number']}({item['total_size']})\n{item['org']}\n{item['hostname']}\n{item['location']}"
+        annotation_text = f"{item['ip_address']}:{item['port']}({item['total_size']})\n{item['org']}\n{item['hostname']}\n{item['location']}"
         if clusters[i] == -1:
             # Outlier
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
@@ -248,7 +248,7 @@ def main():
     outlier_data = [
         {
             'ip_address': item['ip_address'],
-            'port_number': item['port_number'],
+            'port': item['port'],
             'org': item['org'],
             'hostname': item['hostname'],
             'location': item['location'],
@@ -256,9 +256,9 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
-    print(f"\nFound {len(outlier_data)} outliers:", "\n")
+    print(f"\nFound {len(outlier_data)} Outliers:", "\n")
     for item in outlier_data:
-        outlier_list = f"IP Address: {item['ip_address']}\nPort Number: {item['port_number']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
+        outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
         print(outlier_list, "\n")
 
     update_neo4j(outlier_data, driver, args.database)
