@@ -9,6 +9,7 @@ username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 ipinfo_api_key = os.getenv("IPINFO_API_KEY")
 
+
 def connect_to_database(uri, username, password, database):
     try:
         driver = GraphDatabase.driver(uri, auth=(username, password))
@@ -23,6 +24,7 @@ def connect_to_database(uri, username, password, database):
         else:
             raise
 
+
 def get_ip_info(ip_address, ipinfo_api_key):
     general_info_url = f"https://ipinfo.io/{ip_address}/json"
     headers = {'Authorization': f'Bearer {ipinfo_api_key}'}
@@ -36,6 +38,7 @@ def get_ip_info(ip_address, ipinfo_api_key):
         print(f"Request failed for {ip_address}: {e}")
     return None
 
+
 def fetch_data(driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS)
@@ -45,6 +48,7 @@ def fetch_data(driver, database):
     with driver.session(database=database) as session:
         result = session.run(query)
         return [record['ip_address'] for record in result]
+
 
 def update_neo4j(ip_address, ip_info, driver, database):
     query = """
@@ -60,6 +64,7 @@ def update_neo4j(ip_address, ip_info, driver, database):
             'hostname': ip_info.get('hostname', 'Unknown'),
             'location': ip_info.get('loc', 'Unknown')
         })
+
 
 def main():
     parser = argparse.ArgumentParser(description="Update Neo4j database with IP organization information from ipinfo.")

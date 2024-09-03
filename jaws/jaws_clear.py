@@ -3,12 +3,15 @@ import argparse
 import pandas as pd
 from neo4j import GraphDatabase
 
+
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 
+
 def connect_to_database(uri, username, password, database):
     return GraphDatabase.driver(uri, auth=(username, password))
+
 
 def preview_database(driver, database):
     with driver.session(database=database) as session:
@@ -16,9 +19,11 @@ def preview_database(driver, database):
         count = result.single()[0]
         return count
 
+
 def clear_database(driver, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
+
 
 def main():
     parser = argparse.ArgumentParser(description="Clear the Neo4j database.")

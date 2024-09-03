@@ -9,9 +9,11 @@ from pyshark.capture.live_capture import UnknownInterfaceException
 import socket
 import psutil
 
+
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
+
 
 def connect_to_database(uri, username, password, database):
     try:
@@ -27,6 +29,7 @@ def connect_to_database(uri, username, password, database):
         else:
             raise
 
+
 def get_local_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -36,6 +39,7 @@ def get_local_ip():
         return local_ip
     except Exception:
         return "127.0.0.1"
+
 
 def add_packet_to_neo4j(driver, packet_data, database):
     with driver.session(database=database) as session:
@@ -54,6 +58,7 @@ def add_packet_to_neo4j(driver, packet_data, database):
             TIMESTAMP: $timestamp
         }
         """, packet_data))
+
 
 def process_packet(packet, driver, database, local_ip):
     packet_data = {
@@ -81,6 +86,7 @@ def process_packet(packet, driver, database, local_ip):
     except Exception as e:
         print(f"Failed to add packet to Neo4j: {e}")
 
+
 def list_interfaces():
     interfaces = psutil.net_if_addrs()
     print("\nAvailable network interfaces:")
@@ -88,6 +94,7 @@ def list_interfaces():
         print(f"- {interface}")
     print("\n")
     exit(0)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and store them in a Neo4j database.")

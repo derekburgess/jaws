@@ -8,11 +8,13 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from openai import OpenAI
 
+
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
+
 
 def check_database_exists(uri, username, password, database):
     try:
@@ -27,6 +29,7 @@ def check_database_exists(uri, username, password, database):
             raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
         else:
             raise
+
 
 def fetch_ip_data(database):
     query = """
@@ -46,6 +49,7 @@ def fetch_ip_data(database):
         df = pd.DataFrame([record.data() for record in result])
     return df
 
+
 def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, database):
     query = """
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
@@ -64,6 +68,7 @@ def add_traffic(ip_address, port, embedding, org, hostname, location, total_size
         session.run(query, ip_address=ip_address, port=port, 
                     embedding=embedding, org=org, hostname=hostname, 
                     location=location, total_size=total_size)
+
 
 class ComputeTransformers:
     def __init__(self, driver, database):
@@ -107,6 +112,7 @@ class ComputeTransformers:
         self.process_transformer_ip()
         self.driver.close()
 
+
 class ComputeOpenAI:
     def __init__(self, client, driver, database):
         self.client = client
@@ -143,6 +149,7 @@ class ComputeOpenAI:
     def transform(self):
         self.process_openai_ip()
         self.driver.close()
+
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)

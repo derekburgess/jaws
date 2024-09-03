@@ -13,6 +13,7 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
 
+
 def connect_to_database(uri, username, password, database):
     try:
         driver = GraphDatabase.driver(uri, auth=(username, password))
@@ -26,6 +27,7 @@ def connect_to_database(uri, username, password, database):
             raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
         else:
             raise
+
 
 def fetch_data_for_dbscan(driver, database):
     query = """
@@ -54,6 +56,7 @@ def fetch_data_for_dbscan(driver, database):
             })
         return embeddings, data
 
+
 def fetch_data_for_portsize(driver, database):
     query = """
     MATCH (src_port:PORT)-[p:PACKET]->(dst_port:PORT)
@@ -65,6 +68,7 @@ def fetch_data_for_portsize(driver, database):
                      for record in result]
     return plot_data
 
+
 def update_neo4j(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
@@ -74,6 +78,7 @@ def update_neo4j(outlier_list, driver, database):
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
         session.run(query, parameters)
+
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     print("\nPlotting the Packet Size over Ports", "\n")
@@ -106,6 +111,7 @@ def plot_size_over_ports(plot_data, jaws_finder_endpoint):
         portsize_plotille.scatter([item['size']], [item['dst_port']], marker="<")
     print(portsize_plotille.show(legend=False))
 
+
 def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
@@ -129,6 +135,7 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     plotille_plot_x = list(range(len(sorted_k_distances)))
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
     print(kdistance_plotille.show(legend=False))
+
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
@@ -156,6 +163,7 @@ def main():
     print(f"\nPerforming PCA on {len(embeddings_scaled)} Organization Embeddings")
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
+    
     print("Measuring K-Distance", "\n")
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)

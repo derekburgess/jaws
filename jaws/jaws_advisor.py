@@ -11,6 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 import base64
 
+
 uri = os.getenv("NEO4J_URI")
 username = os.getenv("NEO4J_USERNAME")
 password = os.getenv("NEO4J_PASSWORD")
@@ -18,7 +19,6 @@ driver = GraphDatabase.driver(uri, auth=(username, password))
 client = OpenAI()
 jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 image_to_encode = f"{jaws_finder_endpoint}/pca_dbscan_outliers.png"
-
 system_prompt = """
 You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
 ---
@@ -28,6 +28,22 @@ A concise summary of the traffic analysis, including a description of the cluste
 Traffic Analysis:
 1. Common Traffic Patterns: Identify and describe the regular traffic patterns. Highlight any anomalies or unusual patterns.
 2. Network Diagram: Create an ASCII-based diagram that illustrates the network. Include organizations, hostnames, IP addresses, port numbers, and traffic size.
+
+Example of network diagram to follow:
+
+[External]   [External]   [External]
+ (IP:Port)    (IP:Port)    (IP:Port)
+    \            |            /
+     \           |           /
+       -----[WAN Router]----
+                 |
+             [Firewall]
+                 |
+       -----[LAN Switch]----
+      /          |          \
+     /           |           \
+[Internal]   [Internal]   [Internal]
+ (IP:Port)    (IP:Port)    (IP:Port)
 
 Firewall Recommendations:
 1. Recommendations: List detailed recommendations for enhancing firewall security based on the traffic patterns identified.
@@ -40,6 +56,7 @@ Additional Instructions:
 - Ensure recommendations are specific and supported by data from the provided logs.
 - Avoid excessive formatting.
 """
+
 
 def check_database_exists(uri, username, password, database):
     try:
@@ -54,6 +71,7 @@ def check_database_exists(uri, username, password, database):
             raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
         else:
             raise
+
 
 def fetch_data(driver, database):
     query = """
@@ -84,10 +102,12 @@ def fetch_data(driver, database):
         df_json = df.to_json(orient="records")
         return df, df_json
 
+
 def encode_image(image_path):
   with open(image_path, "rb") as image_file:
     return base64.b64encode(image_file.read()).decode('utf-8')
 base64_image = encode_image(image_to_encode)
+
 
 class SummarizeTransformers:
     def __init__(self):
@@ -122,6 +142,7 @@ class SummarizeTransformers:
         print(f"\nAnalysis from {self.model_name}:", "\n")
         print(self.tokenizer.decode(response, skip_special_tokens=True), "\n")
 
+
 class SummarizeOpenAI:
     def __init__(self, client):
         self.client = client
@@ -151,6 +172,7 @@ class SummarizeOpenAI:
         )
         print(f"\nAnalysis from {self.model_name}", "\n")
         print(completion.choices[0].message.content, "\n")
+
 
 def main():
     warnings.filterwarnings("ignore", category=FutureWarning)
