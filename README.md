@@ -1,6 +1,8 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
+Update, 2025: Refactored the experience to become more agentic. Along with the commands, you can now chat directly with the platform and the agent will examine data, use tools, and provide analysis.
+
 JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
 
@@ -13,22 +15,22 @@ This part of the guide is assuming a clean install and mainly exists as a guide 
 
 If you plan on running local models against a NVIDIA GPU, you will need the CUDA Toolkit installed. [You can configure an installer or guide here](https://developer.nvidia.com/cuda-downloads) -- On Ubuntu, if you installed the additional drivers for NVIDIA, you can run:
 
-`sudo apt install nvidia-cuda-toolkit`
+`apt install nvidia-cuda-toolkit`
 
 
 ### Wireshark
 
 JAWS uses pyshark which requires termshark, which can be installed with [Wireshark](https://www.wireshark.org/). Termshark is an optional installation and bundled with the executables for Windows and Mac. On Ubuntu you can install both using:
 
-`sudo apt install wireshark` and `sudo apt install termshark`
+`apt install wireshark` and `apt install termshark`
 
 Wireshark will ask you about adding non-root users to the Wireshark group. It is recommended that you say Yes. If you said No, then you can run:
 
-`sudo dpkg-reconfigure wireshark-common`
+`dpkg-reconfigure wireshark-common`
 
 In addition, the installation and adding non-root users is suppose to add your user to the Wireshark group and set permissions, but I have found that it doesn't always do this. You may need to run:
 
-`sudo adduser $USER wireshark` and `sudo chmod +x /usr/bin/dumpcap`
+`adduser $USER wireshark` and `chmod +x /usr/bin/dumpcap`
 
 
 ### Neo4j DBMS
@@ -41,7 +43,7 @@ https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debi
 
 To use the desktop application on Linux, you will need to set its permissions:
 
-`sudo chmod +x neo4j...`
+`chmod +x neo4j...`
 
 Ubuntu may complain about lack of [FUSE](https://github.com/AppImage/AppImageKit/wiki/FUSE).
 
@@ -49,7 +51,7 @@ Ubuntu may also complain about lack of sandbox... So far I have only found runni
 
 Additionally, the problem appears to stem from changes made to Ubuntu 24.04, this command, recommended in the Docker documentation, which appears to disable "AppArmor", also resolves the issue:
 
-`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
+`sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
 
 
 ### Conda/Anaconda/Miniconda
@@ -113,7 +115,7 @@ Somewhat Optional: Since OpenAI is not free, by passing --api transformers, 2 of
 
 In addition, you will want to install the Hugging Face CLI, found here: https://huggingface.co/docs/huggingface_hub/en/guides/cli and login.
 
-`pip3 install -U "huggingface_hub[cli]"`
+`pip install -U "huggingface_hub[cli]"`
 
 `huggingface-cli login`
 
@@ -125,24 +127,15 @@ The command jaws-finder displays several plots using Matplot, but also saves tho
 
 ### Install the JAWS Python Package
 
-Visit, https://pytorch.org/get-started/locally/ to configure an installation for your system.
-
-`pip3 install torch`
-
-
-Install support for Quantization(StarCoder):
-
-`pip3 install -i https://pypi.org/simple/ bitsandbytes`
-
 
 From the /jaws root directory, install dependencies:
 
-`pip3 install -r requirements.txt`
+`pip install -r requirements.txt`
 
 
 Install JAWS using:
 
-`pip3 install .`
+`pip install .`
 
 
 If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run jaws-guide for the rest of the instructions and commend overview.

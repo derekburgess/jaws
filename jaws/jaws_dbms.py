@@ -1,16 +1,20 @@
-import os
 import argparse
-import pandas as pd
-from neo4j import GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
+from jaws.jaws_config import *
 
 
-uri = os.getenv("NEO4J_URI")
-username = os.getenv("NEO4J_USERNAME")
-password = os.getenv("NEO4J_PASSWORD")
-
-
-def connect_to_database(uri, username, password, database):
-    return GraphDatabase.driver(uri, auth=(username, password))
+def dbms_connection(database):
+    try:
+        with NEO4J.session(database=database) as session:
+            session.run("RETURN 1")
+        return NEO4J
+    except ServiceUnavailable:
+        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
+    except Exception as e:
+        if "database does not exist" in str(e).lower():
+            raise Exception(f"{database} database not found. You need to create the default '{DATABASE}' database or pass an existing database name.")
+        else:
+            raise
 
 
 def preview_database(driver, database):
@@ -27,16 +31,16 @@ def clear_database(driver, database):
 
 def main():
     parser = argparse.ArgumentParser(description="Clear the Neo4j database.")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to clear (default: captures).")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to clear (default: {DATABASE}).")
 
     args = parser.parse_args()
 
     try:
-        driver = connect_to_database(uri, username, password, args.database)
+        driver = dbms_connection(args.database)
         record_count = preview_database(driver, args.database)
     except Exception as e:
         print(f"\n{args.database} not found.")
-        print("You either need to create the default 'captures' database or pass an existing database name.", "\n")
+        print(f"You either need to create the default '{DATABASE}' database or pass an existing database name.", "\n")
         return
 
     confirm = input(f"\nAre you sure you want to clear the {record_count} records from the database? Enter 'YES' to confirm: ")

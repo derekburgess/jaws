@@ -4,9 +4,13 @@ pandas
 numpy
 scikit-learn
 kneed
-transformers
+torch
 accelerate
+bitsandbytes
+transformers
 openai
+semantic-kernel
+smolagents
 matplotlib
 requests
 rich

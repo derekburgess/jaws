@@ -1,9 +1,5 @@
 import os
-import random
 import argparse
-from neo4j import GraphDatabase
-from neo4j.exceptions import ServiceUnavailable
-import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -12,21 +8,8 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-
-
-def connect_to_database(uri, username, password, database):
-    try:
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        with driver.session(database=database) as session:
-            session.run("RETURN 1")
-        return driver
-    except ServiceUnavailable:
-        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
-    except Exception as e:
-        if "database does not exist" in str(e).lower():
-            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
-        else:
-            raise
+from jaws.jaws_config import *
+from jaws.jaws_dbms import dbms_connection
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -69,7 +52,7 @@ def fetch_data_for_portsize(driver, database):
     return plot_data
 
 
-def update_neo4j(outlier_list, driver, database):
+def add_outlier_to_database(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
     MATCH (traffic:TRAFFIC {IP_ADDRESS: outlier.ip_address, PORT: outlier.port})
@@ -139,16 +122,12 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: '{DATABASE}').")
     
     args = parser.parse_args()
 
-    uri = os.getenv("NEO4J_URI")
-    username = os.getenv("NEO4J_USERNAME")
-    password = os.getenv("NEO4J_PASSWORD")
-
     try:
-        driver = connect_to_database(uri, username, password, args.database)
+        driver = dbms_connection(args.database)
     except Exception as e:
         print(f"\n{str(e)}\n")
         return
@@ -269,7 +248,7 @@ def main():
         outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
         print(outlier_list, "\n")
 
-    update_neo4j(outlier_data, driver, args.database)
+    add_outlier_to_database(outlier_data, driver, args.database)
 
     plt.show()
 

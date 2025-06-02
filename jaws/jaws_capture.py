@@ -1,33 +1,12 @@
 import os
 import argparse
 import time
-from neo4j import GraphDatabase
-from neo4j.exceptions import ServiceUnavailable
-import pandas as pd
-import pyshark
-from pyshark.capture.live_capture import UnknownInterfaceException
 import socket
 import psutil
-
-
-uri = os.getenv("NEO4J_URI")
-username = os.getenv("NEO4J_USERNAME")
-password = os.getenv("NEO4J_PASSWORD")
-
-
-def connect_to_database(uri, username, password, database):
-    try:
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        with driver.session(database=database) as session:
-            session.run("RETURN 1")
-        return driver
-    except ServiceUnavailable:
-        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
-    except Exception as e:
-        if "database does not exist" in str(e).lower():
-            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
-        else:
-            raise
+import pyshark
+from pyshark.capture.live_capture import UnknownInterfaceException
+from jaws.jaws_config import *
+from jaws.jaws_dbms import dbms_connection
 
 
 def get_local_ip():
@@ -101,7 +80,7 @@ def main():
     parser.add_argument("--interface", default="Ethernet", help="Specify the network interface to use (default: Ethernet).")
     parser.add_argument("--file", dest="capture_file", help="Path to the Wireshark capture file.")
     parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: {DATABASE}).")
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
 
     args = parser.parse_args()
@@ -118,7 +97,7 @@ def main():
     print(f"\nLocal IP address: {local_ip}")
 
     try:
-        driver = connect_to_database(uri, username, password, args.database)
+        driver = dbms_connection(args.database)
     except Exception as e:
         print(f"\n{str(e)}", "\n")
         return

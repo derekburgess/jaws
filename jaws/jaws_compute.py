@@ -1,37 +1,13 @@
 import os
 import argparse
-import warnings
-from neo4j import GraphDatabase
-from neo4j.exceptions import ServiceUnavailable
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from openai import OpenAI
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from jaws.jaws_config import *
+from jaws.jaws_dbms import dbms_connection
 
 
-uri = os.getenv("NEO4J_URI")
-username = os.getenv("NEO4J_USERNAME")
-password = os.getenv("NEO4J_PASSWORD")
-driver = GraphDatabase.driver(uri, auth=(username, password))
-client = OpenAI()
-
-
-def check_database_exists(uri, username, password, database):
-    try:
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        with driver.session(database=database) as session:
-            session.run("RETURN 1")
-        return driver
-    except ServiceUnavailable:
-        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
-    except Exception as e:
-        if "database does not exist" in str(e).lower():
-            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
-        else:
-            raise
-
-
-def fetch_ip_data(database):
+def fetch_ip_data(driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS)<-[:OWNERSHIP]-(org:ORGANIZATION)
     OPTIONAL MATCH (ip_address)-[:PORT]->(port:PORT)
@@ -50,7 +26,7 @@ def fetch_ip_data(database):
     return df
 
 
-def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, database):
+def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (traffic:TRAFFIC {
@@ -76,23 +52,22 @@ class ComputeTransformers:
         self.database = database
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"\nUsing device: {self.device}")
-        self.huggingface_token = os.getenv("HUGGINGFACE_API_KEY")
-        self.model_name = "bigcode/starcoder2-3b"
-        self.quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.huggingface_token)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, quantization_config=self.quantization_config, token=self.huggingface_token, low_cpu_mem_usage=True)
+        self.model = PACKET_MODEL
+        self.quantization = QUANTIZATION_CONFIG
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model)
+        self.infer = AutoModelForCausalLM.from_pretrained(self.model, quantization_config=self.quantization, low_cpu_mem_usage=True)
 
     def compute_transformer_embedding(self, string):
         inputs = self.tokenizer(string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
         with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True, use_cache=False)
+            outputs = self.infer(**inputs, output_hidden_states=True, use_cache=False)
         last_hidden_states = outputs.hidden_states[-1]
         embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
         return embeddings
 
     def process_transformer_ip(self):
-        df = fetch_ip_data(self.database)
-        print(f"\nComputing {len(df)} embeddings using {self.model_name}", "\n")
+        df = fetch_ip_data(self.driver, self.database)
+        print(f"\nComputing {len(df)} embeddings using {self.model}", "\n")
         for _, row in df.iterrows():
             ip_port_string = f"""
             IP Address: {row['ip_address']}
@@ -105,7 +80,7 @@ class ComputeTransformers:
             if embedding is not None:
                 add_traffic(row['ip_address'], row['port'], embedding, 
                             row['org'], row['hostname'], row['location'], 
-                            row['total_size'], self.database)
+                            row['total_size'], self.driver, self.database)
                 print(ip_port_string)
 
     def transform(self):
@@ -118,18 +93,18 @@ class ComputeOpenAI:
         self.client = client
         self.driver = driver
         self.database = database
-        self.model = "text-embedding-3-large"
+        self.model = OPENAI_EMBEDDING_MODEL
 
-    def compute_openai_embedding(self, text):
+    def compute_openai_embedding(self, input):
         try:
-            response = self.client.embeddings.create(input=text, model=self.model)
+            response = self.client.embeddings.create(input=input, model=self.model)
             return response.data[0].embedding
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
     def process_openai_ip(self):
-        df = fetch_ip_data(self.database)
+        df = fetch_ip_data(self.driver, self.database)
         print(f"\nComputing {len(df)} embeddings using OpenAI {self.model}", "\n")
         for _, row in df.iterrows():
             ip_port_string = f"""
@@ -143,7 +118,7 @@ class ComputeOpenAI:
             if embedding is not None:
                 add_traffic(row['ip_address'], row['port'], embedding, 
                             row['org'], row['hostname'], row['location'], 
-                            row['total_size'], self.database)
+                            row['total_size'], self.driver, self.database)
                 print(ip_port_string)
 
     def transform(self):
@@ -152,17 +127,14 @@ class ComputeOpenAI:
 
 
 def main():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    warnings.filterwarnings("ignore", category=UserWarning)
-    
     parser = argparse.ArgumentParser(description="Compute organization embeddings using either OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for computing embeddings, either openai or transformers (default: openai).")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: '{DATABASE}').")
 
     args = parser.parse_args()
 
     try:
-        check_database_exists(uri, username, password, args.database)
+        driver = dbms_connection(args.database)
     except Exception as e:
         print(f"\n{str(e)}\n")
         return
@@ -170,7 +142,7 @@ def main():
     if args.api == "transformers":
         transformer = ComputeTransformers(driver, args.database)
     else:
-        transformer = ComputeOpenAI(client, driver, args.database)
+        transformer = ComputeOpenAI(CLIENT, driver, args.database)
 
     transformer.transform()
 
