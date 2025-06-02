@@ -90,13 +90,11 @@ setup(
     entry_points={
        'console_scripts': [
            'jaws-guide = jaws.jaws_guide:main',
-           'jaws-anchor = jaws.jaws_anchor:main',
            'jaws-capture = jaws.jaws_capture:main',
            'jaws-ipinfo = jaws.jaws_ipinfo:main',
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
-           'jaws-advisor = jaws.jaws_advisor:main',
-           'jaws-clear = jaws.jaws_dbms:main' 
+           'jaws-utils = jaws.jaws_utils:main' 
        ],
     },
 )

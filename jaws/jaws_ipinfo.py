@@ -1,7 +1,10 @@
 import argparse
 import requests
+from rich.live import Live
+from rich.console import Group
+from rich.console import Console
 from jaws.jaws_config import *
-from jaws.jaws_dbms import dbms_connection
+from jaws.jaws_utils import dbms_connection, render_success_panel, render_info_panel, render_activity_panel
 
 
 def get_ip_info(ip_address, ipinfo_api_key):
@@ -18,7 +21,7 @@ def get_ip_info(ip_address, ipinfo_api_key):
     return None
 
 
-def fetch_data(driver, database):
+def fetch_data_for_organization(driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS)
     WHERE NOT (ip_address)<-[:OWNERSHIP]-(:ORGANIZATION)
@@ -29,7 +32,7 @@ def fetch_data(driver, database):
         return [record['ip_address'] for record in result]
 
 
-def update_neo4j(ip_address, ip_info, driver, database):
+def add_organization_to_database(ip_address, ip_info, driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (org:ORGANIZATION {ORGANIZATION: $org})
@@ -46,24 +49,45 @@ def update_neo4j(ip_address, ip_info, driver, database):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update Neo4j database with IP organization information from ipinfo.")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: {DATABASE}).")
-    
+    parser = argparse.ArgumentParser(description="Update the database with IP organization information from Ipinfo.")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
+    console = Console()
 
-    try:
-        driver = dbms_connection(args.database)
-    except Exception as e:
-        print(f"\n{str(e)}\n")
+    driver = dbms_connection(args.database)
+    if driver is None:
         return
 
-    ip_addresses = fetch_data(driver, args.database)
-    print(f"\nFound {len(ip_addresses)} IP addresses without organization nodes", "\n")
-    for ip_address in ip_addresses:
-        ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
-        if ip_info:
-            update_neo4j(ip_address, ip_info, driver, args.database)
-            print(f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}")
+    ip_addresses = fetch_data_for_organization(driver, args.database)
+    
+    if not ip_addresses:
+        message = f"No addresses without organization nodes."
+        console.print(render_info_panel("INFORMATION", message, console))
+        driver.close()
+        return
+
+    message = f"Found {len(ip_addresses)} IP addresses without organization nodes"
+    organizations = []
+
+    with Live(Group(
+            render_info_panel("CONFIGURATION", message, console),
+            render_activity_panel("ORGANIZATIONS FOUND", organizations, console)
+        ), console=console, refresh_per_second=10) as live:
+        
+        for ip_address in ip_addresses:
+            ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
+            if ip_info:
+                add_organization_to_database(ip_address, ip_info, driver, args.database)
+                org_string = f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}"
+                organizations.append(org_string)
+                live.update(Group(
+                    render_info_panel("CONFIGURATION", message, console),
+                    render_activity_panel("ORGANIZATIONS FOUND", organizations, console)
+                ))
+
+        live.stop()
+        message = f"Successfully added {len(organizations)} organizations to database: '{args.database}'"
+        console.print(render_success_panel("PROCESS COMPLETE", message, console))
 
     driver.close()
 

@@ -1,13 +1,15 @@
-import os
 import argparse
+from rich.live import Live
+from rich.console import Group
+from rich.console import Console
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from jaws.jaws_config import *
-from jaws.jaws_dbms import dbms_connection
+from jaws.jaws_utils import dbms_connection, render_success_panel, render_info_panel, render_activity_panel
 
 
-def fetch_ip_data(driver, database):
+def fetch_data_for_embedding(driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS)<-[:OWNERSHIP]-(org:ORGANIZATION)
     OPTIONAL MATCH (ip_address)-[:PORT]->(port:PORT)
@@ -26,7 +28,7 @@ def fetch_ip_data(driver, database):
     return df
 
 
-def add_traffic(ip_address, port, embedding, org, hostname, location, total_size, driver, database):
+def add_traffic_to_database(ip_address, port, embedding, org, hostname, location, total_size, driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (traffic:TRAFFIC {
@@ -46,105 +48,72 @@ def add_traffic(ip_address, port, embedding, org, hostname, location, total_size
                     location=location, total_size=total_size)
 
 
-class ComputeTransformers:
-    def __init__(self, driver, database):
-        self.driver = driver
-        self.database = database
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"\nUsing device: {self.device}")
-        self.model = PACKET_MODEL
-        self.quantization = QUANTIZATION_CONFIG
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-        self.infer = AutoModelForCausalLM.from_pretrained(self.model, quantization_config=self.quantization, low_cpu_mem_usage=True)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
+infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
 
-    def compute_transformer_embedding(self, string):
-        inputs = self.tokenizer(string, return_tensors="pt", max_length=512, truncation=True).to(self.device)
-        with torch.no_grad():
-            outputs = self.infer(**inputs, output_hidden_states=True, use_cache=False)
-        last_hidden_states = outputs.hidden_states[-1]
-        embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
-        return embeddings
-
-    def process_transformer_ip(self):
-        df = fetch_ip_data(self.driver, self.database)
-        print(f"\nComputing {len(df)} embeddings using {self.model}", "\n")
-        for _, row in df.iterrows():
-            ip_port_string = f"""
-            IP Address: {row['ip_address']}
-            Port: {row['port']} ({row['total_size']})
-            Organization: {row['org']}
-            Hostname: {row['hostname']}
-            Location: {row['location']}
-            """
-            embedding = self.compute_transformer_embedding(ip_port_string)
-            if embedding is not None:
-                add_traffic(row['ip_address'], row['port'], embedding, 
-                            row['org'], row['hostname'], row['location'], 
-                            row['total_size'], self.driver, self.database)
-                print(ip_port_string)
-
-    def transform(self):
-        self.process_transformer_ip()
-        self.driver.close()
+def compute_transformer_embedding(input):
+    inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
+    with torch.no_grad():
+        outputs = infer(**inputs, output_hidden_states=True, use_cache=False)
+    last_hidden_states = outputs.hidden_states[-1]
+    embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
+    return embeddings
 
 
-class ComputeOpenAI:
-    def __init__(self, client, driver, database):
-        self.client = client
-        self.driver = driver
-        self.database = database
-        self.model = OPENAI_EMBEDDING_MODEL
-
-    def compute_openai_embedding(self, input):
-        try:
-            response = self.client.embeddings.create(input=input, model=self.model)
-            return response.data[0].embedding
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return None
-
-    def process_openai_ip(self):
-        df = fetch_ip_data(self.driver, self.database)
-        print(f"\nComputing {len(df)} embeddings using OpenAI {self.model}", "\n")
-        for _, row in df.iterrows():
-            ip_port_string = f"""
-            IP Address: {row['ip_address']}
-            Port: {row['port']} ({row['total_size']})
-            Organization: {row['org']}
-            Hostname: {row['hostname']}
-            Location: {row['location']}
-            """
-            embedding = self.compute_openai_embedding(ip_port_string)
-            if embedding is not None:
-                add_traffic(row['ip_address'], row['port'], embedding, 
-                            row['org'], row['hostname'], row['location'], 
-                            row['total_size'], self.driver, self.database)
-                print(ip_port_string)
-
-    def transform(self):
-        self.process_openai_ip()
-        self.driver.close()
+def compute_openai_embedding(client, input):
+    response = client.embeddings.create(input=input, model=OPENAI_EMBEDDING_MODEL)
+    return response.data[0].embedding
 
 
 def main():
     parser = argparse.ArgumentParser(description="Compute organization embeddings using either OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the api to use for computing embeddings, either openai or transformers (default: openai).")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: '{DATABASE}').")
-
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai').")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
+    console = Console()
 
-    try:
-        driver = dbms_connection(args.database)
-    except Exception as e:
-        print(f"\n{str(e)}\n")
+    driver = dbms_connection(args.database)
+    if driver is None:
         return
 
-    if args.api == "transformers":
-        transformer = ComputeTransformers(driver, args.database)
-    else:
-        transformer = ComputeOpenAI(CLIENT, driver, args.database)
+    df = fetch_data_for_embedding(driver, args.database)
+    message = f"Processing {len(df)} packet embeddings using {PACKET_MODEL if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
+    embeddings = []
 
-    transformer.transform()
+    with Live(Group(
+            render_info_panel("CONFIGURATION", message, console),
+            render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console, height=30)
+        ), console=console, refresh_per_second=10) as live:
+        
+        for _, row in df.iterrows():
+            ip_port_string = f"""
+            IP Address: {row['ip_address']}
+            Port: {row['port']} ({row['total_size']})
+            Organization: {row['org']}
+            Hostname: {row['hostname']}
+            Location: {row['location']}
+            """
+            if args.api == "transformers":
+                embedding = compute_transformer_embedding(ip_port_string)
+            else:
+                embedding = compute_openai_embedding(CLIENT, ip_port_string)
+                
+            if embedding is not None:
+                add_traffic_to_database(row['ip_address'], row['port'], embedding, 
+                            row['org'], row['hostname'], row['location'], 
+                            row['total_size'], driver, args.database)
+                embeddings.append(ip_port_string)
+                live.update(Group(
+                    render_info_panel("CONFIGURATION", message, console),
+                    render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console, height=30)
+                ))
+
+        live.stop()
+        message = f"Successfully processed {len(embeddings)} embeddings in database: '{args.database}'"
+        console.print(render_success_panel("PROCESS COMPLETE", message, console))
+
+    driver.close()
 
 if __name__ == "__main__":
     main()

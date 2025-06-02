@@ -8,8 +8,9 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
+from rich.console import Console
 from jaws.jaws_config import *
-from jaws.jaws_dbms import dbms_connection
+from jaws.jaws_utils import dbms_connection, render_error_panel, render_info_panel
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -64,8 +65,6 @@ def add_outlier_to_database(outlier_list, driver, database):
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
-    print("\nPlotting the Packet Size over Ports", "\n")
-
     plt.figure(num='Packet Size over Ports', figsize=(6, 4))
     for item in plot_data:
         plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
@@ -121,44 +120,48 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the Neo4j database to connect to (default: '{DATABASE}').")
-    
+    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from the database.")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
+    console = Console()
 
-    try:
-        driver = dbms_connection(args.database)
-    except Exception as e:
-        print(f"\n{str(e)}\n")
+    driver = dbms_connection(args.database)
+    if driver is None:
         return
     
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
-    jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
     plot_data = fetch_data_for_portsize(driver, args.database)
-    plot_size_over_ports(plot_data, jaws_finder_endpoint)
+    message = "Plotting the Packet Size over Ports"
+    console.print(render_info_panel("INFORMATION", message, console))
+    plot_size_over_ports(plot_data, FINDER_ENDPOINT)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
-    print(f"\nPerforming PCA on {len(embeddings_scaled)} Organization Embeddings")
+    message = f"Performing PCA on {len(embeddings_scaled)} Organization Embeddings"
+    console.print(render_info_panel("INFORMATION", message, console))
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
     
-    print("Measuring K-Distance", "\n")
+    message = "Measuring K-Distance"
+    console.print(render_info_panel("INFORMATION", message, console))
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(principal_components)
     distances, _ = nearest_neighbors.kneighbors(principal_components)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    plot_k_distances(sorted_k_distances, jaws_finder_endpoint)
+    plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
 
-    print("\nUsing Kneed to recommend EPS")
+    message = "Using Kneed to recommend EPS"
+    console.print(render_info_panel("INFORMATION", message, console))
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
         eps_value = sorted_k_distances[kneedle.knee]
-        print(f"Knee point found at index: {kneedle.knee}")
+        message = f"Knee point found at index: {kneedle.knee}"
+        console.print(render_info_panel("INFORMATION", message, console))
     else:
-        print("Knee point not found. Using default EPS.")
+        message = "Knee point not found. Using default EPS."
+        console.print(render_info_panel("INFORMATION", message, console))
         eps_value = np.median(sorted_k_distances)
 
     user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
@@ -166,9 +169,11 @@ def main():
         try:
             eps_value = float(user_input)
         except ValueError:
-            print("Invalid input. Using the recommended EPS value.")
+            message = "Invalid input. Using the recommended EPS value."
+            console.print(render_error_panel("ERROR", message, console))
 
-    print(f"Using EPS: {eps_value}", "\n")
+    message = f"Using EPS: {eps_value}"
+    console.print(render_info_panel("INFORMATION", message, console))
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
@@ -217,7 +222,7 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
+    save_outliers = os.path.join(FINDER_ENDPOINT, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
     outlier_plotille = plotille.Figure()
@@ -243,10 +248,11 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
-    print(f"\nFound {len(outlier_data)} Outliers:", "\n")
-    for item in outlier_data:
-        outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
-        print(outlier_list, "\n")
+    #message = f"\nFound {len(outlier_data)} Outliers:"
+    #console.print(render_info_panel("INFORMATION", message, console))
+    #for item in outlier_data:
+    #    outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
+    #    print(outlier_list, "\n")
 
     add_outlier_to_database(outlier_data, driver, args.database)
 

@@ -7,7 +7,7 @@ kneed
 torch
 accelerate
 bitsandbytes
-transformers
+transformers==4.51.3
 openai
 semantic-kernel
 smolagents

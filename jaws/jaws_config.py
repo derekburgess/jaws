@@ -1,7 +1,6 @@
 import os
 from openai import OpenAI
 from neo4j import GraphDatabase
-from transformers import BitsAndBytesConfig
 
 
 # Graph database configuration.
@@ -15,27 +14,24 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 
 CLIENT = OpenAI()
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_LANG_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-4.1"
 
 # The packet model is used to process packet strings into embeddings.
 PACKET_MODEL = "bigcode/starcoder2-3b"
 PACKET_MODEL_ID = "starcoder"
-QUANTIZATION_CONFIG = BitsAndBytesConfig(load_in_8bit=True)
 
 # The language model is used for language related tasks, such as analyzing data, or generating reports.
-LANG_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-LANG_MODEL_ID = "llama"
+#LANG_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+#LANG_MODEL_ID = "llama"
 
-# Not in use yet.
-# The reasoning model is used to support the language model.
-REASONING_MODEL = "o4-mini"
-REASONING_MODEL_ID = "o4-mini"
+LANG_MODEL = "microsoft/Phi-4-mini-instruct"
+LANG_MODEL_ID = "phi4"
 
 # Saves plots to this location.
 FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
 
 # Advisor system prompt
-ADVISOR_SYSTEM_PROMPT = rf"""
+ADVISOR_PROMPT = rf"""
 You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
 ---
 Executive Summary:

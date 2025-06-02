@@ -14,19 +14,19 @@ def main():
     JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
     the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
     It also provides a set of commands to transform and process packets into plots and reports using: 
-    K-means, DBSCAN, OpenAI, '{PACKET_MODEL_ID}', and '{LANG_MODEL_ID}'.
+    K-means, DBSCAN, OpenAI, and local transformers.
     [/]""")
     
-    print("""[gray100]
+    print(f"""[gray100]
     JAWS is set to run against the OpenAI API by default and does not require a specific GPU. JAWS can
-    also be configured to run locally using 'open' models. If you create the default captures database, 
-    you can in theory simply run the commands with no options.
+    also be configured to run locally using local transformers. If you create the default '{DATABASE}' database, 
+    you can in theory simply run the commands with no additional options.
     [/]""")
 
     print(f"""[gray100]
-    [grey85]If you plan to run the models locally, it is recommended that you download them first:[/]
-    [green1][green1][CLI][/][/] jaws-anchor [grey50]OPTIONAL[/] --model '{PACKET_MODEL_ID}', '{LANG_MODEL_ID}' 
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-anchor
+    [grey85]If you plan to run the transformer models locally, it is recommended that you download them first:[/]
+    [green1][green1][CLI][/][/] jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}' 
+    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}'
     [orange1][WARNING][/] This will download a large amount of data and may take some time.
     [/]""")
 
@@ -53,14 +53,8 @@ def main():
     [/]""")
           
     print(f"""[gray100]
-    [grey85]To generate an 'expert' analysis:[/] 
-    [green1][CLI][/] jaws-advisor [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database '{DATABASE}'
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-advisor --api 'transformers'
-    [/]""")
-          
-    print(f"""[gray100]
-    [grey85]To clear the database:[/]
-    [green1][CLI][/] jaws-clear [grey50]OPTIONAL[/] --database '{DATABASE}'
+    [grey85]To drop the database:[/]
+    [green1][CLI][/] jaws-utils [grey50]OPTIONAL[/] --drop '{DATABASE}'
     [orange1][WARNING][/] This will erase all data!
     [/]""")
 
