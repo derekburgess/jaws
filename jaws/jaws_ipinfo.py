@@ -78,7 +78,7 @@ def main():
             ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
             if ip_info:
                 add_organization_to_database(ip_address, ip_info, driver, args.database)
-                org_string = f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}"
+                org_string = f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}\n"
                 organizations.append(org_string)
                 live.update(Group(
                     render_info_panel("CONFIGURATION", message, console),

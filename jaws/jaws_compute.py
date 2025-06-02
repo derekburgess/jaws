@@ -83,17 +83,11 @@ def main():
 
     with Live(Group(
             render_info_panel("CONFIGURATION", message, console),
-            render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console, height=30)
+            render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console)
         ), console=console, refresh_per_second=10) as live:
         
         for _, row in df.iterrows():
-            ip_port_string = f"""
-            IP Address: {row['ip_address']}
-            Port: {row['port']} ({row['total_size']})
-            Organization: {row['org']}
-            Hostname: {row['hostname']}
-            Location: {row['location']}
-            """
+            ip_port_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
             if args.api == "transformers":
                 embedding = compute_transformer_embedding(ip_port_string)
             else:
@@ -106,7 +100,7 @@ def main():
                 embeddings.append(ip_port_string)
                 live.update(Group(
                     render_info_panel("CONFIGURATION", message, console),
-                    render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console, height=30)
+                    render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console)
                 ))
 
         live.stop()
