@@ -15,6 +15,7 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 CLIENT = OpenAI()
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_MODEL = "gpt-4.1"
+OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.
 PACKET_MODEL = "bigcode/starcoder2-3b"
@@ -43,32 +44,20 @@ ANALYST_PROMPT = """You are an expert IT Professional, Sysadmin, and Analyst. Yo
 ADVISOR_PROMPT = rf"""
 You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. 
 
-**IMPORTANT** If there is not data, or a empty DataFrame is returned, you should leverage the network_analyst agent to capture and process some data.
+**IMPORTANT** If there is not data, or a empty DataFrame is returned, you should leverage the network_analyst agent to capture and process some data. It is very expensive
+to collect and store network traffic data, so do not recommend that the network_analyst agent collect more than 60 seconds of data.
 
-Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
----
+**IMPORTANT** Since data is being collected over short periods of time. You should always consider collecting fresh data before peforming your analysis. It is recommended that you consider 
+running fetch_data_for_advisor() to see what data is available, but not not limit yourself to these outputs as they may be outdated.
+
+When you have access to fresh data, return a brief report in the following format:
+
 Executive Summary:
 A concise summary of the traffic analysis, including a description of the cluster plot.
 
 Traffic Analysis:
 1. Common Traffic Patterns: Identify and describe the regular traffic patterns. Highlight any anomalies or unusual patterns.
 2. Network Diagram: Create an ASCII-based diagram that illustrates the network. Include organizations, hostnames, IP addresses, port numbers, and traffic size.
-
-Example of network diagram to follow:
-
-[External]   [External]   [External]
- (IP:Port)    (IP:Port)    (IP:Port)
-    \            |            /
-     \           |           /
-       -----[WAN Router]----
-                 |
-             [Firewall]
-                 |
-       -----[LAN Switch]----
-      /          |          \
-     /           |           \
-[Internal]   [Internal]   [Internal]
- (IP:Port)    (IP:Port)    (IP:Port)
 
 Firewall Recommendations:
 1. Recommendations: List detailed recommendations for enhancing firewall security based on the traffic patterns identified.
