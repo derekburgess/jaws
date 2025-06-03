@@ -122,12 +122,18 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
+    parser.add_argument("--noinput", action="store_true", help="Disable user input for the EPS value.")
     args = parser.parse_args()
     console = Console()
 
     driver = dbms_connection(args.database)
     if driver is None:
         return
+    
+    if args.noinput:
+        disable_user_input = True
+    else:
+        disable_user_input = False
     
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
 
@@ -164,17 +170,22 @@ def main():
         console.print(render_info_panel("INFORMATION", message, console))
         eps_value = np.median(sorted_k_distances)
 
-    message = f"Matplotlib plots will be generated after passing an EPS value."
-    console.print(render_info_panel("INFORMATION", message, console))
-    user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
-    if user_input:
-        try:
-            eps_value = float(user_input)
-        except ValueError:
-            message = "Invalid input. Using the recommended EPS value."
-            console.print(render_error_panel("ERROR", message, console))
+    if disable_user_input:
+        message = f"Passing EPS: {eps_value}"
+        console.print(render_info_panel("INFORMATION", message, console))
+    else:
+        user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
+        if user_input:
+            try:
+                eps_value = float(user_input)
+            except ValueError:
+                message = "Invalid input. Using the recommended EPS value."
+                console.print(render_error_panel("ERROR", message, console))
 
     message = f"Passing EPS: {eps_value}"
+    console.print(render_info_panel("INFORMATION", message, console))
+
+    message = f"Matplotlib plots will be generated after passing an EPS value."
     console.print(render_info_panel("INFORMATION", message, console))
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)

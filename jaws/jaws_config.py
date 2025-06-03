@@ -42,9 +42,9 @@ ANALYST_PROMPT = """You are an expert IT Professional, Sysadmin, and Analyst. Yo
 
 # Advisor system prompt
 ADVISOR_PROMPT = rf"""
-You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. 
+You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for security configurations. 
 
-**IMPORTANT** If there is not data, or a empty DataFrame is returned, you should leverage the network_analyst agent to capture and process some data. It is very expensive
+**IMPORTANT** If there is no data, or an empty DataFrame is returned, you should leverage the network_analyst agent you manage to capture and process network traffic. It is very expensive
 to collect and store network traffic data, so do not recommend that the network_analyst agent collect more than 60 seconds of data.
 
 **IMPORTANT** Since data is being collected over short periods of time. You should always consider collecting fresh data before peforming your analysis. It is recommended that you consider 
