@@ -30,9 +30,22 @@ LANG_MODEL_ID = "phi4"
 # Saves plots to this location.
 FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
 
+# Analyst system prompt.
+ANALYST_PROMPT = """You are an expert IT Professional, Sysadmin, and Analyst. Your task is to collect, augment, and process network data for downstream analysis. You have access to several tools, but the process is faily linear. and looks something like this:
+
+1. Capture network traffic. (capture_packets)
+    1a. Use list_interfaces if needed to select an interface.
+2. Document organizations. (document_organizations)
+3. Compute embeddings. (compute_embeddings)
+"""
+
 # Advisor system prompt
 ADVISOR_PROMPT = rf"""
-You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
+You are an expert IT Professional, Sysadmin, and Analyst. Your task is to review data from network traffic to identify patterns and make recommendations for firewall configurations. 
+
+**IMPORTANT** If there is not data, or a empty DataFrame is returned, you should leverage the network_analyst agent to capture and process some data.
+
+Please analyze the provided network traffic and cluster plot, then return a brief report in the following format:
 ---
 Executive Summary:
 A concise summary of the traffic analysis, including a description of the cluster plot.

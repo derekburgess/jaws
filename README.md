@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-Update, 2025: Refactored the experience to become more agentic. Along with the commands, you can now chat directly with the platform and the agent will examine data, use tools, and provide analysis.
+Update, 2025: Refactored the experience to become more agentic. Along with the CLI commands, the `advisor` notebook demonstrates an agent capable of collecting data, using tools, and providing analysis.
 
 JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
