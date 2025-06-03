@@ -18,13 +18,13 @@ def main():
     [/]""")
     
     print(f"""[gray100]
-    JAWS is set to run against the OpenAI API by default and does not require a specific GPU. JAWS can
-    also be configured to run locally using local transformers. If you create the default '{DATABASE}' database, 
-    you can in theory simply run the commands with no additional options.
+    JAWS is set to run against the OpenAI API by default and does not require a specific GPU. JAWS can also 
+    be configured to run on device using local transformers. If you create the default '{DATABASE}' database, 
+    and use OpenAI,you can in theory simply run the commands with no additional options.
     [/]""")
 
     print(f"""[gray100]
-    [grey85]If you plan to run the transformer models locally, it is recommended that you download them first:[/]
+    [grey85]If you plan to run transformers on device, it is recommended that you download them first:[/]
     [green1][green1][CLI][/][/] jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}' 
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}'
     [orange1][WARNING][/] This will download a large amount of data and may take some time.
