@@ -62,7 +62,7 @@ def process_packet(packet, driver, database, local_ip):
             "payload": layer.payload if hasattr(layer, 'payload') else None
         })
 
-    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} -> {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']} {packet_data['size']} [PAYLOAD NOT DISPLAYED]"
+    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']}({packet_data['size']}) **PAYLOAD NOT DISPLAYED**"
     #print(packet_string)
 
     add_packet_to_database(driver, packet_data, database)
@@ -76,7 +76,7 @@ def list_interfaces(console):
         interface_list.append(f"{interface}")
     
     message = "\n".join(interface_list)
-    console.print(render_info_panel("AVAILABLE INTERFACES", message, console))
+    console.print(render_info_panel("INTERFACES", message, console))
     exit(0)
 
 
@@ -95,42 +95,43 @@ def main():
         return
 
     if args.capture_file and not os.path.isfile(args.capture_file):
-        message = "File not found, please check your file path."
+        message = f"File not found, please check your file path:\n{args.capture_file}"
         console.print(render_error_panel("ERROR", message, console))
         return
     
     local_ip = get_local_ip()
+
     driver = dbms_connection(args.database)
     if driver is None:
         return
     
-    message = "" 
+    message = "" # Either importing files or capturing packets.
     packets = []
 
     with Live(Group(
-            render_info_panel("CONFIGURATION", message, console),
-            render_activity_panel("PACKETS CAPTURED", packets, console)
+            render_info_panel("CONFIG", message, console),
+            render_activity_panel("ACTIVITY", packets, console)
         ), console=console, refresh_per_second=10) as live:
         try:
             if args.capture_file:
-                message = f"Importing packets from: {args.capture_file} | Local address: {local_ip}"
+                message = f"Import: {args.capture_file} | {local_ip}"
                 live.update(Group(
-                    render_info_panel("CONFIGURATION", message, console),
-                    render_activity_panel("PACKETS CAPTURED", packets, console)
+                    render_info_panel("CONFIG", message, console),
+                    render_activity_panel("PACKETS", packets, console)
                 ))
                 file_capture = pyshark.FileCapture(args.capture_file)
                 for packet in file_capture:
                     packet_string = process_packet(packet, driver, args.database, local_ip)
                     packets.append(packet_string)
                     live.update(Group(
-                        render_info_panel("CONFIGURATION", message, console),
-                        render_activity_panel("PACKETS CAPTURED", packets, console)
+                        render_info_panel("CONFIG", message, console),
+                        render_activity_panel("PACKETS", packets, console)
                     ))
             else:
-                message = f"Capturing packets on interface: {args.interface} for {args.duration} seconds | Local address: {local_ip}"
+                message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
                 live.update(Group(
-                    render_info_panel("CONFIGURATION", message, console),
-                    render_activity_panel("PACKETS CAPTURED", packets, console)
+                    render_info_panel("CONFIG", message, console),
+                    render_activity_panel("PACKETS", packets, console)
                 ))
                 interface_capture = pyshark.LiveCapture(interface=args.interface)
                 start_time = time.time()
@@ -138,15 +139,15 @@ def main():
                     packet_string = process_packet(packet, driver, args.database, local_ip)
                     packets.append(packet_string)
                     live.update(Group(
-                        render_info_panel("CONFIGURATION", message, console),
-                        render_activity_panel("PACKETS CAPTURED", packets, console)
+                        render_info_panel("CONFIG", message, console),
+                        render_activity_panel("PACKETS", packets, console)
                     ))
                     if time.time() - start_time > args.duration:
                         break
 
                 live.stop()
-                message = f"Packets added to database: '{DATABASE}'"
-                console.print(render_success_panel("CAPTURE COMPLETE", message, console))
+                message = f"Packets({len(packets)}) added to: '{args.database}'"
+                console.print(render_success_panel("PROCESS COMPLETE", message, console))
                 
         except UnknownInterfaceException:
             live.stop()

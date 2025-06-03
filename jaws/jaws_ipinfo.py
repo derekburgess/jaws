@@ -61,32 +61,32 @@ def main():
     ip_addresses = fetch_data_for_organization(driver, args.database)
     
     if not ip_addresses:
-        message = f"No addresses without organization nodes."
-        console.print(render_info_panel("INFORMATION", message, console))
+        message = f"No undocumented addresses."
+        console.print(render_info_panel("INFO", message, console))
         driver.close()
         return
 
-    message = f"Found {len(ip_addresses)} IP addresses without organization nodes"
+    message = f"Found undocumented addresses({len(ip_addresses)})"
     organizations = []
 
     with Live(Group(
-            render_info_panel("CONFIGURATION", message, console),
-            render_activity_panel("ORGANIZATIONS FOUND", organizations, console)
+            render_info_panel("CONFIG", message, console),
+            render_activity_panel("ORGANIZATIONS", organizations, console)
         ), console=console, refresh_per_second=10) as live:
         
         for ip_address in ip_addresses:
             ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
             if ip_info:
                 add_organization_to_database(ip_address, ip_info, driver, args.database)
-                org_string = f"{ip_address} <- ORGANIZATION: {ip_info.get('org', 'Unknown')}, {ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}\n"
+                org_string = f"{ip_info.get('org', 'Unknown')} ➜ {ip_address}\n{ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}\n"
                 organizations.append(org_string)
                 live.update(Group(
-                    render_info_panel("CONFIGURATION", message, console),
-                    render_activity_panel("ORGANIZATIONS FOUND", organizations, console)
+                    render_info_panel("CONFIG", message, console),
+                    render_activity_panel("ORGANIZATIONS", organizations, console)
                 ))
 
         live.stop()
-        message = f"Successfully added {len(organizations)} organizations to database: '{args.database}'"
+        message = f"Organizations({len(organizations)}) added to: '{args.database}'"
         console.print(render_success_panel("PROCESS COMPLETE", message, console))
 
     driver.close()

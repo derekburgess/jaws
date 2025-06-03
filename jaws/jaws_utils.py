@@ -37,12 +37,12 @@ console = Console()
 # Downloads the models to the local device. Nice if you do not want to wait for model downloads on first compute.
 def download_model(model):
     try:
-        message = f"Downloading model: {model}"
-        console.print(render_info_panel("INFORMATION", message, console))
+        message = f"Downloading: {model}"
+        console.print(render_info_panel("INFO", message, console))
         AutoTokenizer.from_pretrained(model)
         AutoModelForCausalLM.from_pretrained(model)
-        message = f"Successfully downloaded model: {model}"
-        console.print(render_success_panel("SUCCESS", message, console))
+        message = f"Downloaded: {model}"
+        console.print(render_success_panel("PROCESS COMPLETE", message, console))
     except Exception as e:
         message = f"{model}\n\n{str(e)}"
         console.print(render_error_panel("ERROR", message, console))
@@ -66,13 +66,13 @@ def drop_database(driver, database):
     with driver.session(database=database) as session:
         result = session.run("MATCH (n) RETURN count(n)")
         count = result.single()[0]
-        message = f"Are you sure you want to clear the {count} records from '{database}'? Enter 'YES' to confirm:"
-        console.print(render_info_panel("CONFIRMATION", message, console))
-        confirm = input("> ")
+        message = f"Are you sure you want to drop({count}): '{database}'?"
+        console.print(render_info_panel("CONFIRM", message, console))
+        confirm = input("Enter 'YES' to confirm: ")
         if confirm == 'YES':
             session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
-            message = f"Successfully cleared {count} records from: '{database}'"
-            console.print(render_success_panel("SUCCESS", message, console))
+            message = f"Dropped({count}): '{database}'"
+            console.print(render_success_panel("PROCESS COMPLETE", message, console))
         return count
 
 

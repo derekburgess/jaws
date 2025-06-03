@@ -78,33 +78,37 @@ def main():
         return
 
     df = fetch_data_for_embedding(driver, args.database)
-    message = f"Processing {len(df)} packet embeddings using {PACKET_MODEL if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
-    embeddings = []
+    message = f"Processing {len(df)} packet embeddings using: {PACKET_MODEL if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}({device})"
+    embedding_strings = []
+    embedding_tensors = []
 
     with Live(Group(
-            render_info_panel("CONFIGURATION", message, console),
-            render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console)
+            render_info_panel("CONFIG", message, console),
+            render_activity_panel("EMBEDDINGS(STR)", embedding_strings, console),
+            render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], console)
         ), console=console, refresh_per_second=10) as live:
         
         for _, row in df.iterrows():
-            ip_port_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
+            embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
             if args.api == "transformers":
-                embedding = compute_transformer_embedding(ip_port_string)
+                embedding = compute_transformer_embedding(embedding_string)
             else:
-                embedding = compute_openai_embedding(CLIENT, ip_port_string)
+                embedding = compute_openai_embedding(CLIENT, embedding_string)
                 
             if embedding is not None:
                 add_traffic_to_database(row['ip_address'], row['port'], embedding, 
                             row['org'], row['hostname'], row['location'], 
                             row['total_size'], driver, args.database)
-                embeddings.append(ip_port_string)
+                embedding_strings.append(embedding_string)
+                embedding_tensors.append(embedding)
                 live.update(Group(
-                    render_info_panel("CONFIGURATION", message, console),
-                    render_activity_panel("EMBEDDINGS PROCESSED", embeddings, console)
+                    render_info_panel("CONFIG", message, console),
+                    render_activity_panel("EMBEDDINGS(STR)", embedding_strings, console),
+                    render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], console)
                 ))
 
         live.stop()
-        message = f"Successfully processed {len(embeddings)} embeddings in database: '{args.database}'"
+        message = f"Embeddings({len(embedding_strings)}) added to: '{args.database}'"
         console.print(render_success_panel("PROCESS COMPLETE", message, console))
 
     driver.close()

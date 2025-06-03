@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import plotille
 from rich.console import Console
 from jaws.jaws_config import *
-from jaws.jaws_utils import dbms_connection, render_error_panel, render_info_panel
+from jaws.jaws_utils import dbms_connection, render_success_panel, render_error_panel, render_info_panel
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -120,7 +120,7 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from the database.")
+    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
     console = Console()
@@ -132,17 +132,17 @@ def main():
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
 
     plot_data = fetch_data_for_portsize(driver, args.database)
-    message = "Plotting the Packet Size over Ports"
+    message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
     console.print(render_info_panel("INFORMATION", message, console))
     plot_size_over_ports(plot_data, FINDER_ENDPOINT)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
-    message = f"Performing PCA on {len(embeddings_scaled)} Organization Embeddings"
+    message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
     console.print(render_info_panel("INFORMATION", message, console))
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
     
-    message = "Measuring K-Distance"
+    message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
     console.print(render_info_panel("INFORMATION", message, console))
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
@@ -152,7 +152,7 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
 
-    message = "Using Kneed to recommend EPS"
+    message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
     console.print(render_info_panel("INFORMATION", message, console))
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
@@ -164,6 +164,8 @@ def main():
         console.print(render_info_panel("INFORMATION", message, console))
         eps_value = np.median(sorted_k_distances)
 
+    message = f"Matplotlib plots will be generated after passing an EPS value."
+    console.print(render_info_panel("INFORMATION", message, console))
     user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
     if user_input:
         try:
@@ -172,13 +174,16 @@ def main():
             message = "Invalid input. Using the recommended EPS value."
             console.print(render_error_panel("ERROR", message, console))
 
-    message = f"Using EPS: {eps_value}"
+    message = f"Passing EPS: {eps_value}"
     console.print(render_info_panel("INFORMATION", message, console))
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    plt.figure(num=f'PCA/DBSCAN Outliers from Organization Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    message = "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise."
+    console.print(render_info_panel("INFORMATION", message, console))
+
+    plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
     plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                 c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
@@ -257,6 +262,8 @@ def main():
     add_outlier_to_database(outlier_data, driver, args.database)
 
     plt.show()
+    message = f"Plots saved to: {FINDER_ENDPOINT}"
+    console.print(render_success_panel("PROCESS COMPLETE", message, console))
 
     driver.close()
 
