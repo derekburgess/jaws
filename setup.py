@@ -23,9 +23,9 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.0',
+    version='1.5.0',
 
-    description='Packet capture and anomaly detection system',
+    description='Agentic packet capture and anomaly detection system',
     long_description=long_description,
 
     # Choose your license
@@ -90,13 +90,11 @@ setup(
     entry_points={
        'console_scripts': [
            'jaws-guide = jaws.jaws_guide:main',
-           'jaws-anchor = jaws.jaws_anchor:main',
            'jaws-capture = jaws.jaws_capture:main',
            'jaws-ipinfo = jaws.jaws_ipinfo:main',
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
-           'jaws-advisor = jaws.jaws_advisor:main',
-           'jaws-clear = jaws.jaws_clear:main' 
+           'jaws-utils = jaws.jaws_utils:main' 
        ],
     },
 )

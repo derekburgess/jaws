@@ -1,9 +1,5 @@
 import os
-import random
 import argparse
-from neo4j import GraphDatabase
-from neo4j.exceptions import ServiceUnavailable
-import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -12,21 +8,9 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-
-
-def connect_to_database(uri, username, password, database):
-    try:
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        with driver.session(database=database) as session:
-            session.run("RETURN 1")
-        return driver
-    except ServiceUnavailable:
-        raise Exception(f"Unable to connect to Neo4j database. Please check your connection settings.")
-    except Exception as e:
-        if "database does not exist" in str(e).lower():
-            raise Exception(f"{database} database not found. You need to create the default 'captures' database or pass an existing database name.")
-        else:
-            raise
+from rich.console import Console
+from jaws.jaws_config import *
+from jaws.jaws_utils import dbms_connection, render_success_panel, render_error_panel, render_info_panel
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -69,7 +53,7 @@ def fetch_data_for_portsize(driver, database):
     return plot_data
 
 
-def update_neo4j(outlier_list, driver, database):
+def add_outlier_to_database(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
     MATCH (traffic:TRAFFIC {IP_ADDRESS: outlier.ip_address, PORT: outlier.port})
@@ -81,8 +65,6 @@ def update_neo4j(outlier_list, driver, database):
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
-    print("\nPlotting the Packet Size over Ports", "\n")
-
     plt.figure(num='Packet Size over Ports', figsize=(6, 4))
     for item in plot_data:
         plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
@@ -138,63 +120,70 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on organization embeddings fetched from Neo4j.")
-    parser.add_argument("--database", default="captures", help="Specify the Neo4j database to connect to (default: captures).")
-    
+    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
+    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
+    console = Console()
 
-    uri = os.getenv("NEO4J_URI")
-    username = os.getenv("NEO4J_USERNAME")
-    password = os.getenv("NEO4J_PASSWORD")
-
-    try:
-        driver = connect_to_database(uri, username, password, args.database)
-    except Exception as e:
-        print(f"\n{str(e)}\n")
+    driver = dbms_connection(args.database)
+    if driver is None:
         return
     
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
-    jaws_finder_endpoint = os.getenv("JAWS_FINDER_ENDPOINT")
 
     plot_data = fetch_data_for_portsize(driver, args.database)
-    plot_size_over_ports(plot_data, jaws_finder_endpoint)
+    message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
+    console.print(render_info_panel("INFORMATION", message, console))
+    plot_size_over_ports(plot_data, FINDER_ENDPOINT)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
-    print(f"\nPerforming PCA on {len(embeddings_scaled)} Organization Embeddings")
+    message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
+    console.print(render_info_panel("INFORMATION", message, console))
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
     
-    print("Measuring K-Distance", "\n")
+    message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
+    console.print(render_info_panel("INFORMATION", message, console))
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(principal_components)
     distances, _ = nearest_neighbors.kneighbors(principal_components)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    plot_k_distances(sorted_k_distances, jaws_finder_endpoint)
+    plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
 
-    print("\nUsing Kneed to recommend EPS")
+    message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
+    console.print(render_info_panel("INFORMATION", message, console))
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
         eps_value = sorted_k_distances[kneedle.knee]
-        print(f"Knee point found at index: {kneedle.knee}")
+        message = f"Knee point found at index: {kneedle.knee}"
+        console.print(render_info_panel("INFORMATION", message, console))
     else:
-        print("Knee point not found. Using default EPS.")
+        message = "Knee point not found. Using default EPS."
+        console.print(render_info_panel("INFORMATION", message, console))
         eps_value = np.median(sorted_k_distances)
 
+    message = f"Matplotlib plots will be generated after passing an EPS value."
+    console.print(render_info_panel("INFORMATION", message, console))
     user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
     if user_input:
         try:
             eps_value = float(user_input)
         except ValueError:
-            print("Invalid input. Using the recommended EPS value.")
+            message = "Invalid input. Using the recommended EPS value."
+            console.print(render_error_panel("ERROR", message, console))
 
-    print(f"Using EPS: {eps_value}", "\n")
+    message = f"Passing EPS: {eps_value}"
+    console.print(render_info_panel("INFORMATION", message, console))
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    plt.figure(num=f'PCA/DBSCAN Outliers from Organization Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
+    message = "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise."
+    console.print(render_info_panel("INFORMATION", message, console))
+
+    plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
     plt.scatter(principal_components[clustered_indices, 0], principal_components[clustered_indices, 1], 
                 c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
@@ -238,7 +227,7 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_outliers = os.path.join(jaws_finder_endpoint, 'pca_dbscan_outliers.png')
+    save_outliers = os.path.join(FINDER_ENDPOINT, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
     outlier_plotille = plotille.Figure()
@@ -264,14 +253,17 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
-    print(f"\nFound {len(outlier_data)} Outliers:", "\n")
-    for item in outlier_data:
-        outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
-        print(outlier_list, "\n")
+    #message = f"\nFound {len(outlier_data)} Outliers:"
+    #console.print(render_info_panel("INFORMATION", message, console))
+    #for item in outlier_data:
+    #    outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
+    #    print(outlier_list, "\n")
 
-    update_neo4j(outlier_data, driver, args.database)
+    add_outlier_to_database(outlier_data, driver, args.database)
 
     plt.show()
+    message = f"Plots saved to: {FINDER_ENDPOINT}"
+    console.print(render_success_panel("PROCESS COMPLETE", message, console))
 
     driver.close()
 
