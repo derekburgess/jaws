@@ -51,6 +51,12 @@ def main():
     [grey85]To view cluster plots of embeddings:[/]
     [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}'
     [/]""")
+
+    print(f"""[gray100]
+    [grey85]Agentic network security advisor:[/]
+    [green1][CLI][/] jaws-advisor
+    [orange1][WARNING][/] Still experimental...
+    [/]""")
           
     print(f"""[gray100]
     [grey85]To drop the database:[/]

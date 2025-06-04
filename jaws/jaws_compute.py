@@ -44,7 +44,8 @@ def add_traffic_to_database(ip_address, port, embedding, org, hostname, location
         traffic.ORGANIZATION = $org,
         traffic.HOSTNAME = $hostname,
         traffic.LOCATION = $location,
-        traffic.TOTAL_SIZE = $total_size
+        traffic.TOTAL_SIZE = $total_size,
+        traffic.TIMESTAMP = datetime()
     MERGE (ip_address)-[:TRAFFIC]->(traffic)
     """
     with driver.session(database=database) as session:

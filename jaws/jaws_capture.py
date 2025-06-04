@@ -50,7 +50,7 @@ def add_packet_to_database(driver, packet_data, database):
             PROTOCOL: $protocol,
             SIZE: $size,
             PAYLOAD: $payload,
-            TIMESTAMP: $timestamp
+            TIMESTAMP: datetime()
         }
         """, packet_data))
 
@@ -63,8 +63,7 @@ def process_packet(packet, driver, database, local_ip):
         "dst_ip_address": packet.ip.dst if hasattr(packet, 'ip') else '0.0.0.0',
         "dst_port": 0,
         "size": len(packet),
-        "payload": None,
-        "timestamp": float(packet.sniff_time.timestamp()) * 1000
+        "payload": None
     }
 
     if hasattr(packet, 'tcp') or hasattr(packet, 'udp'):

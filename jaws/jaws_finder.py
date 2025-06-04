@@ -147,7 +147,7 @@ def main():
     if not args.agent:
         CONSOLE.print(render_info_panel("INFORMATION", pca_info_message, CONSOLE))
     else:
-        print(f"\n[PROCESS COMPLETE] {pca_info_message}\n")
+        print(f"\n[INFORMATION] {pca_info_message}\n")
     
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
@@ -156,7 +156,7 @@ def main():
     if not args.agent:
         CONSOLE.print(render_info_panel("INFORMATION", kdistance_info_message, CONSOLE))
     else:
-        print(f"[PROCESS COMPLETE] {kdistance_info_message}\n")
+        print(f"[INFORMATION] {kdistance_info_message}\n")
     
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
@@ -173,7 +173,7 @@ def main():
     if not args.agent:
         CONSOLE.print(render_info_panel("INFORMATION", kneed_info_message, CONSOLE))
     else:
-        print(f"\n[PROCESS COMPLETE] {kneed_info_message}\n")
+        print(f"[INFORMATION] {kneed_info_message}\n")
     
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
@@ -182,13 +182,13 @@ def main():
         if not args.agent:
             CONSOLE.print(render_info_panel("INFORMATION", kneed_found_message, CONSOLE))
         else:
-            print(f"[PROCESS COMPLETE] {kneed_found_message}\n")
+            print(f"[INFORMATION] {kneed_found_message}\n")
     else:
         kneed_not_found_message = "Knee point not found. Using default EPS."
         if not args.agent:
             CONSOLE.print(render_info_panel("INFORMATION", kneed_not_found_message, CONSOLE))
         else:
-            print(f"[PROCESS COMPLETE] {kneed_not_found_message}\n")
+            print(f"[INFORMATION] {kneed_not_found_message}\n")
         eps_value = np.median(sorted_k_distances)
 
     if not args.agent:
@@ -199,22 +199,16 @@ def main():
             except ValueError:
                 CONSOLE.print(render_error_panel("ERROR", "Invalid input. Using the recommended EPS value.", CONSOLE))
     else:
-        print(f"Skipping user input and passing EPS value.")
+        print(f"[CONFIG] Skipping user input and passing EPS value.")
     
-    matplot_info_message = "Matplotlib plots will be generated after passing an EPS value."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", matplot_info_message, CONSOLE))
-    else:
-        print(f"\n[PROCESS COMPLETE] {matplot_info_message}\n")
+        CONSOLE.print(render_info_panel("INFORMATION", "Matplotlib plots will be generated after passing an EPS value.", CONSOLE))
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    dbscan_info_message = "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", dbscan_info_message, CONSOLE))
-    else:
-        print(f"[PROCESS COMPLETE] {dbscan_info_message}\n")
+        CONSOLE.print(render_info_panel("INFORMATION", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.", CONSOLE))
 
     plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
@@ -275,6 +269,9 @@ def main():
     outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
     display_outlier = outlier_plotille.show(legend=False)
     
+    if not args.agent:
+        print(display_outlier)
+    
     outlier_data = [
         {
             'ip_address': item['ip_address'],
@@ -286,24 +283,18 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
-    if not args.agent:
-        print(display_outlier)
-    else:
-        print(outlier_data)
-
-    #message = f"\nFound {len(outlier_data)} Outliers:"
-    #console.print(render_info_panel("INFORMATION", message, console))
-    #for item in outlier_data:
-    #    outlier_list = f"IP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}"
-    #    print(outlier_list, "\n")
-
     add_outlier_to_database(outlier_data, driver, args.database)
+
+    formatted_output = """"""
+    for item in outlier_data:
+        formatted_output += f"\nIP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}\n"
 
     if not args.agent:
         plt.show()
         CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Plots saved to: {FINDER_ENDPOINT}", CONSOLE))
     else:
-        print(f"\n[PROCESS COMPLETE] Graph populated with traffic and outliers.\n")
+        print(formatted_output)
+        print(f"[PROCESS COMPLETE] Graph populated with traffic and outliers.\n")
     
     driver.close()
 

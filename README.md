@@ -1,7 +1,7 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-Update, 2025: Refactored the experience to become more agentic. Along with the CLI commands, the `advisor` notebook demonstrates an agent capable of collecting data, using tools, and providing analysis.
+Update, 2025: Refactored the experience to become more agentic. Along with the CLI commands, the jaws-advisor command specifically demonstrates an agent capable of collecting data, using tools, and providing analysis.
 
 JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
@@ -104,7 +104,7 @@ To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](ht
 `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and the advisor notebook (gpt-4.1) are set to use OpenAI by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
+Both jaws-compute (text-embedding-3-large) and the jaws-advisor (gpt-4.1) are set to use OpenAI by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
 
 `OPENAI_API_KEY`
 
