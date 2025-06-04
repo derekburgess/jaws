@@ -3,7 +3,7 @@
 
 Update, 2025: Refactored the experience to become more agentic. Along with the CLI commands, the `advisor` notebook demonstrates an agent capable of collecting data, using tools, and providing analysis.
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, and Llama3. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
 
 ## Prerequisites and initial setup
@@ -104,16 +104,16 @@ To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](ht
 `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and jaws-advisor (gpt-4o) are set to pass --api openai by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
+Both jaws-compute (text-embedding-3-large) and the advisor notebook (gpt-4.1) are set to use OpenAI by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
 
 `OPENAI_API_KEY`
 
 
-Somewhat Optional: Since OpenAI is not free, by passing --api transformers, 2 of the commands can pull and run local models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings and jaws-advisor currently uses meta-llama/Meta-Llama-3-8B-Instruct to act as an agent/assisstant. Both of the local models require a Hugging Face account and that you request access to each model. Feel free to adjust the model usage, but either way create an env variable for:
+Somewhat Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --download model, jaws can download and run on device models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings. Feel free to adjust the model usage, but either way create an env variable for:
 
 `HUGGINGFACE_API_KEY`
 
-In addition, you will want to install the Hugging Face CLI, found here: https://huggingface.co/docs/huggingface_hub/en/guides/cli and login.
+In addition, you will want to install the Hugging Face CLI, found here: https://huggingface.co/docs/huggingface_hub/en/guides/cli and login. This saves on passing the key.
 
 `pip install -U "huggingface_hub[cli]"`
 

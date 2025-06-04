@@ -10,7 +10,13 @@ import matplotlib.pyplot as plt
 import plotille
 from rich.console import Console
 from jaws.jaws_config import *
-from jaws.jaws_utils import dbms_connection, render_success_panel, render_error_panel, render_info_panel
+from jaws.jaws_utils import (
+    dbms_connection,
+    render_error_panel,
+    render_info_panel,
+    render_success_panel
+    #render_activity_panel
+)
 
 
 def fetch_data_for_dbscan(driver, database):
@@ -91,7 +97,8 @@ def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     for item in plot_data:
         portsize_plotille.scatter([item['size']], [item['src_port']], marker=">")
         portsize_plotille.scatter([item['size']], [item['dst_port']], marker="<")
-    print(portsize_plotille.show(legend=False))
+    display_portsize = portsize_plotille.show(legend=False)
+    print(display_portsize)
 
 
 def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
@@ -116,83 +123,99 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     kdistance_plotille.set_y_limits(min_=0)
     plotille_plot_x = list(range(len(sorted_k_distances)))
     kdistance_plotille.plot(plotille_plot_x, sorted_k_distances, marker="o", lc=40)
-    print(kdistance_plotille.show(legend=False))
+    display_kdistance = kdistance_plotille.show(legend=False)
+    print(display_kdistance)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
-    parser.add_argument("--noinput", action="store_true", help="Disable user input for the EPS value.")
+    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
-    console = Console()
-
     driver = dbms_connection(args.database)
-    if driver is None:
-        return
-    
-    if args.noinput:
-        disable_user_input = True
-    else:
-        disable_user_input = False
-    
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
 
     plot_data = fetch_data_for_portsize(driver, args.database)
-    message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
-    console.print(render_info_panel("INFORMATION", message, console))
-    plot_size_over_ports(plot_data, FINDER_ENDPOINT)
+    portsize_info_message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", portsize_info_message, CONSOLE))
+        plot_size_over_ports(plot_data, FINDER_ENDPOINT)
+    else:
+        print(plot_data)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
-    message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
-    console.print(render_info_panel("INFORMATION", message, console))
+    pca_info_message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", pca_info_message, CONSOLE))
+    else:
+        print(f"\n[PROCESS COMPLETE] {pca_info_message}\n")
+    
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
     
-    message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
-    console.print(render_info_panel("INFORMATION", message, console))
+    kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", kdistance_info_message, CONSOLE))
+    else:
+        print(f"[PROCESS COMPLETE] {kdistance_info_message}\n")
+    
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(principal_components)
     distances, _ = nearest_neighbors.kneighbors(principal_components)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
+    if not args.agent:
+        plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
+    #else:
+        #print(sorted_k_distances)
 
-    message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
-    console.print(render_info_panel("INFORMATION", message, console))
+    kneed_info_message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", kneed_info_message, CONSOLE))
+    else:
+        print(f"\n[PROCESS COMPLETE] {kneed_info_message}\n")
+    
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
         eps_value = sorted_k_distances[kneedle.knee]
-        message = f"Knee point found at index: {kneedle.knee}"
-        console.print(render_info_panel("INFORMATION", message, console))
+        kneed_found_message = f"Knee point found at index: {kneedle.knee}"
+        if not args.agent:
+            CONSOLE.print(render_info_panel("INFORMATION", kneed_found_message, CONSOLE))
+        else:
+            print(f"[PROCESS COMPLETE] {kneed_found_message}\n")
     else:
-        message = "Knee point not found. Using default EPS."
-        console.print(render_info_panel("INFORMATION", message, console))
+        kneed_not_found_message = "Knee point not found. Using default EPS."
+        if not args.agent:
+            CONSOLE.print(render_info_panel("INFORMATION", kneed_not_found_message, CONSOLE))
+        else:
+            print(f"[PROCESS COMPLETE] {kneed_not_found_message}\n")
         eps_value = np.median(sorted_k_distances)
 
-    if disable_user_input:
-        message = f"Passing EPS: {eps_value}"
-        console.print(render_info_panel("INFORMATION", message, console))
-    else:
-        user_input = input(f"Recommended EPS: {eps_value} | Press ENTER to accept, or provide a value: ")
+    if not args.agent:
+        user_input = input(f"[RECOMMENDED] {eps_value} | Press ENTER to accept, or provide a value: ")
         if user_input:
             try:
                 eps_value = float(user_input)
             except ValueError:
-                message = "Invalid input. Using the recommended EPS value."
-                console.print(render_error_panel("ERROR", message, console))
-
-    message = f"Passing EPS: {eps_value}"
-    console.print(render_info_panel("INFORMATION", message, console))
-
-    message = f"Matplotlib plots will be generated after passing an EPS value."
-    console.print(render_info_panel("INFORMATION", message, console))
+                CONSOLE.print(render_error_panel("ERROR", "Invalid input. Using the recommended EPS value.", CONSOLE))
+    else:
+        print(f"Skipping user input and passing EPS value.")
+    
+    matplot_info_message = "Matplotlib plots will be generated after passing an EPS value."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", matplot_info_message, CONSOLE))
+    else:
+        print(f"\n[PROCESS COMPLETE] {matplot_info_message}\n")
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    message = "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise."
-    console.print(render_info_panel("INFORMATION", message, console))
+    dbscan_info_message = "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise."
+    if not args.agent:
+        CONSOLE.print(render_info_panel("INFORMATION", dbscan_info_message, CONSOLE))
+    else:
+        print(f"[PROCESS COMPLETE] {dbscan_info_message}\n")
 
     plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
@@ -251,7 +274,7 @@ def main():
     outlier_indices_pc2 = principal_components[outlier_indices, 1]
     outlier_plotille.scatter(clustered_indices_pc1, clustered_indices_pc2, marker="^")
     outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
-    print(outlier_plotille.show(legend=False))
+    display_outlier = outlier_plotille.show(legend=False)
     
     outlier_data = [
         {
@@ -264,6 +287,11 @@ def main():
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
+    if not args.agent:
+        print(display_outlier)
+    else:
+        print(outlier_data)
+
     #message = f"\nFound {len(outlier_data)} Outliers:"
     #console.print(render_info_panel("INFORMATION", message, console))
     #for item in outlier_data:
@@ -272,10 +300,12 @@ def main():
 
     add_outlier_to_database(outlier_data, driver, args.database)
 
-    plt.show()
-    message = f"Plots saved to: {FINDER_ENDPOINT}"
-    console.print(render_success_panel("PROCESS COMPLETE", message, console))
-
+    if not args.agent:
+        plt.show()
+        CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Plots saved to: {FINDER_ENDPOINT}", CONSOLE))
+    else:
+        print(f"\n[PROCESS COMPLETE] Graph populated with traffic and outliers.\n")
+    
     driver.close()
 
 if __name__ == "__main__":

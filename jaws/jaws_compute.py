@@ -6,7 +6,13 @@ import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from jaws.jaws_config import *
-from jaws.jaws_utils import dbms_connection, render_success_panel, render_info_panel, render_activity_panel
+from jaws.jaws_utils import (
+    dbms_connection,
+    render_error_panel,
+    render_info_panel,
+    render_success_panel,
+    render_activity_panel
+)
 
 
 def fetch_data_for_embedding(driver, database):
@@ -48,6 +54,7 @@ def add_traffic_to_database(ip_address, port, embedding, org, hostname, location
                     location=location, total_size=total_size)
 
 
+# Setup transformers model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
 infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
@@ -70,48 +77,69 @@ def main():
     parser = argparse.ArgumentParser(description="Compute organization embeddings using either OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai').")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
+    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
-    console = Console()
-
     driver = dbms_connection(args.database)
-    if driver is None:
-        return
-
     df = fetch_data_for_embedding(driver, args.database)
-    message = f"Processing {len(df)} packet embeddings using: {PACKET_MODEL if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}({device})"
     embedding_strings = []
     embedding_tensors = []
 
-    with Live(Group(
-            render_info_panel("CONFIG", message, console),
-            render_activity_panel("EMBEDDINGS(STR)", embedding_strings, console),
-            render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], console)
-        ), console=console, refresh_per_second=10) as live:
-        
-        for _, row in df.iterrows():
-            embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
-            if args.api == "transformers":
-                embedding = compute_transformer_embedding(embedding_string)
-            else:
-                embedding = compute_openai_embedding(CLIENT, embedding_string)
+
+    try:
+        if not args.agent:
+            processing_message = f"Processing {len(df)} packet embeddings using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
+            with Live(Group(
+                    render_info_panel("CONFIG", processing_message, CONSOLE),
+                    render_activity_panel("EMBEDDINGS(STR)", embedding_strings, CONSOLE),
+                    render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], CONSOLE)
+                ), console=CONSOLE, refresh_per_second=10) as live:
                 
-            if embedding is not None:
-                add_traffic_to_database(row['ip_address'], row['port'], embedding, 
-                            row['org'], row['hostname'], row['location'], 
-                            row['total_size'], driver, args.database)
-                embedding_strings.append(embedding_string)
-                embedding_tensors.append(embedding)
-                live.update(Group(
-                    render_info_panel("CONFIG", message, console),
-                    render_activity_panel("EMBEDDINGS(STR)", embedding_strings, console),
-                    render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], console)
-                ))
+                for _, row in df.iterrows():
+                    embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
+                    if args.api == "transformers":
+                        embedding = compute_transformer_embedding(embedding_string)
+                    else:
+                        embedding = compute_openai_embedding(CLIENT, embedding_string)
+                        
+                    if embedding is not None:
+                        add_traffic_to_database(row['ip_address'], row['port'], embedding, 
+                                    row['org'], row['hostname'], row['location'], 
+                                    row['total_size'], driver, args.database)
+                        embedding_strings.append(embedding_string)
+                        embedding_tensors.append(embedding)
+                        live.update(Group(
+                            render_info_panel("CONFIG", processing_message, CONSOLE),
+                            render_activity_panel("EMBEDDINGS(STR)", embedding_strings, CONSOLE),
+                            render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], CONSOLE)
+                        ))
 
-        live.stop()
-        message = f"Embeddings({len(embedding_strings)}) added to: '{args.database}'"
-        console.print(render_success_panel("PROCESS COMPLETE", message, console))
+                live.stop()
+                CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Embeddings({len(embedding_strings)}) added to: '{args.database}'", CONSOLE))
+        else:
+            for _, row in df.iterrows():
+                embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
+                if args.api == "transformers":
+                    embedding = compute_transformer_embedding(embedding_string)
+                else:
+                    embedding = compute_openai_embedding(CLIENT, embedding_string)
+                    
+                if embedding is not None:
+                    add_traffic_to_database(row['ip_address'], row['port'], embedding, 
+                                row['org'], row['hostname'], row['location'], 
+                                row['total_size'], driver, args.database)
+                    embedding_strings.append(embedding_string)
+                    embedding_tensors.append(embedding)
+            print(f"\n[PROCESS COMPLETE] Embeddings({len(embedding_strings)}) added to: '{args.database}'\n")
+        return
 
-    driver.close()
+    except Exception as e:
+        if not args.agent:
+            CONSOLE.print(render_error_panel("ERROR", f"An error occurred: {str(e)}", CONSOLE))
+        else:
+            return f"\n[ERROR] An error occurred: {str(e)}\n"
+        
+    finally:
+        driver.close()
 
 if __name__ == "__main__":
     main()

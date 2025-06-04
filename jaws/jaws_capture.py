@@ -6,10 +6,15 @@ import psutil
 import pyshark
 from rich.live import Live
 from rich.console import Group
-from rich.console import Console
 from pyshark.capture.live_capture import UnknownInterfaceException
 from jaws.jaws_config import *
-from jaws.jaws_utils import dbms_connection, render_error_panel, render_success_panel, render_info_panel, render_activity_panel
+from jaws.jaws_utils import (
+    dbms_connection,
+    render_error_panel,
+    render_info_panel,
+    render_success_panel,
+    render_activity_panel
+)
 
 
 def get_local_ip():
@@ -21,6 +26,14 @@ def get_local_ip():
         return local_ip
     except Exception:
         return "127.0.0.1"
+    
+
+def list_interfaces():
+    interfaces = psutil.net_if_addrs()
+    interface_list = []
+    for interface, addrs in interfaces.items():
+        interface_list.append(f"{interface}")
+    return interface_list
 
 
 def add_packet_to_database(driver, packet_data, database):
@@ -69,17 +82,6 @@ def process_packet(packet, driver, database, local_ip):
     return packet_string
 
 
-def list_interfaces(console):
-    interfaces = psutil.net_if_addrs()
-    interface_list = []
-    for interface, addrs in interfaces.items():
-        interface_list.append(f"{interface}")
-    
-    message = "\n".join(interface_list)
-    console.print(render_info_panel("INTERFACES", message, console))
-    exit(0)
-
-
 def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and stores them in the database.")
     parser.add_argument("--interface", default="Ethernet", help="Specify the network interface to use (default: 'Ethernet').")
@@ -87,75 +89,90 @@ def main():
     parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
+    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
-    console = Console()
+    driver = dbms_connection(args.database)
+    local_ip = get_local_ip()
+    packets = []
 
     if args.list:
-        list_interfaces(console)
+        if not args.agent:
+            interface_list = list_interfaces()
+            CONSOLE.print(render_info_panel("INTERFACES", "\n".join(interface_list), CONSOLE))
+        else:
+            print("\n[INTERFACES]\n" + "\n".join(list_interfaces()) + "\n")
         return
 
     if args.capture_file and not os.path.isfile(args.capture_file):
-        message = f"File not found, please check your file path:\n{args.capture_file}"
-        console.print(render_error_panel("ERROR", message, console))
+        CONSOLE.print(render_error_panel("ERROR", f"File not found, please check your file path:\n{args.capture_file}", CONSOLE))
         return
     
-    local_ip = get_local_ip()
-
-    driver = dbms_connection(args.database)
-    if driver is None:
-        return
-    
-    message = "" # Either importing files or capturing packets.
-    packets = []
-
-    with Live(Group(
-            render_info_panel("CONFIG", message, console),
-            render_activity_panel("ACTIVITY", packets, console)
-        ), console=console, refresh_per_second=10) as live:
+    if not args.capture_file:
         try:
-            if args.capture_file:
-                message = f"Import: {args.capture_file} | {local_ip}"
-                live.update(Group(
-                    render_info_panel("CONFIG", message, console),
-                    render_activity_panel("PACKETS", packets, console)
-                ))
+            pyshark.LiveCapture(interface=args.interface)
+        except UnknownInterfaceException:
+            CONSOLE.print(render_error_panel("ERROR", f"{args.interface} interface not found. Select an interface from the list below.", CONSOLE))
+            list_interfaces(CONSOLE)
+            driver.close()
+            return
+
+    try:
+        if args.capture_file:
+            file_message = f"Import: {args.capture_file} | {local_ip}"
+            with Live(Group(
+                render_info_panel("CONFIG", file_message, CONSOLE),
+                render_activity_panel("PACKETS", packets, CONSOLE)
+            ), console=CONSOLE, refresh_per_second=10) as live:
                 file_capture = pyshark.FileCapture(args.capture_file)
                 for packet in file_capture:
                     packet_string = process_packet(packet, driver, args.database, local_ip)
                     packets.append(packet_string)
                     live.update(Group(
-                        render_info_panel("CONFIG", message, console),
-                        render_activity_panel("PACKETS", packets, console)
+                        render_info_panel("CONFIG", file_message, CONSOLE),
+                        render_activity_panel("PACKETS", packets, CONSOLE)
                     ))
+        else:
+            interface_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
+            if not args.agent:
+                with Live(Group(
+                    render_info_panel("CONFIG", interface_message, CONSOLE),
+                    render_activity_panel("PACKETS", packets, CONSOLE)
+                ), console=CONSOLE, refresh_per_second=10) as live:
+                    interface_capture = pyshark.LiveCapture(interface=args.interface)
+                    start_time = time.time()
+                    for packet in interface_capture.sniff_continuously():
+                        packet_string = process_packet(packet, driver, args.database, local_ip)
+                        packets.append(packet_string)
+                        live.update(Group(
+                            render_info_panel("CONFIG", interface_message, CONSOLE),
+                            render_activity_panel("PACKETS", packets, CONSOLE)
+                        ))
+                        if time.time() - start_time > args.duration:
+                            break
             else:
-                message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
-                live.update(Group(
-                    render_info_panel("CONFIG", message, console),
-                    render_activity_panel("PACKETS", packets, console)
-                ))
                 interface_capture = pyshark.LiveCapture(interface=args.interface)
                 start_time = time.time()
                 for packet in interface_capture.sniff_continuously():
                     packet_string = process_packet(packet, driver, args.database, local_ip)
                     packets.append(packet_string)
-                    live.update(Group(
-                        render_info_panel("CONFIG", message, console),
-                        render_activity_panel("PACKETS", packets, console)
-                    ))
                     if time.time() - start_time > args.duration:
                         break
 
-                live.stop()
-                message = f"Packets({len(packets)}) added to: '{args.database}'"
-                console.print(render_success_panel("PROCESS COMPLETE", message, console))
+        if not args.agent:
+            CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Packets({len(packets)}) added to: '{args.database}'", CONSOLE))
+        else:
+            print(f"\n[PROCESS COMPLETE] Packets({len(packets)}) added to: '{args.database}'\n")
+        return
                 
-        except UnknownInterfaceException:
-            live.stop()
-            message = f"{args.interface} interface not found. Select an interface from the list below."
-            console.print(render_error_panel("ERROR", message, console))
-            list_interfaces(console)
-        finally:
-            driver.close()
+    except Exception as e:
+        if not args.agent:
+            CONSOLE.print(render_error_panel("ERROR", f"An error occurred: {str(e)}", CONSOLE))
+            return
+        else:
+            return f"\n[ERROR] An error occurred: {str(e)}\n"
+    
+    finally:
+        driver.close()
 
 if __name__ == "__main__":
     main()

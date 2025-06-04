@@ -1,7 +1,11 @@
 import os
+from rich.console import Console
 from openai import OpenAI
 from neo4j import GraphDatabase
 
+
+# Used for the message panels below.
+CONSOLE = Console()
 
 # Graph database configuration.
 DATABASE = "captures" # Created using the Neo4j Desktop app. Default is 'captures'.
@@ -34,10 +38,11 @@ FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
 # Analyst system prompt.
 ANALYST_PROMPT = """You are an expert IT Professional, Sysadmin, and Analyst. Your task is to collect, augment, and process network data for downstream analysis. You have access to several tools, but the process is faily linear. and looks something like this:
 
-1. Capture network traffic. (capture_packets)
-    1a. Use list_interfaces if needed to select an interface.
-2. Document organizations. (document_organizations)
-3. Compute embeddings. (compute_embeddings)
+1. List and select an interface. (list_interfaces)
+2. Capture network traffic. (capture_packets)
+3. Document organizations from addresses. (document_organizations)
+4. Compute embeddings from traffic data. (compute_embeddings)
+5. Detect anomalies from embeddings. (anomoly_detection)
 """
 
 # Advisor system prompt
