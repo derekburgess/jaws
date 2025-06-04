@@ -1,6 +1,6 @@
 import subprocess
 import pandas as pd
-from smolagents import tool, CodeAgent, ToolCallingAgent, OpenAIServerModel #TransformersModel, HfApiModel
+from smolagents import tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool, OpenAIServerModel #TransformersModel, HfApiModel
 from jaws.jaws_config import *
 from jaws.jaws_utils import dbms_connection
 
@@ -131,29 +131,26 @@ def fetch_data() -> pd.DataFrame:
         return pd.DataFrame(data)
     
 
-tools = [list_interfaces, capture_packets, document_organizations, compute_embeddings]
 network_analyst = ToolCallingAgent(
     name="network_analyst",
-    description="Collect network traffic and OSINT.",
+    description=ANALYST_SYSTEM_PROMPT,
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
+    #prompt_templates={"system_prompt": ANALYST_SYSTEM_PROMPT},
     #verbosity_level=0,
-    tools=tools
+    tools=[list_interfaces, capture_packets, document_organizations, compute_embeddings, fetch_data]
 )
-#network_analyst.prompt_templates["system_prompt"] = ANALYST_PROMPT
 
 expert_analysis = CodeAgent(
     name="network_security_advisor",
-    description="Reviews network traffic and provides analysis.",
+    description=ADVISOR_PROMPT,
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
     planning_interval=1,
     max_steps=10,
     #verbosity_level=2,
-    tools=[fetch_data, anomoly_detection],
+    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool()],
     additional_authorized_imports=["pandas"],
     managed_agents=[network_analyst]
-
 )
-expert_analysis.prompt_templates["managed_agent_prompt"] = ANALYST_PROMPT
 
 
 def main():

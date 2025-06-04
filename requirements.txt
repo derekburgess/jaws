@@ -10,7 +10,9 @@ bitsandbytes
 transformers==4.51.3
 openai
 semantic-kernel
-smolagents
+smolagents==1.13.0
+semantic-kernel
+duckduckgo-search
 matplotlib
 requests
 rich
