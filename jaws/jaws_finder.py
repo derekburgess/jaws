@@ -8,7 +8,6 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-from rich.console import Console
 from jaws.jaws_config import *
 from jaws.jaws_utils import (
     dbms_connection,
@@ -140,8 +139,8 @@ def main():
     if not args.agent:
         CONSOLE.print(render_info_panel("INFORMATION", portsize_info_message, CONSOLE))
         plot_size_over_ports(plot_data, FINDER_ENDPOINT)
-    else:
-        print(plot_data)
+    #else:
+        #print(plot_data)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca_info_message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."

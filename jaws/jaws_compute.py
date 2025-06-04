@@ -1,7 +1,6 @@
 import argparse
 from rich.live import Live
 from rich.console import Group
-from rich.console import Console
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
