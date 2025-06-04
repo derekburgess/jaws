@@ -59,9 +59,10 @@ def main():
     parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
     driver = dbms_connection(args.database)
-    ip_addresses = fetch_data_for_organization(driver, args.database)
-    organizations = []
+    if driver is None:
+        return
     
+    ip_addresses = fetch_data_for_organization(driver, args.database)
     if not ip_addresses:
         if not args.agent:
             CONSOLE.print(render_info_panel("INFO", f"No undocumented addresses.", CONSOLE))
@@ -70,6 +71,7 @@ def main():
         else:
             return f"\n[INFO] No undocumented addresses.\n"
     
+    organizations = []
     try:
         if not args.agent:
             address_message = f"Found undocumented addresses({len(ip_addresses)})"
@@ -103,10 +105,10 @@ def main():
 
     except Exception as e:
         if not args.agent:
-            CONSOLE.print(render_error_panel("ERROR", f"An error occurred: {str(e)}", CONSOLE))
+            CONSOLE.print(render_error_panel("ERROR", f"{str(e)}", CONSOLE))
             return
         else:
-            return f"\n[ERROR] An error occurred: {str(e)}\n"
+            return f"\n[ERROR] {str(e)}\n"
         
     finally:
         driver.close()

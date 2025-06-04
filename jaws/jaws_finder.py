@@ -132,15 +132,15 @@ def main():
     parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
     driver = dbms_connection(args.database)
+    if driver is None:
+        return
+    
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
-
     plot_data = fetch_data_for_portsize(driver, args.database)
     portsize_info_message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
     if not args.agent:
         CONSOLE.print(render_info_panel("INFORMATION", portsize_info_message, CONSOLE))
         plot_size_over_ports(plot_data, FINDER_ENDPOINT)
-    #else:
-        #print(plot_data)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca_info_message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
@@ -166,8 +166,6 @@ def main():
     sorted_k_distances = np.sort(k_distances)
     if not args.agent:
         plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
-    #else:
-        #print(sorted_k_distances)
 
     kneed_info_message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
     if not args.agent:

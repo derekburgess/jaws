@@ -6,7 +6,6 @@ import psutil
 import pyshark
 from rich.live import Live
 from rich.console import Group
-from pyshark.capture.live_capture import UnknownInterfaceException
 from jaws.jaws_config import *
 from jaws.jaws_utils import (
     dbms_connection,
@@ -75,8 +74,6 @@ def process_packet(packet, driver, database, local_ip):
         })
 
     packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']}({packet_data['size']}) **PAYLOAD NOT DISPLAYED**"
-    #print(packet_string)
-
     add_packet_to_database(driver, packet_data, database)
     return packet_string
 
@@ -90,9 +87,10 @@ def main():
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
     parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
-    driver = dbms_connection(args.database)
     local_ip = get_local_ip()
-    packets = []
+    driver = dbms_connection(args.database)
+    if driver is None:
+        return
 
     if args.list:
         if not args.agent:
@@ -106,15 +104,15 @@ def main():
         CONSOLE.print(render_error_panel("ERROR", f"File not found, please check your file path:\n{args.capture_file}", CONSOLE))
         return
     
-    if not args.capture_file:
-        try:
-            pyshark.LiveCapture(interface=args.interface)
-        except UnknownInterfaceException:
-            CONSOLE.print(render_error_panel("ERROR", f"{args.interface} interface not found. Select an interface from the list below.", CONSOLE))
-            list_interfaces(CONSOLE)
+    if args.interface and not args.capture_file:
+        available_interfaces = list_interfaces()
+        if args.interface not in available_interfaces:
+            CONSOLE.print(render_error_panel("ERROR", f"{args.interface} interface not found.\nSelect an interface from the list below.", CONSOLE))
+            CONSOLE.print(render_info_panel("INTERFACES", "\n".join(available_interfaces), CONSOLE))
             driver.close()
             return
-
+        
+    packets = []
     try:
         if args.capture_file:
             file_message = f"Import: {args.capture_file} | {local_ip}"
@@ -162,13 +160,6 @@ def main():
         else:
             print(f"\n[PROCESS COMPLETE] Packets({len(packets)}) added to: '{args.database}'\n")
         return
-                
-    except Exception as e:
-        if not args.agent:
-            CONSOLE.print(render_error_panel("ERROR", f"An error occurred: {str(e)}", CONSOLE))
-            return
-        else:
-            return f"\n[ERROR] An error occurred: {str(e)}\n"
     
     finally:
         driver.close()

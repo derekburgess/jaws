@@ -30,7 +30,8 @@ def render_activity_panel(title, recent_packets, console, height=10):
     return Panel(Text(text, justify="center"), title=f"{title}", border_style="blue", width=width, height=height)
 
 
-# Downloads the models to the local device. Nice if you do not want to wait for model downloads on first compute.
+# Downloads the models to the local device.
+# Nice if you do not want to wait for model downloads on first compute.
 def download_model(model):
     try:
         CONSOLE.print(render_info_panel("INFO", f"Downloading: {model}", CONSOLE))
@@ -49,12 +50,12 @@ def dbms_connection(database):
         return NEO4J
     except Exception as e:
         if "database does not exist" in str(e).lower():
-            error = f"{database} database does not exist. You need to create the default '{DATABASE}' database or provide the name of an existing database."
+            error = f"'{database}' database does not exist.\nYou need to create the default '{DATABASE}' database or provide the name of an existing database."
             CONSOLE.print(render_error_panel("ERROR", error, CONSOLE))
         return None
 
 
-# Drops the database of all entities.
+# Drops all entities from the database.
 def drop_database(driver, database):
     with driver.session(database=database) as session:
         result = session.run("MATCH (n) RETURN count(n)")
@@ -74,12 +75,14 @@ def main():
     parser.add_argument("--model", choices=[PACKET_MODEL_ID, LANG_MODEL_ID], help="Specify a model to download.")
     args = parser.parse_args()
     driver = dbms_connection(args.drop)
+    if driver is None:
+        return
 
     if args.model == PACKET_MODEL_ID:
         download_model(PACKET_MODEL)
     elif args.model == LANG_MODEL_ID:
         download_model(LANG_MODEL)
-    else:
+    else: 
         drop_database(driver, args.drop)
         driver.close()
 

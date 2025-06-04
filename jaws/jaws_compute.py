@@ -80,11 +80,12 @@ def main():
     parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
     driver = dbms_connection(args.database)
+    if driver is None:
+        return
+    
     df = fetch_data_for_embedding(driver, args.database)
     embedding_strings = []
     embedding_tensors = []
-
-
     try:
         if not args.agent:
             processing_message = f"Processing {len(df)} packet embeddings using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
@@ -134,9 +135,9 @@ def main():
 
     except Exception as e:
         if not args.agent:
-            CONSOLE.print(render_error_panel("ERROR", f"An error occurred: {str(e)}", CONSOLE))
+            CONSOLE.print(render_error_panel("ERROR", f"{str(e)}", CONSOLE))
         else:
-            return f"\n[ERROR] An error occurred: {str(e)}\n"
+            return f"\n[ERROR] {str(e)}\n"
         
     finally:
         driver.close()
