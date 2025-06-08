@@ -1,7 +1,7 @@
 .env
+__pycache__/
 /jaws/__pycache__
 /JAWS.egg-info
-__pycache__/
 /build/
 /logs/
-logs/
+/.gradio/
