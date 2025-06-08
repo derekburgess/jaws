@@ -1,7 +1,17 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
-Update, 2025: Refactored the experience to become more agentic. Along with the CLI commands, the jaws-advisor command specifically demonstrates an agent capable of collecting data, using tools, and providing analysis.
+
+##2025
+
+Refactored the experience to become more agentic. Along with the CLI commands, the jaws-advisor command specifically demonstrates an agent capable of collecting data, using tools, and providing analysis.
+
+Running `jaws-advisor` utilizes the [smolagents](https://huggingface.co/docs/smolagents/en/index) library to orchistrate 2 agents in a managed hand-off workflow. A manager agent hands the task off to a network analyst, who collects and prepares the data, handing that data back off to the manager, who returns a report.
+
+The `semantic_kernel` notebook utilizes Microsoft's [Semantic Kernel](https://github.com/microsoft/semantic-kernel) library to explore hand-off and group chat orchsitration. With group chat, 3 network analysts work together to probe and report on the data.
+
+
+## Context
 
 JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 

@@ -17,3 +17,4 @@ matplotlib
 requests
 rich
 plotille
+gradio

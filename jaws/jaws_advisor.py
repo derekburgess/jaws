@@ -132,17 +132,17 @@ def fetch_data() -> pd.DataFrame:
     
 
 network_analyst = ToolCallingAgent(
-    name="network_analyst",
-    description=ANALYST_SYSTEM_PROMPT,
+    name="NetworkAnalyst",
+    description=ANALYST_MANAGED_PROMPT,
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
-    #prompt_templates={"system_prompt": ANALYST_SYSTEM_PROMPT},
+    #prompt_templates={"system_prompt": ANALYST_MANAGED_PROMPT},
     #verbosity_level=0,
-    tools=[list_interfaces, capture_packets, document_organizations, compute_embeddings, fetch_data]
+    tools=[list_interfaces, capture_packets, document_organizations, compute_embeddings]
 )
 
-expert_analysis = CodeAgent(
-    name="network_security_advisor",
-    description=ADVISOR_PROMPT,
+lead_network_analyst = CodeAgent(
+    name="LeadAnalyst",
+    description=MANAGER_PROMPT,
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
     planning_interval=1,
     max_steps=10,
@@ -154,7 +154,7 @@ expert_analysis = CodeAgent(
 
 
 def main():
-    analysis = expert_analysis.run(ADVISOR_PROMPT)
+    analysis = lead_network_analyst.run(MANAGER_PROMPT)
     print(analysis)
 
 if __name__ == "__main__":
