@@ -1,5 +1,6 @@
 import argparse
 import requests
+import ipinfo
 from rich.live import Live
 from rich.console import Group
 from jaws.jaws_config import *
@@ -12,18 +13,14 @@ from jaws.jaws_utils import (
 )
 
 
-def get_ip_info(ip_address, ipinfo_api_key):
-    general_info_url = f"https://ipinfo.io/{ip_address}/json"
-    headers = {'Authorization': f'Bearer {ipinfo_api_key}'}
+def get_ipinfo(ip_address, ipinfo_api_key):
     try:
-        response = requests.get(general_info_url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Error fetching info for {ip_address}: {response.status_code}")
-    except requests.RequestException as e:
-        print(f"Request failed for {ip_address}: {e}")
-    return None
+        handler = ipinfo.getHandler(ipinfo_api_key)
+        details = handler.getDetails(ip_address)
+        return details.all
+    except Exception as e:
+        CONSOLE.print(render_error_panel("ERROR", f"{ip_address} | {e}", CONSOLE))
+        return None
 
 
 def fetch_data_for_organization(driver, database):
@@ -37,7 +34,7 @@ def fetch_data_for_organization(driver, database):
         return [record['ip_address'] for record in result]
 
 
-def add_organization_to_database(ip_address, ip_info, driver, database):
+def add_organization_to_database(ip_address, ipinfo, driver, database):
     query = """
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (org:ORGANIZATION {ORGANIZATION: $org})
@@ -47,9 +44,9 @@ def add_organization_to_database(ip_address, ip_info, driver, database):
     with driver.session(database=database) as session:
         session.run(query, {
             'ip_address': ip_address,
-            'org': ip_info.get('org', 'Unknown'),
-            'hostname': ip_info.get('hostname', 'Unknown'),
-            'location': ip_info.get('loc', 'Unknown')
+            'org': ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')),
+            'hostname': ipinfo.get('hostname', 'Unknown'),
+            'location': ipinfo.get('loc', 'Unknown')
         })
         
 
@@ -81,10 +78,11 @@ def main():
                 ), console=CONSOLE, refresh_per_second=10) as live:
                 
                 for ip_address in ip_addresses:
-                    ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
-                    if ip_info:
-                        add_organization_to_database(ip_address, ip_info, driver, args.database)
-                        org_string = f"{ip_info.get('org', 'Unknown')} ➜ {ip_address}\n{ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}\n"
+                    ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
+                    if ipinfo:
+                        add_organization_to_database(ip_address, ipinfo, driver, args.database)
+                        org_name = ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))
+                        org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                         organizations.append(org_string)
                         live.update(Group(
                             render_info_panel("CONFIG", address_message, CONSOLE),
@@ -95,10 +93,11 @@ def main():
                 CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Organizations({len(organizations)}) added to: '{args.database}'", CONSOLE))
         else:
             for ip_address in ip_addresses:
-                ip_info = get_ip_info(ip_address, IPINFO_API_KEY)
-                if ip_info:
-                    add_organization_to_database(ip_address, ip_info, driver, args.database)
-                    org_string = f"{ip_info.get('org', 'Unknown')} ➜ {ip_address}\n{ip_info.get('hostname', 'Unknown')}, {ip_info.get('loc', 'Unknown')}\n"
+                ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
+                if ipinfo:
+                    add_organization_to_database(ip_address, ipinfo, driver, args.database)
+                    org_name = ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))
+                    org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
             print(f"\n[PROCESS COMPLETE] Organizations({len(organizations)}) added to: '{args.database}'\n")
         return
