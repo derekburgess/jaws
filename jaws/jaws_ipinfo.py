@@ -1,5 +1,4 @@
 import argparse
-import requests
 import ipinfo
 from rich.live import Live
 from rich.console import Group
