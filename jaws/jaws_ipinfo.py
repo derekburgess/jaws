@@ -16,6 +16,7 @@ def get_ipinfo(ip_address, ipinfo_api_key):
     try:
         handler = ipinfo.getHandler(ipinfo_api_key)
         details = handler.getDetails(ip_address)
+        #print(details.all)
         return details.all
     except Exception as e:
         CONSOLE.print(render_error_panel("ERROR", f"{ip_address} | {e}", CONSOLE))
@@ -43,7 +44,7 @@ def add_organization_to_database(ip_address, ipinfo, driver, database):
     with driver.session(database=database) as session:
         session.run(query, {
             'ip_address': ip_address,
-            'org': ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')),
+            'org': ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))),
             'hostname': ipinfo.get('hostname', 'Unknown'),
             'location': ipinfo.get('loc', 'Unknown')
         })
@@ -80,7 +81,7 @@ def main():
                     ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
                     if ipinfo:
                         add_organization_to_database(ip_address, ipinfo, driver, args.database)
-                        org_name = ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))
+                        org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
                         org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                         organizations.append(org_string)
                         live.update(Group(
@@ -95,7 +96,7 @@ def main():
                 ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
                 if ipinfo:
                     add_organization_to_database(ip_address, ipinfo, driver, args.database)
-                    org_name = ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))
+                    org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
             print(f"\n[PROCESS COMPLETE] Organizations({len(organizations)}) added to: '{args.database}'\n")
