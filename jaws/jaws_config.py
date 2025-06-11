@@ -19,7 +19,7 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 CLIENT = OpenAI()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.
@@ -63,7 +63,6 @@ OPERATOR_PROMPT = """You are an expert IT Professional, Hacker, and Operator. Yo
 5. Use the Anomaly Detection tool to analyze the traffic data for anomalies and patterns.
 
 Once you perform your analysis, return a brief report in the following format:
-Traffic Patterns: Identify and describe traffic patterns. Highlight any anomalies or unusual patterns.
-
-If you believe the data contains suspicious activity, escalate to the Senior Analyst for further investigation.
+Red Flags: List any red flags you have identified. Red Flags should be formatted as follows:
+** <description of the red flag> **
 """
