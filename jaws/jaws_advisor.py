@@ -12,7 +12,7 @@ driver = dbms_connection(DATABASE)
 def list_interfaces() -> str:
     """
     Step 1: List available network interfaces.
-    You will never want to select interfaces such as; 'lo', 'docker0', 'wlo1', etc.
+    You will never want to select interfaces such as; 'lo' and 'docker0'.
 
     Returns:
         str: A string listing all available network interfaces.

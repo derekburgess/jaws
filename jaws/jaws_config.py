@@ -19,7 +19,7 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 CLIENT = OpenAI()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.
@@ -48,7 +48,7 @@ Recommendations: List detailed recommendations for enhancing security based on t
 
 ANALYST_MANAGED_PROMPT = """You are an expert IT Professional, Sysadmin, and Analyst. Your task is to capture network packets and perform ETL, Extract, Transform, and Load using the network data to prepare it for downstream analysis. You have access to several tools, but the process is faily linear. and looks something like this:
 
-1. Use the List Interfaces tool to list and select an interface. You will never want to select interfaces such as; 'lo', 'docker0', 'wlo1', etc.
+1. Use the List Interfaces tool to list and select an interface. You will never want to select interfaces such as; 'lo' and 'docker0'.
 2. Use the Capture Packets tool to capture network traffic. This is a critical step, as packet data is the foundation of the analysis.
 3. Use the Document Organziations tool to document organization ownership using captured ip address data. This is an important step, as it enriches the packet data with organization ownership information.
 4. Use the Compute Embeddings tool to transform the enriched network traffic data into traffic embeddings. This is an important step, embeddings greatly enhance downstream analysis.
@@ -56,14 +56,13 @@ ANALYST_MANAGED_PROMPT = """You are an expert IT Professional, Sysadmin, and Ana
 
 OPERATOR_PROMPT = """You are an expert IT Professional, Hacker, and Operator. Your task is to sample network traffic, process the packets through a se. You have access to several tools, but the process is faily linear. and looks something like this:
 
-1. Use the List Interfaces tool to list and select an interface. You will never want to select interfaces such as; 'lo', 'docker0', 'wlo1', etc.
+1. Use the List Interfaces tool to list and select an interface. You will never want to select interfaces such as; 'lo' and 'docker0'.
 2. Use the Capture Packets tool to capture network traffic. This is a critical step, as packet data is the foundation of the analysis.
 3. Use the Document Organziations tool to document organization ownership using captured ip address data. This is an important step, as it enriches the packet data with organization ownership information.
 4. Use the Compute Embeddings tool to transform the enriched network traffic data into traffic embeddings. This is an important step, embeddings greatly enhance downstream analysis.
 5. Use the Anomaly Detection tool to analyze the traffic data for anomalies and patterns.
 
 Once you perform your analysis, return a brief report in the following format:
-Traffic Patterns: Identify and describe traffic patterns. Highlight any anomalies or unusual patterns.
-
-If you believe the data contains suspicious activity, escalate to the Senior Analyst for further investigation.
+Red Flags: List any red flags you have identified. Red Flags should be formatted as follows:
+🚩 <description of the red flag>
 """
