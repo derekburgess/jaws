@@ -56,23 +56,28 @@ def dbms_connection(database):
 
 
 # Drops all entities from the database.
-def drop_database(driver, database):
+def drop_database(driver, database, agent):
     with driver.session(database=database) as session:
         result = session.run("MATCH (n) RETURN count(n)")
         count = result.single()[0]
         if count == 0:
-            return CONSOLE.print(render_info_panel("INFO", f"'{database}' is empty.", CONSOLE))
-        CONSOLE.print(render_info_panel("CONFIRM", f"Are you sure you want to drop({count}): '{database}'?", CONSOLE))
-        confirm = input("Enter 'YES' to confirm: ")
-        if confirm == 'YES':
+            if not agent:
+                return CONSOLE.print(render_info_panel("INFO", f"'{database}' is empty.", CONSOLE))
+            else:
+                return print(f"\n[INFO] '{database}' is empty.\n")
+        else:
             session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
-        return CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Dropped({count}): '{database}'", CONSOLE))
+            if not agent:
+                return CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Dropped({count}): '{database}'", CONSOLE))
+            else:
+                return print(f"\n[PROCESS COMPLETE] Dropped({count}): '{database}'\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Utility functions for JAWS | 1.) Download models 2.) Drop database")
     parser.add_argument("--drop", default=DATABASE, help=f"Specify a database to drop (default: '{DATABASE}').")
     parser.add_argument("--model", choices=[PACKET_MODEL_ID, LANG_MODEL_ID], help="Specify a model to download.")
+    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
     driver = dbms_connection(args.drop)
     if driver is None:
@@ -83,7 +88,7 @@ def main():
     elif args.model == LANG_MODEL_ID:
         download_model(LANG_MODEL)
     else: 
-        drop_database(driver, args.drop)
+        drop_database(driver, args.drop, args.agent)
         driver.close()
 
 if __name__ == "__main__":
