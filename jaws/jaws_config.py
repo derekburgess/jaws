@@ -48,6 +48,7 @@ MANAGER_PROMPT = """You are an expert IT Professional, Sysadmin, and Senior Anal
 2. Use the Anomaly Detection tool to analyze the traffic data for anomalies and patterns.
 3. Use the Drop Database tool to drop the database when the report is complete.
 4. Use the Send Email tool to send the full contents of the report to High Command.
+5. Return the report to the system for the command center to display.
 
 If there is no data, or an empty DataFrame is returned, you should work with your team to capture and process fresh network traffic data. It is recommended that you always use the Fetch Data tool to see what data is available, but not not limit yourself to existing data, as that data may be stale. You should always request fresh data from your team to enrich any existing data.
 
@@ -74,7 +75,7 @@ OPERATOR_PROMPT = """You are an expert IT Professional, Hacker, and Operator. Yo
 4. Use the Compute Embeddings tool to transform the enriched network traffic data into traffic embeddings. This is an important step, as embeddings greatly enhance the capabilities of downstream analysis.
 5. Use the Anomaly Detection tool to analyze the traffic data for anomalies and patterns.
 
-Once you perform your analysis, return a brief report in the following format:
+Once you perform your analysis, return a brief report for the command center, in the following format:
 Red Flags: List any red flags you have identified. Red Flags should be formatted as follows:
 🚩 <description of the red flag>
 """
