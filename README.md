@@ -2,7 +2,7 @@
 ![hehe](/assets/cover.jpg)
 
 
-##2025
+## 2025
 
 Refactored the experience to become more agentic. Along with the CLI commands/UX, the agent commands specifically demonstrates agents capable of collecting data, using tools, and providing analysis.
 
