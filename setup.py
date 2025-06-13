@@ -94,7 +94,8 @@ setup(
            'jaws-ipinfo = jaws.jaws_ipinfo:main',
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
-           'jaws-advisor = jaws.jaws_advisor:main',
+           'jaws-smolagent = jaws.jaws_smolagent:main',
+           'jaws-agent = jaws.jaws_agent:main',
            'jaws-utils = jaws.jaws_utils:main' 
        ],
     },

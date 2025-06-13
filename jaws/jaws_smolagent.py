@@ -7,6 +7,42 @@ from jaws.jaws_utils import dbms_connection
 # Database not passed, uses the database set in jaws_config.py
 driver = dbms_connection(DATABASE)
 
+# Email Report Config
+
+# Add these env variables
+#EMAIL_SENDER
+#EMAIL_PASSWORD
+#EMAIL_SERVER
+#EMAIL_PORT
+
+# Additional imports
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+EMAIL_RECIPIENT = "db@x51.derekburgess.com"
+
+def send_email(content: str) -> bool:
+    try:
+        message = MIMEMultipart()
+        message["From"] = EMAIL_SENDER
+        message["To"] = EMAIL_RECIPIENT
+        message["Subject"] = "🛡️ Briefing for High Command"
+        body = f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{content}\n\n** This is an automated report from the JAWS Network Monitoring System. **"""
+        message.attach(MIMEText(body, "plain"))
+        
+        with smtplib.SMTP(EMAIL_SERVER, EMAIL_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.send_message(message)
+        
+        print(f"[EMAIL SENT] | {EMAIL_RECIPIENT}")
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return False
+
 
 @tool
 def list_interfaces() -> str:
@@ -81,6 +117,18 @@ def anomoly_detection() -> str:
 
 
 @tool
+def drop_database() -> str:
+    """
+    Clears the database of all data.
+
+    Returns:
+        str: A system message once the process is complete.
+    """
+    output = subprocess.run(['python', './jaws/jaws_utils.py', '--agent'], capture_output=True, text=True)
+    return output.stdout
+
+
+@tool
 def fetch_data() -> pd.DataFrame:
     """
     Fetches the latest data from the database and returns it as a DataFrame.
@@ -129,6 +177,21 @@ def fetch_data() -> pd.DataFrame:
                 'timestamp': record['timestamp']
             })
         return pd.DataFrame(data)
+
+
+@tool
+def send_email(content: str) -> str:
+    """
+    Sends an email to High Command with the entire contents of the report.
+
+    Args:
+        content (str): The entire contents of the report.
+
+    Returns:
+        str: A system message once the process is complete.
+    """
+    response = send_email(content)
+    return str(response)
     
 
 network_analyst = ToolCallingAgent(
@@ -147,7 +210,7 @@ lead_network_analyst = CodeAgent(
     planning_interval=1,
     max_steps=10,
     #verbosity_level=2,
-    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool()],
+    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool(), send_email, drop_database],
     additional_authorized_imports=["pandas"],
     managed_agents=[network_analyst]
 )

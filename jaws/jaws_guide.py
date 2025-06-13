@@ -54,7 +54,8 @@ def main():
 
     print(f"""[gray100]
     [grey85]Agentic network security advisor:[/]
-    [green1][CLI][/] jaws-advisor
+    [green1][CLI][/] jaws-smolagent [Hugging Face smolagents]
+    [green1][CLI][/] jaws-agent [Microsoft Semantic Kernel]
     [orange1][WARNING][/] Still experimental...
     [/]""")
           
