@@ -4,11 +4,13 @@
 
 ##2025
 
-Refactored the experience to become more agentic. Along with the CLI commands, the jaws-advisor command specifically demonstrates an agent capable of collecting data, using tools, and providing analysis.
+Refactored the experience to become more agentic. Along with the CLI commands/UX, the agent commands specifically demonstrates agents capable of collecting data, using tools, and providing analysis.
 
-Running `jaws-advisor` utilizes the [smolagents](https://huggingface.co/docs/smolagents/en/index) library to orchistrate 2 agents in a managed hand-off workflow. A manager agent hands the task off to a network analyst, who collects and prepares the data, handing that data back off to the manager, who returns a report.
+Running `jaws-smolagent` utilizes the [smolagents](https://huggingface.co/docs/smolagents/en/index) library to orchistrate 2 agents in a managed hand-off workflow. A manager agent hands the task off to a network analyst, who collects and prepares the data, handing that data back off to the manager, who returns a report.
 
-The `semantic_kernel` notebook utilizes Microsoft's [Semantic Kernel](https://github.com/microsoft/semantic-kernel) library to explore hand-off and group chat orchsitration. With group chat, 3 network analysts work together to probe and report on the data.
+Running `jaws-agent` utilizes Microsoft's [Semantic Kernel](https://github.com/microsoft/semantic-kernel) library to explore concurrent, hand-off and group chat orchsitration. Creates an interactive command center at `http://127.0.0.1:7860/`. With concurrent, 2 models work in parallel to capture data and report on red flags. With hand-off, a lead model manages 2 assistants to create a final report. With group chat, 3 models work collaboratively to create a final report.
+
+Note, both agents send emails containing the final report, you will need to set these variables for that to work: `EMAIL_SENDER`, `EMAIL_RECIPIENT`, `EMAIL_PASSWORD`, `EMAIL_SERVER`, `EMAIL_PORT`.
 
 
 ## Context

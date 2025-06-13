@@ -1,27 +1,20 @@
+from datetime import datetime
 import subprocess
 import pandas as pd
 from smolagents import tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool, OpenAIServerModel #TransformersModel, HfApiModel
 from jaws.jaws_config import *
 from jaws.jaws_utils import dbms_connection
 
-# Database not passed, uses the database set in jaws_config.py
-driver = dbms_connection(DATABASE)
-
-# Email Report Config
-
-# Add these env variables
-#EMAIL_SENDER
-#EMAIL_PASSWORD
-#EMAIL_SERVER
-#EMAIL_PORT
-
-# Additional imports
+# Email
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-EMAIL_RECIPIENT = "db@x51.derekburgess.com"
+# Database not passed, uses the database set in jaws_config.py
+driver = dbms_connection(DATABASE)
 
+
+# Support Functions
 def send_email(content: str) -> bool:
     try:
         message = MIMEMultipart()
@@ -44,6 +37,7 @@ def send_email(content: str) -> bool:
         return False
 
 
+# Tools
 @tool
 def list_interfaces() -> str:
     """
@@ -180,7 +174,7 @@ def fetch_data() -> pd.DataFrame:
 
 
 @tool
-def send_email(content: str) -> str:
+def send_report_email(content: str) -> str:
     """
     Sends an email to High Command with the entire contents of the report.
 
@@ -194,6 +188,7 @@ def send_email(content: str) -> str:
     return str(response)
     
 
+# Agents
 network_analyst = ToolCallingAgent(
     name="NetworkAnalyst",
     description=ANALYST_MANAGED_PROMPT,
@@ -210,8 +205,8 @@ lead_network_analyst = CodeAgent(
     planning_interval=1,
     max_steps=10,
     #verbosity_level=2,
-    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool(), send_email, drop_database],
-    additional_authorized_imports=["pandas"],
+    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool(), send_report_email, drop_database],
+    additional_authorized_imports=["pandas", "networkx"],
     managed_agents=[network_analyst]
 )
 

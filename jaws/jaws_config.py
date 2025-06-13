@@ -38,6 +38,7 @@ FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
 
 # Email configuration
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_RECIPIENT = os.getenv("EMAIL_RECIPIENT")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_SERVER = os.getenv("EMAIL_SERVER")
 EMAIL_PORT = os.getenv("EMAIL_PORT")

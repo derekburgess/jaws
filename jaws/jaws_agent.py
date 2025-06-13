@@ -17,10 +17,14 @@ from semantic_kernel.functions import kernel_function, KernelArguments
 import subprocess
 import pandas as pd
 import gradio as gr
-from datetime import datetime, timedelta
+from datetime import datetime
 from jaws.jaws_config import *
 from jaws.jaws_utils import dbms_connection
 
+# Email
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Database not passed, uses the database set in jaws_config.py
 driver = dbms_connection(DATABASE)
@@ -32,21 +36,7 @@ lang_service = OpenAIChatCompletion(ai_model_id=OPENAI_MODEL, api_key=OPENAI_API
 kernel.add_service(lang_service)
 
 
-# Email Report Config
-
-# Add these env variables
-#EMAIL_SENDER
-#EMAIL_PASSWORD
-#EMAIL_SERVER
-#EMAIL_PORT
-
-# Additional imports
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-EMAIL_RECIPIENT = "db@x51.derekburgess.com"
-
+# Support Functions
 def send_email(content: str) -> bool:
     try:
         message = MIMEMultipart()
@@ -67,6 +57,21 @@ def send_email(content: str) -> bool:
     except Exception as e:
         print(f"[ERROR] {e}")
         return False
+    
+
+def human_in_the_loop() -> ChatMessageContent:
+    message = "Please provide a report of the situation."
+    return ChatMessageContent(role=AuthorRole.USER, content=message)
+
+
+async def agent_callback(message: ChatMessageContent) -> None:
+    for item in message.items or []:
+        if isinstance(item, FunctionCallContent):
+            print(f"Function Call:> {item.name} with arguments: {item.arguments}")
+        elif isinstance(item, FunctionResultContent):
+            print(f"Function Result:> {item.result} for function: {item.name}")
+        else:
+            print(f"{message.name}: {message.content}")
 
 
 # Tools
@@ -193,6 +198,8 @@ lead_network_analyst = ChatCompletionAgent(
     arguments=KernelArguments(settings)
 )
 
+
+# Orchestration(s)
 handoffs = (
     OrchestrationHandoffs()
     .add_many(
@@ -213,23 +220,6 @@ handoffs = (
         description=f"Transfer back to the {lead_network_analyst.name} when the {network_analyst.name} has completed their task so that the {lead_network_analyst.name} can review the data and provide a final report.",
     )
 )
-
-
-# Orchestration(s)
-def human_in_the_loop() -> ChatMessageContent:
-    message = "Please provide a report of the situation."
-    return ChatMessageContent(role=AuthorRole.USER, content=message)
-
-
-async def agent_callback(message: ChatMessageContent) -> None:
-    for item in message.items or []:
-        if isinstance(item, FunctionCallContent):
-            print(f"Function Call:> {item.name} with arguments: {item.arguments}")
-        elif isinstance(item, FunctionResultContent):
-            print(f"Function Result:> {item.result} for function: {item.name}")
-        else:
-            print(f"{message.name}: {message.content}")
-
 
 concurrent_members=[operator_0, operator_1]
 concurrent_config = ConcurrentOrchestration(members=concurrent_members)
@@ -300,7 +290,6 @@ async def orchestration(input: str, orchestration: str) -> str:
 
 
 def main():
-    # Interface
     with gr.Blocks(title="Network Traffic Monitoring") as INTERFACE:
 
         concurrent_chat_history = gr.State(value=[{

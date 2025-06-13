@@ -54,8 +54,9 @@ def main():
 
     print(f"""[gray100]
     [grey85]Agentic network security advisor:[/]
-    [green1][CLI][/] jaws-smolagent [Hugging Face smolagents]
-    [green1][CLI][/] jaws-agent [Microsoft Semantic Kernel]
+    [green1][CLI][/] jaws-smolagent [Hugging Face smolagents] *Runs in CLI
+    [orange1][WARNING][/] Still experimental...
+    [green1][CLI][/] jaws-agent [Microsoft Semantic Kernel] *Spawns a command center: http://127.0.0.1:7860/
     [orange1][WARNING][/] Still experimental...
     [/]""")
           
