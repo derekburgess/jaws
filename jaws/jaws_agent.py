@@ -105,7 +105,7 @@ async def orchestration(input: str) -> str:
 
 def main():
     with gr.Blocks(title="Network Traffic Monitoring") as INTERFACE:
-        groupchat_history = gr.State(value=[{
+        chat_history = gr.State(value=[{
             "role": "assistant", 
             "content": "A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning a comprehensive report to the command center.",
             "metadata": {"title": "🔎 Traffic Analysis"}
@@ -113,8 +113,8 @@ def main():
         
         with gr.Row(equal_height=True):
             with gr.Column():
-                groupchat_chatbot = gr.Chatbot(
-                    value=groupchat_history.value,
+                chatbot = gr.Chatbot(
+                    value=chat_history.value,
                     type="messages",
                     show_label=True,
                     label=f"Group Chat | Round Robin({max_rounds}) | Members({len(group_members)})",
@@ -123,7 +123,7 @@ def main():
                     show_copy_button=True,
                     height=600
                 )
-                groupchat_request_button = gr.Button("💬 Report in, team", variant="huggingface")
+                request_button = gr.Button("💬 Report in, team", variant="huggingface")
         
 
         async def group_orchestration(history: str) -> str:
@@ -134,12 +134,12 @@ def main():
             return chat_history, chat_history
 
 
-        groupchat_request_button.click(
+        request_button.click(
             fn=group_orchestration,
-            inputs=[groupchat_history],
-            outputs=[groupchat_chatbot, groupchat_history]
+            inputs=[chat_history],
+            outputs=[chatbot, chat_history]
         )
-
+    
     INTERFACE.launch(server_name="0.0.0.0", server_port=7860)
 
 if __name__ == "__main__":
