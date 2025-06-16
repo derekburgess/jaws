@@ -79,13 +79,13 @@ def drop_database(driver, database, agent):
             if not agent:
                 return CONSOLE.print(render_info_panel("INFO", f"'{database}' is empty.", CONSOLE))
             else:
-                return print(f"\n[INFO] '{database}' is empty.\n")
+                return print(f"[INFO] '{database}' is empty.")
         else:
             session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
             if not agent:
                 return CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Dropped({count}): '{database}'", CONSOLE))
             else:
-                return print(f"\n[PROCESS COMPLETE] Dropped({count}): '{database}'\n")
+                return print(f"[PROCESS COMPLETE] Dropped({count}): '{database}'")
 
 
 def main():

@@ -128,7 +128,7 @@ def main():
                                 row['total_size'], driver, args.database)
                     embedding_strings.append(embedding_string)
                     embedding_tensors.append(embedding)
-            print(f"\n[PROCESS COMPLETE] Embeddings({len(embedding_strings)}) added to: '{args.database}'\n")
+            print(f"[PROCESS COMPLETE] Embeddings({len(embedding_strings)}) added to: '{args.database}'")
         return
 
     except Exception as e:

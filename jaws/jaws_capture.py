@@ -93,11 +93,11 @@ def main():
         return
 
     if args.list:
+        interface_list = "\n".join(list_interfaces())
         if not args.agent:
-            interface_list = list_interfaces()
-            CONSOLE.print(render_info_panel("INTERFACES", "\n".join(interface_list), CONSOLE))
+            CONSOLE.print(render_info_panel("INTERFACES", interface_list, CONSOLE))
         else:
-            print("\n[INTERFACES]\n" + "\n".join(list_interfaces()) + "\n")
+            print(interface_list)
         return
 
     if args.capture_file and not os.path.isfile(args.capture_file):
@@ -158,7 +158,7 @@ def main():
         if not args.agent:
             CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Packets({len(packets)}) added to: '{args.database}'", CONSOLE))
         else:
-            print(f"\n[PROCESS COMPLETE] Packets({len(packets)}) added to: '{args.database}'\n")
+            print(f"[PROCESS COMPLETE] Packets({len(packets)}) added to: '{args.database}'")
         return
     
     finally:

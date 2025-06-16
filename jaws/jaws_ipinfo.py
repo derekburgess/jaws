@@ -66,7 +66,7 @@ def main():
             driver.close()
             return
         else:
-            return f"\n[INFO] No undocumented addresses.\n"
+            return f"[INFO] No undocumented addresses."
     
     organizations = []
     try:
@@ -99,7 +99,7 @@ def main():
                     org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
-            print(f"\n[PROCESS COMPLETE] Organizations({len(organizations)}) added to: '{args.database}'\n")
+            print(f"[PROCESS COMPLETE] Organizations({len(organizations)}) added to: '{args.database}'")
         return
 
     except Exception as e:
@@ -107,7 +107,7 @@ def main():
             CONSOLE.print(render_error_panel("ERROR", f"{str(e)}", CONSOLE))
             return
         else:
-            return f"\n[ERROR] {str(e)}\n"
+            return f"[ERROR] {str(e)}"
         
     finally:
         driver.close()

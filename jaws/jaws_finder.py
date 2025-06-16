@@ -147,7 +147,7 @@ def main():
     if not args.agent:
         CONSOLE.print(render_info_panel("INFO", pca_info_message, CONSOLE))
     else:
-        print(f"\n[INFO] {pca_info_message}\n")
+        print(f"[INFO] {pca_info_message}\n")
     
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
@@ -292,7 +292,7 @@ def main():
         CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Plots saved to: {FINDER_ENDPOINT}", CONSOLE))
     else:
         print(formatted_output)
-        print(f"[PROCESS COMPLETE] Graph populated with traffic and outliers.\n")
+        print(f"[PROCESS COMPLETE] Graph populated with traffic and outliers.")
     
     driver.close()
 

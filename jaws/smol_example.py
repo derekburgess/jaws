@@ -4,40 +4,11 @@ import pandas as pd
 from smolagents import tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool, OpenAIServerModel #TransformersModel, HfApiModel
 from jaws.jaws_config import *
 from jaws.jaws_utils import dbms_connection
+from jaws.sk_tools import send_email
 
-# Email
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-# Database not passed, uses the database set in jaws_config.py
 driver = dbms_connection(DATABASE)
 
 
-# Support Functions
-def send_email(content: str) -> bool:
-    try:
-        message = MIMEMultipart()
-        message["From"] = EMAIL_SENDER
-        message["To"] = EMAIL_RECIPIENT
-        message["Subject"] = "🛡️ Briefing for High Command"
-        body = f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{content}\n\n** This is an automated report from the JAWS Network Monitoring System. **"""
-        message.attach(MIMEText(body, "plain"))
-        
-        with smtplib.SMTP(EMAIL_SERVER, EMAIL_PORT) as server:
-            server.starttls()
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.send_message(message)
-        
-        print(f"[EMAIL SENT] | {EMAIL_RECIPIENT}")
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        return False
-
-
-# Tools
 @tool
 def list_interfaces() -> str:
     """
@@ -186,9 +157,8 @@ def send_report_email(content: str) -> str:
     """
     response = send_email(content)
     return str(response)
-    
+   
 
-# Agents
 network_analyst = ToolCallingAgent(
     name="NetworkAnalyst",
     description=ANALYST_MANAGED_PROMPT,

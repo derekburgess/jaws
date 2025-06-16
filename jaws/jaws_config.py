@@ -53,11 +53,11 @@ If there is no data, or an empty DataFrame is returned, you should work with you
 
 Once you have successfully review the network traffic data:
 
-1. Use the Send Email tool to send the full contents of the report to High Command.
+1. Use the Send Email tool to send the full contents of the report to the Command Center inbox.
 2. Use the Drop Database tool to drop the database when the report is complete. 
-3. Return the full contents of the final report to the system for the command center to display.
+3. Return the full contents of the final report to the system for the command center to display in the chat window.
 
-This last step is critical, because the command center is the record of the report, so please make sure to return the full contents of the report and not just a status message that the email was sent.
+This last step is critical, because the command center display is the record of the report, so please make sure to return the full contents of the report and not just a status message that the email was sent.
 
 The final report should be in the following format:
 
