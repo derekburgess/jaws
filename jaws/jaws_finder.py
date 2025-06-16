@@ -139,24 +139,24 @@ def main():
     plot_data = fetch_data_for_portsize(driver, args.database)
     portsize_info_message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", portsize_info_message, CONSOLE))
+        CONSOLE.print(render_info_panel("INFO", portsize_info_message, CONSOLE))
         plot_size_over_ports(plot_data, FINDER_ENDPOINT)
 
     embeddings_scaled = StandardScaler().fit_transform(embeddings)
     pca_info_message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_scaled)}).\nThis reduces the dimensionality of the embeddings to 2 dimensions."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", pca_info_message, CONSOLE))
+        CONSOLE.print(render_info_panel("INFO", pca_info_message, CONSOLE))
     else:
-        print(f"\n[INFORMATION] {pca_info_message}\n")
+        print(f"\n[INFO] {pca_info_message}\n")
     
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(embeddings_scaled)
     
     kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", kdistance_info_message, CONSOLE))
+        CONSOLE.print(render_info_panel("INFO", kdistance_info_message, CONSOLE))
     else:
-        print(f"[INFORMATION] {kdistance_info_message}\n")
+        print(f"[INFO] {kdistance_info_message}\n")
     
     min_samples = 2
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
@@ -169,24 +169,24 @@ def main():
 
     kneed_info_message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", kneed_info_message, CONSOLE))
+        CONSOLE.print(render_info_panel("INFO", kneed_info_message, CONSOLE))
     else:
-        print(f"[INFORMATION] {kneed_info_message}\n")
+        print(f"[INFO] {kneed_info_message}\n")
     
     kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
     if kneedle.knee is not None:
         eps_value = sorted_k_distances[kneedle.knee]
         kneed_found_message = f"Knee point found at index: {kneedle.knee}"
         if not args.agent:
-            CONSOLE.print(render_info_panel("INFORMATION", kneed_found_message, CONSOLE))
+            CONSOLE.print(render_info_panel("INFO", kneed_found_message, CONSOLE))
         else:
-            print(f"[INFORMATION] {kneed_found_message}\n")
+            print(f"[INFO] {kneed_found_message}\n")
     else:
         kneed_not_found_message = "Knee point not found. Using default EPS."
         if not args.agent:
-            CONSOLE.print(render_info_panel("INFORMATION", kneed_not_found_message, CONSOLE))
+            CONSOLE.print(render_info_panel("INFO", kneed_not_found_message, CONSOLE))
         else:
-            print(f"[INFORMATION] {kneed_not_found_message}\n")
+            print(f"[INFO] {kneed_not_found_message}\n")
         eps_value = np.median(sorted_k_distances)
 
     if not args.agent:
@@ -206,7 +206,7 @@ def main():
     clusters = dbscan.fit_predict(principal_components)
 
     if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.", CONSOLE))
+        CONSOLE.print(render_info_panel("INFO", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.", CONSOLE))
 
     plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components/samples: 2, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1

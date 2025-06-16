@@ -64,8 +64,8 @@ The final report should be in the following format:
 Executive Summary: A concise summary of the traffic analysis.
 Traffic Patterns: Identify and describe traffic patterns. Highlight any anomalies or unusual patterns. Call out any red flags in this format: 🚩 <description of the red flag>
 Recommendations: List detailed recommendations for enhancing security based on the traffic patterns identified. Include a rationale for each recommendation, explaining how it addresses specific issues identified in the traffic analysis. Each recommendation should use this format: 💡 <recommendation><rationale>
-Provide a simple network diagram by returning python code using the NetworkX library.
 """
+# Provide a simple network diagram by returning python code using the NetworkX library.
 
 ANALYST_MANAGED_PROMPT = """You are an expert IT Professional, Sysadmin, and Network Analyst. Your task is to capture network traffic and enrich the data for downstream analysis. You have access to several tools, but the process is linear and looks like this:
 

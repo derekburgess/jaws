@@ -182,7 +182,7 @@ From the /jaws/ocean directory run:
 `docker run --gpus 1 --network host --name jaws-container --detach jaws-image`
 
 
-To pull the Hugging Face models, run jaws-utils with the model argument, either: starcoder or phi4.
+To pull the Hugging Face models, run jaws-utils with the model argument.
 
 `docker exec -it jaws-container jaws-utils --model starcoder`
 

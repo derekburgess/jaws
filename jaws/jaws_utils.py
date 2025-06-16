@@ -21,6 +21,21 @@ def render_success_panel(title,message, console):
     return Panel(Text(message, justify="center"), title=f"{title}", border_style="green", width=width)
 
 
+def render_input_panel(title,message, console):
+    width = console.size.width
+    return Panel(Text(message, justify="center"), title=f"{title}", border_style="blue", width=width)
+
+
+def render_assistant_panel(title,message, console):
+    width = console.size.width
+    return Panel(Text(message, justify="left"), title=f"{title}", border_style="yellow", width=width)
+
+
+def render_response_panel(title,message, console):
+    width = console.size.width
+    return Panel(Text(message, justify="left"), title=f"{title}", border_style="green", width=width)
+
+
 def render_activity_panel(title, recent_packets, console, height=10):
     width = console.size.width
     lines = recent_packets[-(height-2):]
@@ -76,7 +91,7 @@ def drop_database(driver, database, agent):
 def main():
     parser = argparse.ArgumentParser(description="Utility functions for JAWS | 1.) Download models 2.) Drop database")
     parser.add_argument("--drop", default=DATABASE, help=f"Specify a database to drop (default: '{DATABASE}').")
-    parser.add_argument("--model", choices=[PACKET_MODEL_ID, LANG_MODEL_ID], help="Specify a model to download.")
+    parser.add_argument("--model", choices=[PACKET_MODEL_ID], help="Specify a model to download.")
     parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
     driver = dbms_connection(args.drop)
@@ -85,8 +100,6 @@ def main():
 
     if args.model == PACKET_MODEL_ID:
         download_model(PACKET_MODEL)
-    elif args.model == LANG_MODEL_ID:
-        download_model(LANG_MODEL)
     else: 
         drop_database(driver, args.drop, args.agent)
         driver.close()

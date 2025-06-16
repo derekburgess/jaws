@@ -19,7 +19,16 @@ import pandas as pd
 import gradio as gr
 from datetime import datetime
 from jaws.jaws_config import *
-from jaws.jaws_utils import dbms_connection
+from jaws.jaws_utils import (
+    dbms_connection,
+    render_error_panel,
+    render_info_panel,
+    render_success_panel,
+    render_input_panel,
+    render_assistant_panel,
+    render_response_panel
+    #render_activity_panel
+)
 
 # Email
 import smtplib
@@ -51,11 +60,12 @@ def send_email(content: str) -> bool:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.send_message(message)
         
-        print(f"[EMAIL SENT] | {EMAIL_RECIPIENT}")
+        CONSOLE.print(render_success_panel("EMAIL SENT", EMAIL_RECIPIENT, CONSOLE))
         return True
         
     except Exception as e:
-        print(f"[ERROR] {e}")
+        error_message = str(e)
+        CONSOLE.print(render_error_panel("ERROR", error_message, CONSOLE))
         return False
     
 
@@ -67,11 +77,14 @@ def human_in_the_loop() -> ChatMessageContent:
 async def agent_callback(message: ChatMessageContent) -> None:
     for item in message.items or []:
         if isinstance(item, FunctionCallContent):
-            print(f"Function Call:> {item.name} with arguments: {item.arguments}")
+            func_msg = f"Function Call:> {item.name} with arguments: {item.arguments}"
+            CONSOLE.print(render_assistant_panel("ASSISTANT", func_msg, CONSOLE))
         elif isinstance(item, FunctionResultContent):
-            print(f"Function Result:> {item.result} for function: {item.name}")
+            func_msg = f"Function Result:> {item.result} for function: {item.name}"
+            CONSOLE.print(render_assistant_panel("ASSISTANT", func_msg, CONSOLE))
         else:
-            print(f"{message.name}: {message.content}")
+            agent_msg = f"{message.name}: {message.content}"
+            CONSOLE.print(render_assistant_panel("ASSISTANT", agent_msg, CONSOLE))
 
 
 # Tools
@@ -245,23 +258,23 @@ async def orchestration(input: str, orchestration: str) -> str:
     runtime = InProcessRuntime()
     runtime.start()
 
-    print(f"[INPUT] | {input}")
+    CONSOLE.print(render_input_panel("INPUT", input, CONSOLE))
     
     try:
         if orchestration == "concurrent":
             config = concurrent_config
-            message = f"[ORCHESTRATION] | [CONCURRENT] {len(concurrent_members)}"
+            message = f"CONCURRENT | MEMBERS({len(concurrent_members)}): {operator_0.name}, {operator_1.name}"
         elif orchestration == "handoff":
             config = handoff_config
-            message = f"[ORCHESTRATION] | [HANDOFF] {len(handoff_members)}"
+            message = f"HANDOFF | MEMBERS({len(handoff_members)}): {lead_network_analyst.name}, {network_analyst.name}, {operator_0.name}"
         elif orchestration == "group":
             config = group_config
-            message = f"[ORCHESTRATION] | [GROUP CHAT] {len(group_members)} | [ROUND ROBIN] {max_rounds}"
+            message = f"GROUP CHAT | ROUND ROBIN({max_rounds}) | MEMBERS({len(group_members)}): {lead_network_analyst.name}, {network_analyst.name}"
         else:
             raise ValueError(f"[CONCURRENT] | [HANDOFF] | [GROUP CHAT]")
         
-        print(message)
-        
+        CONSOLE.print(render_info_panel("ORCHESTRATION", message, CONSOLE))
+
         result = await config.invoke(
             task=input,
             runtime=runtime
@@ -274,15 +287,15 @@ async def orchestration(input: str, orchestration: str) -> str:
             for item in response:
                 response_collection.append(f"{item.name}: {item.content}")
             response_text = str("\n".join(response_collection))
-            print(f"[RESPONSE] |\n{response_text}")
+            CONSOLE.print(render_response_panel("RESPONSE", response_text, CONSOLE))
         else:
             response_text = response.content
-            print(f"[RESPONSE] | {response_text}")
-        
+            CONSOLE.print(render_response_panel("RESPONSE", response_text, CONSOLE))
+
         return response_text
        
     except Exception as e:
-        print(f"[ERROR] | {e}")
+        CONSOLE.print(render_error_panel("ERROR", e, CONSOLE))
         return f"[ERROR] | {e}"
         
     finally:
@@ -392,7 +405,7 @@ def main():
             outputs=[groupchat_chatbot, groupchat_history]
         )
 
-    INTERFACE.launch()
+    INTERFACE.launch(share=True)
 
 if __name__ == "__main__":
     main()
