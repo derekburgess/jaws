@@ -100,7 +100,7 @@ def main():
         chat_history = gr.State(value=[{
             "role": "assistant", 
             "content": f"A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enriching the data, and returning reports to the command center.\n\nMembers: {operator_0.name}, {operator_1.name}, {network_analyst.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, DropDatabase, SendEmail",
-            "metadata": {"title": "🔎 NetworkTraffic Analysis"}
+            "metadata": {"title": "🛡️ Command Center"}
         }])
         
         with gr.Row(equal_height=True):
