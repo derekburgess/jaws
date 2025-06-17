@@ -111,23 +111,9 @@ handoffs = (
 )
 
 concurrent_members=[operator_0, operator_1]
-concurrent_config = ConcurrentOrchestration(members=concurrent_members)
-
 handoff_members=[lead_network_analyst, operator_0, network_analyst]
-handoff_config = HandoffOrchestration(
-    members=handoff_members,
-    handoffs=handoffs,
-    agent_response_callback=agent_callback,
-    human_response_function=human_in_the_loop
-)
-
 max_rounds = 2
 group_members=[network_analyst, lead_network_analyst]
-group_config = GroupChatOrchestration(
-    members=group_members,
-    manager=RoundRobinGroupChatManager(max_rounds=max_rounds),
-    agent_response_callback=agent_callback
-)
 
 
 async def orchestration(input: str, orchestration: str) -> str:
@@ -138,13 +124,22 @@ async def orchestration(input: str, orchestration: str) -> str:
     
     try:
         if orchestration == "concurrent":
-            config = concurrent_config
+            config = ConcurrentOrchestration(members=concurrent_members)
             message = f"CONCURRENT | MEMBERS({len(concurrent_members)}): {operator_0.name}, {operator_1.name}"
         elif orchestration == "handoff":
-            config = handoff_config
+            config = HandoffOrchestration(
+                members=handoff_members,
+                handoffs=handoffs,
+                agent_response_callback=agent_callback,
+                human_response_function=human_in_the_loop
+            )
             message = f"HANDOFF | MEMBERS({len(handoff_members)}): {lead_network_analyst.name}, {network_analyst.name}, {operator_0.name}"
         elif orchestration == "group":
-            config = group_config
+            config = GroupChatOrchestration(
+                members=group_members,
+                manager=RoundRobinGroupChatManager(max_rounds=max_rounds),
+                agent_response_callback=agent_callback
+            )
             message = f"GROUP CHAT | ROUND ROBIN({max_rounds}) | MEMBERS({len(group_members)}): {lead_network_analyst.name}, {network_analyst.name}"
         else:
             raise ValueError(f"[CONCURRENT] | [HANDOFF] | [GROUP CHAT]")
@@ -242,25 +237,46 @@ def main():
 
 
         async def concurrent_orchestration(history: str) -> str:
-            response = await orchestration("Perform a short 10-30 second network probe and report back to the command center ASAP.", "concurrent")
-            timestamp = datetime.now()
-            formatted_response = {"role": "assistant", "content": response, "metadata": {"title": f"️📋 Overwatch Report | {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"}}
-            chat_history = (history + [formatted_response])[-10:]
-            return chat_history, chat_history
+            input = "Perform a short 10-30 second network probe and report back to the command center ASAP."
+            response = await orchestration(input, "concurrent")
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_turn = {
+                "role": "assistant",
+                "content": response,
+                "metadata": {"title": f"️📋 Overwatch Report | {timestamp}"}
+            }
+
+            updated_history = history + [new_turn]
+            return updated_history, updated_history
 
         async def handoff_orchestration(history: str) -> str:
-            response = await orchestration("The Command Center is reporting weird traffic near your endpoint. Perform a complete network scan and return a moderately detailed situational report to High Command ASAP.", "handoff")
-            timestamp = datetime.now()
-            formatted_response = {"role": "assistant", "content": response, "metadata": {"title": f"️📋 Situation Report | {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"}}
-            chat_history = (history + [formatted_response])[-3:]
-            return chat_history, chat_history
-        
+            input = "The Command Center is reporting weird traffic near your endpoint. Perform a complete network scan and return a moderately detailed situational report to High Command ASAP."
+            response = await orchestration(input, "handoff")
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_turn = {
+                "role": "assistant",
+                "content": response,
+                "metadata": {"title": f"️📋 Situation Report | {timestamp}"}
+            }
+
+            updated_history = history + [new_turn]
+            return updated_history, updated_history
+
         async def group_orchestration(history: str) -> str:
-            response = await orchestration("High command is requesting the comprehensive network traffic report ASAP.", "group")
-            timestamp = datetime.now()
-            formatted_response = {"role": "assistant", "content": response, "metadata": {"title": f"🛡️ Briefing for High Command | {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"}}
-            chat_history = (history + [formatted_response])[-3:]
-            return chat_history, chat_history
+            input = "High command is requesting the comprehensive network traffic report ASAP."
+            response = await orchestration(input, "group")
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_turn = {
+                "role": "assistant",
+                "content": response,
+                "metadata": {"title": f"🛡️ Briefing for High Command | {timestamp}"}
+            }
+
+            updated_history = history + [new_turn]
+            return updated_history, updated_history
 
 
         concurrent_request_button.click(

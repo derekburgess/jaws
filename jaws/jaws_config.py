@@ -19,19 +19,12 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 CLIENT = OpenAI()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_MODEL = "gpt-4o-mini"
+OPENAI_MODEL = "gpt-4.1"
 OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.
 PACKET_MODEL = "bigcode/starcoder2-3b"
 PACKET_MODEL_ID = "starcoder"
-
-# The language model is used for language related tasks, such as analyzing data, or generating reports.
-#LANG_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-#LANG_MODEL_ID = "llama"
-
-LANG_MODEL = "microsoft/Phi-4-mini-instruct"
-LANG_MODEL_ID = "phi4"
 
 # Saves plots to this location.
 FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")

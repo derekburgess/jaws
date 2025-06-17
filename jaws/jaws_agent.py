@@ -66,42 +66,26 @@ network_analyst = ChatCompletionAgent(
 
 max_rounds = 2
 group_members=[operator, network_analyst]
-group_config = GroupChatOrchestration(
-    members=group_members,
-    manager=RoundRobinGroupChatManager(max_rounds=max_rounds),
-    agent_response_callback=agent_callback
-)
-
-
 async def orchestration(input: str) -> str:
     runtime = InProcessRuntime()
     runtime.start()
-
     CONSOLE.print(render_input_panel("INPUT", input, CONSOLE))
-    
     try:
-        config = group_config
+        orchestration = GroupChatOrchestration(
+            members=group_members,
+            manager=RoundRobinGroupChatManager(max_rounds=max_rounds),
+            agent_response_callback=agent_callback,
+        )
         message = f"GROUP CHAT | ROUND ROBIN({max_rounds}) | MEMBERS({len(group_members)}): {operator.name}, {network_analyst.name}"
         CONSOLE.print(render_info_panel("ORCHESTRATION", message, CONSOLE))
-
-        result = await config.invoke(
-            task=input,
-            runtime=runtime
-        )
-        
+        result = await orchestration.invoke(task=input, runtime=runtime)
         response = await result.get()
-        response_text = response.content
+        response_text = str(response.content)
         CONSOLE.print(render_response_panel("RESPONSE", response_text, CONSOLE))
-
-        return response_text
-       
-    except Exception as e:
-        CONSOLE.print(render_error_panel("ERROR", e, CONSOLE))
-        return f"[ERROR] | {e}"
-        
+        return response.content
     finally:
         await runtime.stop_when_idle()
-
+       
 
 def main():
     with gr.Blocks(title="Network Traffic Monitoring") as INTERFACE:
@@ -125,14 +109,19 @@ def main():
                 )
                 request_button = gr.Button("💬 Report in, team", variant="huggingface")
         
+        async def group_orchestration(history):
+            input = "Please perform your tasks and return a report to the command center."
+            response = await orchestration(input)
 
-        async def group_orchestration(history: str) -> str:
-            response = await orchestration("Please perform your tasks and return a report to the command center.")
-            timestamp = datetime.now()
-            formatted_response = {"role": "assistant", "content": response, "metadata": {"title": f"📋 Situation Report | {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"}}
-            chat_history = (history + [formatted_response])[-3:]
-            return chat_history, chat_history
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_turn = {
+                "role": "assistant",
+                "content": response,
+                "metadata": {"title": f"📋 Situation Report | {timestamp}"}
+            }
 
+            updated_history = history + [new_turn]
+            return updated_history, updated_history
 
         request_button.click(
             fn=group_orchestration,
