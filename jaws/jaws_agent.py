@@ -49,7 +49,7 @@ operator = ChatCompletionAgent(
     service=lang_service,
     name="Operator",
     description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data, and analyzing the data looking for patterns and anomalies, or 'red flags'.",
-    instructions=OPERATOR_PROMPT,
+    instructions=ANALYST_MANAGED_PROMPT,
     plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
     arguments=KernelArguments(settings)
 )
