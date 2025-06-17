@@ -108,7 +108,7 @@ def send_email(content: str) -> bool:
         message = MIMEMultipart()
         message["From"] = EMAIL_SENDER
         message["To"] = EMAIL_RECIPIENT
-        message["Subject"] = "🛡️ Briefing for High Command"
+        message["Subject"] = "📋 Situation Report"
         body = f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{content}\n\n** This is an automated report from the JAWS Network Monitoring System. **"""
         message.attach(MIMEText(body, "plain"))
         

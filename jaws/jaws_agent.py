@@ -45,9 +45,18 @@ async def agent_callback(message: ChatMessageContent) -> None:
             CONSOLE.print(render_assistant_panel(message.name, message.content, CONSOLE))
 
 
-operator = ChatCompletionAgent(
+operator_0 = ChatCompletionAgent(
     service=lang_service,
-    name="Operator",
+    name="Operator0",
+    description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data, and analyzing the data looking for patterns and anomalies, or 'red flags'.",
+    instructions=ANALYST_MANAGED_PROMPT,
+    plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
+    arguments=KernelArguments(settings)
+)
+
+operator_1 = ChatCompletionAgent(
+    service=lang_service,
+    name="Operator1",
     description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data, and analyzing the data looking for patterns and anomalies, or 'red flags'.",
     instructions=ANALYST_MANAGED_PROMPT,
     plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
@@ -57,16 +66,15 @@ operator = ChatCompletionAgent(
 network_analyst = ChatCompletionAgent(
     service=reasoning_service,
     name="LeadAnalyst",
-    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to High Command.",
+    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to Command.",
     instructions=MANAGER_PROMPT,
     plugins=[AnomalyDetection(), FetchData(), DropDatabase(), SendEmail()],
     arguments=KernelArguments(settings)
 )
 
 
-max_rounds = 2
-group_members=[operator, network_analyst]
-async def orchestration(input: str) -> str:
+group_members=[operator_0, operator_1, network_analyst]
+async def orchestration(input: str, max_rounds: int = 3) -> str:
     runtime = InProcessRuntime()
     runtime.start()
     CONSOLE.print(render_input_panel("INPUT", input, CONSOLE))
@@ -76,7 +84,7 @@ async def orchestration(input: str) -> str:
             manager=RoundRobinGroupChatManager(max_rounds=max_rounds),
             agent_response_callback=agent_callback,
         )
-        message = f"GROUP CHAT | ROUND ROBIN({max_rounds}) | MEMBERS({len(group_members)}): {operator.name}, {network_analyst.name}"
+        message = f"GROUP CHAT | ROUND ROBIN({max_rounds}) | MEMBERS({len(group_members)}): {operator_0.name}, {operator_1.name}, {network_analyst.name}"
         CONSOLE.print(render_info_panel("ORCHESTRATION", message, CONSOLE))
         result = await orchestration.invoke(task=input, runtime=runtime)
         response = await result.get()
@@ -91,7 +99,7 @@ def main():
     with gr.Blocks(title="Network Traffic Monitoring") as INTERFACE:
         chat_history = gr.State(value=[{
             "role": "assistant", 
-            "content": "A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning a comprehensive report to the command center.",
+            "content": f"A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning reports to the command center.\n\nMembers: {operator_0.name}, {operator_1.name}, {network_analyst.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, DropDatabase, SendEmail",
             "metadata": {"title": "🔎 Traffic Analysis"}
         }])
         
@@ -100,26 +108,41 @@ def main():
                 chatbot = gr.Chatbot(
                     value=chat_history.value,
                     type="messages",
-                    show_label=True,
-                    label=f"Group Chat | Round Robin({max_rounds}) | Members({len(group_members)})",
+                    show_label=False,
                     autoscroll=True,
                     resizable=True,
                     show_copy_button=True,
-                    height=600
+                    height=480
                 )
-                request_button = gr.Button("💬 Report in, team", variant="huggingface")
+                input_text = gr.Textbox(show_label=False, container=False, placeholder="Ask the team a question about the network traffic.")
+                with gr.Row(equal_height=True):
+                    rounds_slider = gr.Slider(
+                        minimum=3,
+                        maximum=12,
+                        value=3,
+                        step=3,
+                        show_label=False,
+                        container=False
+                    )
+                    request_button = gr.Button("💬 Report in, team", variant="huggingface")
         
-        async def group_orchestration(history):
-            input = "Please perform your tasks and return a report to the command center."
-            response = await orchestration(input)
+        async def group_orchestration(history, input_text="", max_rounds=2):
+            input = input_text if input_text else "Please perform a network traffic analysis and return a situation report to the command center."
+            response = await orchestration(input, max_rounds)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"📋 Situation Report | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 
-        request_button.click(
+        input_text.submit(
             fn=group_orchestration,
-            inputs=[chat_history],
+            inputs=[chat_history, input_text, rounds_slider],
+            outputs=[chatbot, chat_history]
+        )
+
+        request_button.click(
+            fn=lambda history, max_rounds: asyncio.run(group_orchestration(history, "", max_rounds)),
+            inputs=[chat_history, rounds_slider],
             outputs=[chatbot, chat_history]
         )
     
