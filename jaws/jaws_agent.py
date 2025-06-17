@@ -48,7 +48,7 @@ async def agent_callback(message: ChatMessageContent) -> None:
 operator_0 = ChatCompletionAgent(
     service=lang_service,
     name="Operator0",
-    description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data, and analyzing the data looking for patterns and anomalies, or 'red flags'.",
+    description="An expert IT Professional and Analyst. Tasked with capturing network traffic data and performing ETL(Extract, Transform, and Load) to enrich and prepare the data for analysis.",
     instructions=ANALYST_MANAGED_PROMPT,
     plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
     arguments=KernelArguments(settings)
@@ -58,15 +58,15 @@ operator_1 = ChatCompletionAgent(
     service=lang_service,
     name="Operator1",
     description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data, and analyzing the data looking for patterns and anomalies, or 'red flags'.",
-    instructions=ANALYST_MANAGED_PROMPT,
-    plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
+    instructions=OPERATOR_PROMPT,
+    plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings(), AnomalyDetection()],
     arguments=KernelArguments(settings)
 )
 
 network_analyst = ChatCompletionAgent(
     service=reasoning_service,
     name="LeadAnalyst",
-    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to Command.",
+    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to the command center.",
     instructions=MANAGER_PROMPT,
     plugins=[AnomalyDetection(), FetchData(), DropDatabase(), SendEmail()],
     arguments=KernelArguments(settings)
@@ -99,8 +99,8 @@ def main():
     with gr.Blocks(title="Network Traffic Monitoring") as INTERFACE:
         chat_history = gr.State(value=[{
             "role": "assistant", 
-            "content": f"A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning reports to the command center.\n\nMembers: {operator_0.name}, {operator_1.name}, {network_analyst.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, DropDatabase, SendEmail",
-            "metadata": {"title": "🔎 Traffic Analysis"}
+            "content": f"A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enriching the data, and returning reports to the command center.\n\nMembers: {operator_0.name}, {operator_1.name}, {network_analyst.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, DropDatabase, SendEmail",
+            "metadata": {"title": "🔎 NetworkTraffic Analysis"}
         }])
         
         with gr.Row(equal_height=True):

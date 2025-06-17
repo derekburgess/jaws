@@ -73,7 +73,7 @@ operator_1 = ChatCompletionAgent(
 network_analyst = ChatCompletionAgent(
     service=lang_service, 
     name="NetworkAnalyst",
-    description="An expert IT Professional and Analyst. Tasked with capturing additional network traffic data and performing ETL(Extract, Transform, and Load) to enrich and prepare the data for analysis.",
+    description="An expert IT Professional and Analyst. Tasked with capturing network traffic data and performing ETL(Extract, Transform, and Load) to enrich and prepare the data for analysis.",
     instructions=ANALYST_MANAGED_PROMPT,
     plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
     arguments=KernelArguments(settings)
@@ -82,7 +82,7 @@ network_analyst = ChatCompletionAgent(
 lead_network_analyst = ChatCompletionAgent(
     service=reasoning_service,
     name="LeadAnalyst",
-    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to High Command.",
+    description="n expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to the command center.",
     instructions=MANAGER_PROMPT,
     plugins=[AnomalyDetection(), FetchData(), DropDatabase(), SendEmail()],
     arguments=KernelArguments(settings)
@@ -94,7 +94,7 @@ handoffs = (
     .add_many(
         source_agent=lead_network_analyst.name,
         target_agents={
-            operator_0.name: f"Transfer to {operator_0.name} to capture a quick snapshot of network traffic data, the agent will return a list of red flags. The red flags are an important part of the final report to High Command.",
+            operator_0.name: f"Transfer to {operator_0.name} to capture a quick snapshot of network traffic data, the agent will return a list of red flags. The red flags are an important part of the report to the command center.",
             network_analyst.name: f"Transfer to {network_analyst.name} for longer snapshots of network traffic data, this agent will also enrich the data, which improves the quality and accuracy of the final report.",
         },
     )
@@ -184,13 +184,13 @@ def main():
         
         handoff_chat_history = gr.State(value=[{
             "role": "assistant", 
-            "content": "A managed group of network analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning a moderately detailed situational report to high command.",
+            "content": "A managed group of network analysts tasked with capturing 30-60 second snapshots of network traffic data, enriching the data, and returning a moderately detailed situation report to the command center.",
             "metadata": {"title": "🔎 Traffic Analysis"}
         }])
 
         groupchat_history = gr.State(value=[{
             "role": "assistant", 
-            "content": "A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enchring the data, and returning a comprehensive report to the high command.",
+            "content": "A collaborative group of analysts tasked with capturing 30-60 second snapshots of network traffic data, enriching the data, and returning a comprehensive report to the command center.",
             "metadata": {"title": "🪬 Command Center"}
         }])
         
@@ -245,7 +245,7 @@ def main():
             return updated_history, updated_history
 
         async def handoff_orchestration(history: str) -> str:
-            input = "The Command Center is reporting weird traffic near your endpoint. Perform a complete network scan and return a moderately detailed situational report to High Command ASAP."
+            input = "The command center is reporting weird traffic near your endpoint. Perform a complete network scan and return a moderately detailed situation report to the command center ASAP."
             response = await orchestration(input, "handoff")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"️📋 Situation Report | {timestamp}"}}
@@ -253,10 +253,10 @@ def main():
             return updated_history, updated_history
 
         async def group_orchestration(history: str) -> str:
-            input = "High command is requesting the comprehensive network traffic report ASAP."
+            input = "The command center is requesting the comprehensive network traffic report ASAP."
             response = await orchestration(input, "group")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"🛡️ Briefing for High Command | {timestamp}"}}
+            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"📋 Situation Report | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 
