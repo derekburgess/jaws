@@ -112,14 +112,8 @@ def main():
         async def group_orchestration(history):
             input = "Please perform your tasks and return a report to the command center."
             response = await orchestration(input)
-
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_turn = {
-                "role": "assistant",
-                "content": response,
-                "metadata": {"title": f"📋 Situation Report | {timestamp}"}
-            }
-
+            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"📋 Situation Report | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 

@@ -239,42 +239,24 @@ def main():
         async def concurrent_orchestration(history: str) -> str:
             input = "Perform a short 10-30 second network probe and report back to the command center ASAP."
             response = await orchestration(input, "concurrent")
-
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_turn = {
-                "role": "assistant",
-                "content": response,
-                "metadata": {"title": f"️📋 Overwatch Report | {timestamp}"}
-            }
-
+            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"️📋 Overwatch Report | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 
         async def handoff_orchestration(history: str) -> str:
             input = "The Command Center is reporting weird traffic near your endpoint. Perform a complete network scan and return a moderately detailed situational report to High Command ASAP."
             response = await orchestration(input, "handoff")
-
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_turn = {
-                "role": "assistant",
-                "content": response,
-                "metadata": {"title": f"️📋 Situation Report | {timestamp}"}
-            }
-
+            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"️📋 Situation Report | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 
         async def group_orchestration(history: str) -> str:
             input = "High command is requesting the comprehensive network traffic report ASAP."
             response = await orchestration(input, "group")
-
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_turn = {
-                "role": "assistant",
-                "content": response,
-                "metadata": {"title": f"🛡️ Briefing for High Command | {timestamp}"}
-            }
-
+            new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"🛡️ Briefing for High Command | {timestamp}"}}
             updated_history = history + [new_turn]
             return updated_history, updated_history
 
