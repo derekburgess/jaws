@@ -19,7 +19,7 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 CLIENT = OpenAI()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.

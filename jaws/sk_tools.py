@@ -26,7 +26,7 @@ class ListInterfaces:
 class CapturePackets:
     @kernel_function(description="Captures packets into the database. Choose a duration depending on the amount of data you want to capture. Recommended not to exceed 60 seconds.")
     def capture_packets(self, interface: str, duration: int) -> Annotated[str, "A system message once the process is complete."]:
-        CONSOLE.print(render_info_panel("TOOL", "Capturing network traffic.", CONSOLE))
+        CONSOLE.print(render_info_panel("TOOL", f"Capturing network traffic on {interface} for {duration} seconds.", CONSOLE))
         if duration > 60:
             duration = 60
         packets = subprocess.run(['python', './jaws/jaws_capture.py', '--interface', interface, '--duration', str(duration), '--agent'], capture_output=True, text=True)
