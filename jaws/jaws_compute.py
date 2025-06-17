@@ -57,7 +57,7 @@ def add_traffic_to_database(ip_address, port, embedding, org, hostname, location
 def compute_transformer_embedding(input):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
-    infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
+    infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL) # quantization_config=BitsAndBytesConfig(load_in_8bit=True)
     inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
     with torch.no_grad():
         outputs = infer(**inputs, output_hidden_states=True, use_cache=False)

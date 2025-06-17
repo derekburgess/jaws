@@ -29,9 +29,18 @@ def get_local_ip():
 
 def list_interfaces():
     interfaces = psutil.net_if_addrs()
+    interface_stats = psutil.net_io_counters(pernic=True)
     interface_list = []
+    
     for interface, addrs in interfaces.items():
-        interface_list.append(f"{interface}")
+        if interface in ['lo'] or interface.startswith('docker') or interface.startswith('tailscale'):
+            continue
+            
+        if interface in interface_stats:
+            stats = interface_stats[interface]
+            if stats.bytes_sent > 0 or stats.bytes_recv > 0:
+                interface_list.append(f"{interface}")
+    
     return interface_list
 
 
