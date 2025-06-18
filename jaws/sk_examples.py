@@ -74,7 +74,7 @@ network_analyst = ChatCompletionAgent(
     service=lang_service, 
     name="NetworkAnalyst",
     description="An expert IT Professional and Analyst. Tasked with capturing network traffic data and performing ETL(Extract, Transform, and Load) to enrich and prepare the data for analysis.",
-    instructions=ANALYST_MANAGED_PROMPT,
+    instructions=NETWORK_ANALYST_PROMPT,
     plugins=[ListInterfaces(), CapturePackets(), DocumentOrganizations(), ComputeEmbeddings()],
     arguments=KernelArguments(settings)
 )
@@ -83,7 +83,7 @@ lead_network_analyst = ChatCompletionAgent(
     service=reasoning_service,
     name="LeadAnalyst",
     description="n expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to the command center.",
-    instructions=MANAGER_PROMPT,
+    instructions=LEAD_ANALYST_PROMPT,
     plugins=[AnomalyDetection(), FetchData(), DropDatabase(), SendEmail()],
     arguments=KernelArguments(settings)
 )

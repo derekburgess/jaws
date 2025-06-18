@@ -145,7 +145,7 @@ def fetch_data() -> pd.DataFrame:
 
 
 @tool
-def send_report_email(content: str) -> str:
+def send_email(content: str) -> str:
     """
     Sends an email to High Command with the entire contents of the report.
 
@@ -159,30 +159,30 @@ def send_report_email(content: str) -> str:
     return str(response)
    
 
-network_analyst = ToolCallingAgent(
-    name="NetworkAnalyst",
-    description=ANALYST_MANAGED_PROMPT,
+operator = ToolCallingAgent(
+    name="Operator",
+    description="The eyes of the network. Tasked with capturing small snapshots of network traffic data, enriching the data with OSINT, and analyzing the data looking for patterns and anomalies, reporting on 'red flags'.",
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
     #prompt_templates={"system_prompt": ANALYST_MANAGED_PROMPT},
     #verbosity_level=0,
-    tools=[list_interfaces, capture_packets, document_organizations, compute_embeddings]
+    tools=[list_interfaces, capture_packets, document_organizations, compute_embeddings, anomoly_detection]
 )
 
 lead_network_analyst = CodeAgent(
     name="LeadAnalyst",
-    description=MANAGER_PROMPT,
+    description="An expert IT Professional, Sysadmin, and Senior Analyst. Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to the command center and managing the data.",
     model=OpenAIServerModel(model_id=OPENAI_MODEL),
     planning_interval=1,
     max_steps=10,
     #verbosity_level=2,
-    tools=[fetch_data, anomoly_detection, DuckDuckGoSearchTool(), send_report_email, drop_database],
+    tools=[fetch_data, anomoly_detection, send_email, drop_database],
     additional_authorized_imports=["pandas", "networkx"],
-    managed_agents=[network_analyst]
+    managed_agents=[operator]
 )
 
 
 def main():
-    analysis = lead_network_analyst.run(MANAGER_PROMPT)
+    analysis = lead_network_analyst.run(LEAD_ANALYST_PROMPT)
     print(analysis)
 
 if __name__ == "__main__":
