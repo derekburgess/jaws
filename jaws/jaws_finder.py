@@ -14,18 +14,18 @@ from jaws.jaws_utils import (
     render_error_panel,
     render_info_panel,
     render_success_panel
-    #render_activity_panel
 )
 
 
 def fetch_data_for_dbscan(driver, database):
     query = """
     MATCH (traffic:TRAFFIC)
-    RETURN traffic.IP_ADDRESS AS ip_address,
-           traffic.PORT AS port,
-           traffic.ORGANIZATION AS org,
-           traffic.HOSTNAME AS hostname,
-           traffic.LOCATION AS location,
+    OPTIONAL MATCH (src_ip:IP_ADDRESS {IP_ADDRESS: traffic.SRC_IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
+    RETURN traffic.SRC_IP_ADDRESS AS ip_address,
+           traffic.SRC_PORT AS port,
+           COALESCE(traffic.ORGANIZATION, org.ORGANIZATION, 'Unknown') AS org,
+           COALESCE(traffic.HOSTNAME, org.HOSTNAME, 'Unknown') AS hostname,
+           COALESCE(traffic.LOCATION, org.LOCATION, 'Unknown') AS location,
            traffic.EMBEDDING AS embedding,
            traffic.TOTAL_SIZE AS total_size
     """
@@ -34,22 +34,23 @@ def fetch_data_for_dbscan(driver, database):
         embeddings = []
         data = []
         for record in result:
-            embeddings.append(np.array(record['embedding']))
-            data.append({
-                'ip_address': record['ip_address'],
-                'port': record['port'],
-                'org': record['org'],
-                'hostname': record['hostname'],
-                'location': record['location'],
-                'total_size': record['total_size'],
-            })
+            if record['embedding'] is not None:  # Only process records with embeddings
+                embeddings.append(np.array(record['embedding']))
+                data.append({
+                    'ip_address': record['ip_address'] or 'Unknown',
+                    'port': record['port'] or 0,
+                    'org': record['org'] or 'Unknown',
+                    'hostname': record['hostname'] or 'Unknown',
+                    'location': record['location'] or 'Unknown',
+                    'total_size': record['total_size'] or 0,
+                })
         return embeddings, data
 
 
 def fetch_data_for_portsize(driver, database):
     query = """
-    MATCH (src_port:PORT)-[p:PACKET]->(dst_port:PORT)
-    RETURN p.SIZE AS size, src_port.PORT AS src_port, dst_port.PORT AS dst_port
+    MATCH (src_port:PORT)-[:SENT]->(packet:PACKET)-[:RECEIVED]->(dst_port:PORT)
+    RETURN packet.SIZE AS size, src_port.PORT AS src_port, dst_port.PORT AS dst_port
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -61,7 +62,7 @@ def fetch_data_for_portsize(driver, database):
 def add_outlier_to_database(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
-    MATCH (traffic:TRAFFIC {IP_ADDRESS: outlier.ip_address, PORT: outlier.port})
+    MATCH (traffic:TRAFFIC {SRC_IP_ADDRESS: outlier.ip_address, SRC_PORT: outlier.port})
     SET traffic.OUTLIER = true
     """
     parameters = {'outliers': outlier_list}

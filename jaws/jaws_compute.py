@@ -16,16 +16,19 @@ from jaws.jaws_utils import (
 
 def fetch_data_for_embedding(driver, database):
     query = """
-    MATCH (ip_address:IP_ADDRESS)<-[:OWNERSHIP]-(org:ORGANIZATION)
-    OPTIONAL MATCH (ip_address)-[:PORT]->(port:PORT)
-    OPTIONAL MATCH (port)-[p:PACKET]->()
-    WITH ip_address, port, org, sum(p.SIZE) AS total_size
-    RETURN ip_address.IP_ADDRESS AS ip_address,
-           port.PORT AS port,
+    MATCH (src_ip:IP_ADDRESS)-[:PORT]->(src_port:PORT)-[:SENT]->(packet:PACKET)-[:RECEIVED]->(dst_port:PORT)<-[:PORT]-(dst_ip:IP_ADDRESS)
+    OPTIONAL MATCH (src_ip)-[:OWNERSHIP]->(org:ORGANIZATION)
+    WITH src_ip, src_port, dst_ip, dst_port, packet, org,
+         sum(packet.SIZE) AS total_size
+    RETURN src_ip.IP_ADDRESS AS src_ip_address,
+           src_port.PORT AS src_port,
+           dst_ip.IP_ADDRESS AS dst_ip_address,
+           dst_port.PORT AS dst_port,
+           packet.PROTOCOL AS protocol,
+           total_size,
            org.ORGANIZATION AS org,
            org.HOSTNAME AS hostname,
-           org.LOCATION AS location,
-           total_size
+           org.LOCATION AS location
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -33,12 +36,16 @@ def fetch_data_for_embedding(driver, database):
     return df
 
 
-def add_traffic_to_database(ip_address, port, embedding, org, hostname, location, total_size, driver, database):
+def add_traffic_to_database(src_ip_address, src_port, dst_ip_address, dst_port, protocol, embedding, org, hostname, location, total_size, driver, database):
     query = """
-    MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
+    MATCH (src_ip:IP_ADDRESS {IP_ADDRESS: $src_ip_address})
+    MATCH (dst_ip:IP_ADDRESS {IP_ADDRESS: $dst_ip_address})
     MERGE (traffic:TRAFFIC {
-        IP_ADDRESS: $ip_address,
-        PORT: $port
+        SRC_IP_ADDRESS: $src_ip_address,
+        SRC_PORT: $src_port,
+        DST_IP_ADDRESS: $dst_ip_address,
+        DST_PORT: $dst_port,
+        PROTOCOL: $protocol
     })
     SET traffic.EMBEDDING = $embedding,
         traffic.ORGANIZATION = $org,
@@ -46,10 +53,12 @@ def add_traffic_to_database(ip_address, port, embedding, org, hostname, location
         traffic.LOCATION = $location,
         traffic.TOTAL_SIZE = $total_size,
         traffic.TIMESTAMP = datetime()
-    MERGE (ip_address)-[:TRAFFIC]->(traffic)
+    MERGE (src_ip)-[:SENT]->(traffic)
+    MERGE (traffic)-[:RECEIVED]->(dst_ip)
     """
     with driver.session(database=database) as session:
-        session.run(query, ip_address=ip_address, port=port, 
+        session.run(query, src_ip_address=src_ip_address, src_port=src_port,
+                    dst_ip_address=dst_ip_address, dst_port=dst_port, protocol=protocol,
                     embedding=embedding, org=org, hostname=hostname, 
                     location=location, total_size=total_size)
 
@@ -86,7 +95,7 @@ def main():
     embedding_tensors = []
     try:
         if not args.agent:
-            processing_message = f"Processing {len(df)} packet embeddings using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
+            processing_message = f"Processing packet embeddings({len(df)}) using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
             with Live(Group(
                     render_info_panel("CONFIG", processing_message, CONSOLE),
                     render_activity_panel("EMBEDDINGS(STR)", embedding_strings, CONSOLE),
@@ -94,15 +103,16 @@ def main():
                 ), console=CONSOLE, refresh_per_second=10) as live:
                 
                 for _, row in df.iterrows():
-                    embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
+                    embedding_string = f"Source: {row['src_ip_address']}:{row['src_port']} ➜ Destination: {row['dst_ip_address']}:{row['dst_port']} | Protocol: {row['protocol']} | Size: {row['total_size']}\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
                     if args.api == "transformers":
                         embedding = compute_transformer_embedding(embedding_string)
                     else:
                         embedding = compute_openai_embedding(CLIENT, embedding_string)
                         
                     if embedding is not None:
-                        add_traffic_to_database(row['ip_address'], row['port'], embedding, 
-                                    row['org'], row['hostname'], row['location'], 
+                        add_traffic_to_database(row['src_ip_address'], row['src_port'], 
+                                    row['dst_ip_address'], row['dst_port'], row['protocol'],
+                                    embedding, row['org'], row['hostname'], row['location'], 
                                     row['total_size'], driver, args.database)
                         embedding_strings.append(embedding_string)
                         embedding_tensors.append(embedding)
@@ -116,15 +126,16 @@ def main():
                 CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Embeddings({len(embedding_strings)}) added to: '{args.database}'", CONSOLE))
         else:
             for _, row in df.iterrows():
-                embedding_string = f"IP Address: {row['ip_address']} | Port: {row['port']} ({row['total_size']})\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
+                embedding_string = f"Source: {row['src_ip_address']}:{row['src_port']} ➜ Destination: {row['dst_ip_address']}:{row['dst_port']} | Protocol: {row['protocol']} | Size: {row['total_size']}\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
                 if args.api == "transformers":
                     embedding = compute_transformer_embedding(embedding_string)
                 else:
                     embedding = compute_openai_embedding(CLIENT, embedding_string)
                     
                 if embedding is not None:
-                    add_traffic_to_database(row['ip_address'], row['port'], embedding, 
-                                row['org'], row['hostname'], row['location'], 
+                    add_traffic_to_database(row['src_ip_address'], row['src_port'], 
+                                row['dst_ip_address'], row['dst_port'], row['protocol'],
+                                embedding, row['org'], row['hostname'], row['location'], 
                                 row['total_size'], driver, args.database)
                     embedding_strings.append(embedding_string)
                     embedding_tensors.append(embedding)

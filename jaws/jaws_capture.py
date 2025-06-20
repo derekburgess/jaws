@@ -54,13 +54,19 @@ def add_packet_to_database(driver, packet_data, database):
         MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: $src_port, IP_ADDRESS: $src_ip_address})
         MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: $dst_port, IP_ADDRESS: $dst_ip_address})
         
-        CREATE (src_port)-[p:PACKET]->(dst_port)
-        SET p += { 
+        CREATE (packet:PACKET {
             PROTOCOL: $protocol,
             SIZE: $size,
             PAYLOAD: $payload,
-            TIMESTAMP: datetime()
-        }
+            TIMESTAMP: datetime(),
+            SRC_IP: $src_ip_address,
+            DST_IP: $dst_ip_address,
+            SRC_PORT: $src_port,
+            DST_PORT: $dst_port
+        })
+        
+        CREATE (src_port)-[:SENT]->(packet)
+        CREATE (packet)-[:RECEIVED]->(dst_port)
         """, packet_data))
 
 
@@ -110,7 +116,7 @@ def main():
             print(interface_list)
         return
     
-    initialize_schema(driver, args.database)
+    initialize_schema(driver, args.database, local_ip)
 
     if args.capture_file and not os.path.isfile(args.capture_file):
         CONSOLE.print(render_error_panel("ERROR", f"File not found, please check your file path:\n{args.capture_file}", CONSOLE))

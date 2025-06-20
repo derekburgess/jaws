@@ -70,7 +70,7 @@ def dbms_connection(database):
         return None
 
 # Populate database with schema. Called prior to capture.
-def initialize_schema(driver, database):
+def initialize_schema(driver, database, local_ip):
     schema_definitions = [
         {
             "type": "constraint",
@@ -80,11 +80,11 @@ def initialize_schema(driver, database):
             "query": "CREATE CONSTRAINT ip_address_unique FOR (ip:IP_ADDRESS) REQUIRE ip.IP_ADDRESS IS UNIQUE"
         },
         {
-            "type": "constraint",
-            "name": "organization_unique",
-            "label": "ORGANIZATION",
-            "properties": ["ORGANIZATION"],
-            "query": "CREATE CONSTRAINT organization_unique FOR (org:ORGANIZATION) REQUIRE org.ORGANIZATION IS UNIQUE"
+            "type": "index",
+            "name": "packet_timestamp_index", 
+            "label": "PACKET",
+            "properties": ["TIMESTAMP"],
+            "query": "CREATE INDEX packet_timestamp_index FOR (p:PACKET) ON (p.TIMESTAMP)"
         },
         {
             "type": "index",
@@ -92,6 +92,19 @@ def initialize_schema(driver, database):
             "label": "PORT",
             "properties": ["PORT", "IP_ADDRESS"],
             "query": "CREATE INDEX port_composite_index FOR (p:PORT) ON (p.PORT, p.IP_ADDRESS)"
+        },
+        {
+            "type": "constraint",
+            "name": "organization_unique",
+            "label": "ORGANIZATION",
+            "properties": ["ORGANIZATION"],
+            "query": "CREATE CONSTRAINT organization_unique FOR (org:ORGANIZATION) REQUIRE org.ORGANIZATION IS UNIQUE"
+        },
+        {
+            "type": "home_organization",
+            "name": "YOU ARE HERE",
+            "description": "Create an organization for the current system's IP address.",
+            "query": f"MERGE (ip:IP_ADDRESS {{IP_ADDRESS: '{local_ip}'}}) MERGE (org:ORGANIZATION {{ORGANIZATION: 'YOU ARE HERE'}}) MERGE (org)-[:OWNERSHIP]->(ip)"
         },
         {
             "type": "index",
@@ -103,13 +116,17 @@ def initialize_schema(driver, database):
     ]
     
     with driver.session(database=database) as session:
+        errors = []
         for schema in schema_definitions:
             try:
                 session.run(schema["query"])
-                msg = f"Created {schema['type']} '{schema['name']}' on {schema['label']}({', '.join(schema['properties'])})"
-                CONSOLE.print(render_success_panel("SCHEMA", msg, CONSOLE))
             except Exception as e:
-                CONSOLE.print(render_error_panel("ERROR", {e}, CONSOLE))
+                errors.append(str(e))
+        
+        if errors:
+            CONSOLE.print(render_info_panel("INFO", f"'{database}' is ready to go.", CONSOLE))
+        else:
+            CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Schema has been initialized for: '{database}'", CONSOLE))
 
 
 # Drops all entities from the database.
