@@ -37,7 +37,7 @@ async def agent_callback(message: ChatMessageContent) -> None:
 operator = ChatCompletionAgent(
     service=lang_service,
     name="Operator",
-    description="Tasked with capturing small snapshots of network traffic data for downstream analysis.",
+    description="Tasked with capturing small 30 to 120 second snapshots of network traffic data for downstream analysis.",
     instructions=OPERATOR_PROMPT,
     plugins=[ListInterfaces(), CapturePackets()],
     arguments=KernelArguments(settings)
@@ -55,18 +55,18 @@ data_scientist = ChatCompletionAgent(
 lead_analyst = ChatCompletionAgent(
     service=lang_service,
     name="LeadAnalyst",
-    description="Tasked with reviewing the enriched network traffic data to further identify additional patterns and anomalies. Responsible for reporting to the command center and managing the data.",
+    description="Tasked with reviewing the enriched network traffic data to identify patterns and anomalies. Responsible for generating the final situation report.",
     instructions=LEAD_ANALYST_PROMPT,
-    plugins=[FetchData(), AnomalyDetection(), DropDatabase()],
+    plugins=[FetchData(), AnomalyDetection()],
     arguments=KernelArguments(settings)
 )
 
 project_manager = ChatCompletionAgent(
     service=lang_service,
     name="ProjectManager",
-    description="Tasked with helping the team by managing their email communications and ensuring the situation report is returned to the command center.",
+    description="Tasked with helping the network analysts by managing their email communications and ensuring a copy of the situation report is emailed.",
     instructions=PROJECT_MANAGER_PROMPT,
-    plugins=[SendEmail()],
+    plugins=[SendEmail(), DropDatabase()],
     arguments=KernelArguments(settings)
 )
 
@@ -124,7 +124,7 @@ def main():
                 request_button = gr.Button("💬 Report in, team", variant="huggingface")
         
         async def group_orchestration(history, input_text=""):
-            input = input_text if input_text else "Please perform a deep network traffic analysis and email the group a situation report, after which submit a report to the command center."
+            input = input_text if input_text else "Please perform a quick network traffic analysis and email the group a situation report, after which submit a report to the command center."
             response = await orchestration(input)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_turn = {"role": "assistant", "content": response, "metadata": {"title": f"📋 Situation Report | {timestamp}"}}

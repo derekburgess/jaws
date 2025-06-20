@@ -45,7 +45,7 @@ class ComputeEmbeddings:
         CONSOLE.print(render_info_panel("TOOL", "Transforming data into embeddings.", CONSOLE))
         embeddings = subprocess.run(['python', './jaws/jaws_compute.py', '--agent'], capture_output=True, text=True)
         return str(embeddings.stdout)
-    
+
 
 class AnomalyDetection:
     @kernel_function(description="Analyzes the network traffic data and embeddings and returns a list of anomalies.")
@@ -54,7 +54,7 @@ class AnomalyDetection:
         output = subprocess.run(['python', './jaws/jaws_finder.py', '--agent'], capture_output=True, text=True)
         CONSOLE.print(render_assistant_panel("OUTPUT", str(output.stdout), CONSOLE))
         return str(output.stdout)
-    
+
 
 class DropDatabase:
     @kernel_function(description="Clears the database of all data.")
@@ -62,7 +62,7 @@ class DropDatabase:
         CONSOLE.print(render_info_panel("TOOL", "Cleaning up the database.", CONSOLE))
         output = subprocess.run(['python', './jaws/jaws_utils.py', '--agent'], capture_output=True, text=True)
         return str(output.stdout)
-    
+
 
 class FetchData:
     @kernel_function(description="Fetches data from the database and returns it as a string. Pass a duration in minutes to time limit the data. Pass a limit to control the number of entries to return.")
@@ -71,8 +71,11 @@ class FetchData:
         MATCH (traffic:TRAFFIC)
         WHERE traffic.TIMESTAMP > datetime() - duration({minutes: $duration})
         RETURN DISTINCT
-            traffic.IP_ADDRESS AS ip_address,
-            traffic.PORT AS port,
+            traffic.SRC_IP_ADDRESS AS src_ip_address,
+            traffic.SRC_PORT AS src_port,
+            traffic.DST_IP_ADDRESS AS dst_ip_address,
+            traffic.DST_PORT AS dst_port,
+            traffic.PROTOCOL AS protocol,
             traffic.ORGANIZATION AS org,
             traffic.HOSTNAME AS hostname,
             traffic.LOCATION AS location,
@@ -83,13 +86,16 @@ class FetchData:
         LIMIT $limit
         """
         with driver.session(database=DATABASE) as session:
-            CONSOLE.print(render_info_panel("DATA", "Fetching data from the database.", CONSOLE))
+            CONSOLE.print(render_info_panel("DATA", f"Fetching records({limit}) from the database for the last {duration} minutes.", CONSOLE))
             result = session.run(query, duration=duration, limit=limit)
             data = []
             for record in result:
                 data.append({
-                    'ip_address': record['ip_address'],
-                    'port': record['port'],
+                    'src_ip_address': record['src_ip_address'],
+                    'src_port': record['src_port'],
+                    'dst_ip_address': record['dst_ip_address'],
+                    'dst_port': record['dst_port'],
+                    'protocol': record['protocol'],
                     'org': record['org'],
                     'hostname': record['hostname'],
                     'location': record['location'],
@@ -99,7 +105,7 @@ class FetchData:
                 })
             CONSOLE.print(render_assistant_panel("DATA", pd.DataFrame(data).to_string(), CONSOLE))
             return str(data)
-        
+
 
 def send_email(content: str) -> bool:
     try:
