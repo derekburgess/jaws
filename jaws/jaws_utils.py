@@ -23,7 +23,7 @@ def render_success_panel(title,message, console):
 
 def render_input_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="center"), title=f"{title}", border_style="blue", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", border_style="blue", width=width)
 
 
 def render_assistant_panel(title,message, console):
