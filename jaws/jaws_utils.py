@@ -69,6 +69,48 @@ def dbms_connection(database):
             CONSOLE.print(render_error_panel("ERROR", error, CONSOLE))
         return None
 
+# Populate database with schema. Called prior to capture.
+def initialize_schema(driver, database):
+    schema_definitions = [
+        {
+            "type": "constraint",
+            "name": "ip_address_unique",
+            "label": "IP_ADDRESS",
+            "properties": ["IP_ADDRESS"],
+            "query": "CREATE CONSTRAINT ip_address_unique FOR (ip:IP_ADDRESS) REQUIRE ip.IP_ADDRESS IS UNIQUE"
+        },
+        {
+            "type": "constraint",
+            "name": "organization_unique",
+            "label": "ORGANIZATION",
+            "properties": ["ORGANIZATION"],
+            "query": "CREATE CONSTRAINT organization_unique FOR (org:ORGANIZATION) REQUIRE org.ORGANIZATION IS UNIQUE"
+        },
+        {
+            "type": "index",
+            "name": "port_composite_index",
+            "label": "PORT",
+            "properties": ["PORT", "IP_ADDRESS"],
+            "query": "CREATE INDEX port_composite_index FOR (p:PORT) ON (p.PORT, p.IP_ADDRESS)"
+        },
+        {
+            "type": "index",
+            "name": "traffic_composite_index",
+            "label": "TRAFFIC",
+            "properties": ["IP_ADDRESS", "PORT"],
+            "query": "CREATE INDEX traffic_composite_index FOR (t:TRAFFIC) ON (t.IP_ADDRESS, t.PORT)"
+        }
+    ]
+    
+    with driver.session(database=database) as session:
+        for schema in schema_definitions:
+            try:
+                session.run(schema["query"])
+                msg = f"Created {schema['type']} '{schema['name']}' on {schema['label']}({', '.join(schema['properties'])})"
+                CONSOLE.print(render_success_panel("SCHEMA", msg, CONSOLE))
+            except Exception as e:
+                CONSOLE.print(render_error_panel("ERROR", {e}, CONSOLE))
+
 
 # Drops all entities from the database.
 def drop_database(driver, database, agent):

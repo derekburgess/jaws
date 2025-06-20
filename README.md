@@ -122,12 +122,6 @@ Somewhat Optional: Since OpenAI is not free, by passing --api transformers, or j
 
 `HUGGINGFACE_API_KEY`
 
-In addition, you will want to install the Hugging Face CLI, found here: https://huggingface.co/docs/huggingface_hub/en/guides/cli and login. This saves on passing the key.
-
-`pip install -U "huggingface_hub[cli]"`
-
-`huggingface-cli login`
-
 
 The command jaws-finder displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
 

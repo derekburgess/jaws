@@ -24,11 +24,9 @@ class ListInterfaces:
 
 
 class CapturePackets:
-    @kernel_function(description="Captures packets into the database. Choose a duration depending on the amount of data you want to capture. Recommended not to exceed 60 seconds.")
+    @kernel_function(description="Captures packets into the database. Pass a duration in seconds depending on the amount of data you want to capture.")
     def capture_packets(self, interface: str, duration: int) -> Annotated[str, "A system message once the process is complete."]:
         CONSOLE.print(render_info_panel("TOOL", f"Capturing network traffic on '{interface}' for {duration} seconds.", CONSOLE))
-        if duration > 60:
-            duration = 60
         packets = subprocess.run(['python', './jaws/jaws_capture.py', '--interface', interface, '--duration', str(duration), '--agent'], capture_output=True, text=True)
         return str(packets.stdout)
 
@@ -67,11 +65,11 @@ class DropDatabase:
     
 
 class FetchData:
-    @kernel_function(description="Fetches the latest (10 minutes) traffic data from the database and returns it as a string.")
-    def fetch_traffic(self) -> Annotated[str, "A string containing a list of current traffic data."]:
+    @kernel_function(description="Fetches data from the database and returns it as a string. Pass a duration in minutes to time limit the data. Pass a limit to control the number of entries to return.")
+    def fetch_traffic(self, duration: int, limit: int) -> Annotated[str, "A string containing a list of traffic data entries."]:
         query = """
         MATCH (traffic:TRAFFIC)
-        WHERE traffic.TIMESTAMP > datetime() - duration({minutes: 10})
+        WHERE traffic.TIMESTAMP > datetime() - duration({minutes: $duration})
         RETURN DISTINCT
             traffic.IP_ADDRESS AS ip_address,
             traffic.PORT AS port,
@@ -82,11 +80,11 @@ class FetchData:
             traffic.OUTLIER AS outlier,
             traffic.TIMESTAMP AS timestamp
         ORDER BY traffic.TIMESTAMP DESC
-        LIMIT 100
+        LIMIT $limit
         """
         with driver.session(database=DATABASE) as session:
             CONSOLE.print(render_info_panel("DATA", "Fetching data from the database.", CONSOLE))
-            result = session.run(query)
+            result = session.run(query, duration=duration, limit=limit)
             data = []
             for record in result:
                 data.append({

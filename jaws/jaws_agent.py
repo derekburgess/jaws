@@ -17,7 +17,7 @@ from jaws.jaws_utils import (
     render_assistant_panel,
     render_response_panel
 )
-from jaws.sk_tools import *
+from jaws.tools import *
 
 driver = dbms_connection(DATABASE)
 kernel = Kernel()
@@ -37,7 +37,7 @@ async def agent_callback(message: ChatMessageContent) -> None:
 operator = ChatCompletionAgent(
     service=lang_service,
     name="Operator",
-    description="The eyes of the network. Tasked with capturing small snapshots of network traffic data for downstream analysis.",
+    description="Tasked with capturing small snapshots of network traffic data for downstream analysis.",
     instructions=OPERATOR_PROMPT,
     plugins=[ListInterfaces(), CapturePackets()],
     arguments=KernelArguments(settings)
@@ -64,7 +64,7 @@ lead_analyst = ChatCompletionAgent(
 project_manager = ChatCompletionAgent(
     service=lang_service,
     name="ProjectManager",
-    description="Tasked with helping the team by managing their email communications and ensuring a copy of the email report is returned to the command center.",
+    description="Tasked with helping the team by managing their email communications and ensuring the situation report is returned to the command center.",
     instructions=PROJECT_MANAGER_PROMPT,
     plugins=[SendEmail()],
     arguments=KernelArguments(settings)
@@ -105,7 +105,7 @@ def main():
     with gr.Blocks(title="JAWS | Agentic Network Traffic Monitoring") as INTERFACE:
         chat_history = gr.State(value=[{
             "role": "assistant", 
-            "content": f"A collaborative group(4) of network analysts tasked with capturing 30-60 second snapshots of network traffic data, enriching the data with OSINT, and returning situation reports to the command center.\n\nMembers: {operator.name}, {data_scientist.name}, {lead_analyst.name}, {project_manager.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, SendEmail, DropDatabase",
+            "content": f"A collaborative group(4) of network analysts tasked with capturing snapshots of network traffic data, enriching the data with OSINT, and returning situation reports to the command center.\n\nMembers: {operator.name}, {data_scientist.name}, {lead_analyst.name}, {project_manager.name}\nTools: ListInterfaces, CapturePackets, DocumentOrganizations, ComputeEmbeddings, AnomalyDetection, FetchData, SendEmail, DropDatabase",
             "metadata": {"title": "🛡️ Command Center"}
         }])
         
@@ -120,7 +120,7 @@ def main():
                     show_copy_button=True,
                     height=480
                 )
-                input_text = gr.Textbox(show_label=False, container=False, placeholder="Ask the team questions about the current state of the network.")
+                input_text = gr.Textbox(show_label=False, container=False, placeholder="e.g. 'Capture for 30 seconds on the Ethernet interface.'")
                 request_button = gr.Button("💬 Report in, team", variant="huggingface")
         
         async def group_orchestration(history, input_text=""):

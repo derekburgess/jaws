@@ -9,6 +9,7 @@ from rich.console import Group
 from jaws.jaws_config import *
 from jaws.jaws_utils import (
     dbms_connection,
+    initialize_schema,
     render_error_panel,
     render_info_panel,
     render_success_panel,
@@ -100,7 +101,7 @@ def main():
     driver = dbms_connection(args.database)
     if driver is None:
         return
-
+    
     if args.list:
         interface_list = "\n".join(list_interfaces())
         if not args.agent:
@@ -108,6 +109,8 @@ def main():
         else:
             print(interface_list)
         return
+    
+    initialize_schema(driver, args.database)
 
     if args.capture_file and not os.path.isfile(args.capture_file):
         CONSOLE.print(render_error_panel("ERROR", f"File not found, please check your file path:\n{args.capture_file}", CONSOLE))
@@ -120,7 +123,7 @@ def main():
             CONSOLE.print(render_info_panel("INTERFACES", "\n".join(available_interfaces), CONSOLE))
             driver.close()
             return
-        
+    
     packets = []
     try:
         if args.capture_file:

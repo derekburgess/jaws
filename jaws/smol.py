@@ -1,10 +1,9 @@
-from datetime import datetime
 import subprocess
 import pandas as pd
-from smolagents import tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool, OpenAIServerModel #TransformersModel, HfApiModel
+from smolagents import tool, CodeAgent, ToolCallingAgent, OpenAIServerModel #TransformersModel, HfApiModel
 from jaws.jaws_config import *
 from jaws.jaws_utils import dbms_connection
-from jaws.sk_tools import send_email
+from jaws.tools import send_email
 
 driver = dbms_connection(DATABASE)
 
