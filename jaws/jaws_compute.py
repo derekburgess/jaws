@@ -4,7 +4,7 @@ from rich.console import Group
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
     render_error_panel,

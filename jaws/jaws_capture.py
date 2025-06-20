@@ -6,7 +6,7 @@ import psutil
 import pyshark
 from rich.live import Live
 from rich.console import Group
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
     initialize_schema,

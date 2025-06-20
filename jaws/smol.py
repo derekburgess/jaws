@@ -1,7 +1,7 @@
 import subprocess
 import pandas as pd
 from smolagents import tool, CodeAgent, ToolCallingAgent, OpenAIServerModel #TransformersModel, HfApiModel
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import dbms_connection
 from jaws.tools import send_email
 

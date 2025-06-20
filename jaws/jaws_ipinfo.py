@@ -2,7 +2,7 @@ import argparse
 import ipinfo
 from rich.live import Live
 from rich.console import Group
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
     render_error_panel,

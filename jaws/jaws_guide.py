@@ -1,5 +1,5 @@
 from rich import print
-from jaws.jaws_config import *
+from jaws.config import *
 
 def main():
     print(r"""[turquoise2]

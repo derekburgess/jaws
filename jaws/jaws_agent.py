@@ -9,7 +9,7 @@ from semantic_kernel.agents import ChatCompletionAgent, GroupChatOrchestration, 
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings, OpenAIChatCompletion
 from semantic_kernel.contents import ChatMessageContent
 
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
     render_error_panel,

@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Annotated
 from semantic_kernel.functions import kernel_function
 
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import *
 
 import smtplib

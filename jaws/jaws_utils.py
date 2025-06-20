@@ -2,7 +2,7 @@ import argparse
 from rich.text import Text
 from rich.panel import Panel
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from jaws.jaws_config import *
+from jaws.config import *
 
 
 # Utility functions imported elsewhere.

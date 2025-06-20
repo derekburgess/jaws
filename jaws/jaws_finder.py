@@ -8,7 +8,7 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-from jaws.jaws_config import *
+from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
     render_error_panel,
