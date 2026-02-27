@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "JAWS": {
+      "type": "sse",
+      "url": "http://localhost:8765/sse"
+    }
+  }
+}

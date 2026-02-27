@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "JAWS": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["/path/to/jaws/MCP/server.py"]
+    }
+  }
+}

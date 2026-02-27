@@ -25,8 +25,8 @@ def main():
 
     print(f"""[gray100]
     [grey85]If you plan to run transformers on device, it is recommended that you download them first:[/]
-    [green1][green1][CLI][/][/] jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}' 
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{PACKET_MODEL_ID}' or '{LANG_MODEL_ID}'
+    [green1][green1][CLI][/][/] jaws-utils --model '{PACKET_MODEL_ID}' 
+    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{PACKET_MODEL_ID}'
     [orange1][WARNING][/] This will download a large amount of data and may take some time.
     [/]""")
 
@@ -55,7 +55,13 @@ def main():
     print(f"""[gray100]
     [grey85]Agentic network security advisor:[/]
     [green1][CLI][/] jaws-agent [Microsoft Semantic Kernel] *Spawns a command center: http://127.0.0.1:7860/
-    [orange1][WARNING][/] Still experimental...
+    [orange1][WARNING][/] Experimental...
+    [/]""")
+
+    print(f"""[gray100]
+    [grey85]MCP server:[/]
+    [green1][CLI][/] jaws-mcp [grey50]OPTIONAL[/] --database '{DATABASE}'
+    [orange1][WARNING][/] Experimental...
     [/]""")
           
     print(f"""[gray100]
@@ -65,7 +71,7 @@ def main():
     [/]""")
 
     print("""[grey50]
-    version 1.5.0 BETA, 2025
+    version 2.0.0 BETA, 2026
     https://github.com/derekburgess/jaws
     [/]""")
 

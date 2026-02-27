@@ -124,9 +124,9 @@ def initialize_schema(driver, database, local_ip):
                 errors.append(str(e))
         
         if errors:
-            CONSOLE.print(render_info_panel("INFO", f"'{database}' is ready to go.", CONSOLE))
+            print(f"[INFO] '{database}' is ready to go.")
         else:
-            CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Schema has been initialized for: '{database}'", CONSOLE))
+            print(f"[PROCESS COMPLETE] Schema has been initialized for: '{database}'")
 
 
 # Drops all entities from the database.

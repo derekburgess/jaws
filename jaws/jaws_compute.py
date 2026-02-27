@@ -66,14 +66,15 @@ def add_traffic_to_database(src_ip_address, src_port, dst_ip_address, dst_port, 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def compute_transformer_embedding(input):
     tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
-    infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL) # quantization_config=BitsAndBytesConfig(load_in_8bit=True)
+    infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL)  # quantization_config=BitsAndBytesConfig(load_in_8bit=True)
+    # Ensure model and inputs are on the same device to avoid CPU/CUDA mismatches
+    infer = infer.to(device)
     inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
     with torch.no_grad():
         outputs = infer(**inputs, output_hidden_states=True, use_cache=False)
     last_hidden_states = outputs.hidden_states[-1]
     embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
     return embeddings
-
 
 def compute_openai_embedding(client, input):
     response = client.embeddings.create(input=input, model=OPENAI_EMBEDDING_MODEL)
