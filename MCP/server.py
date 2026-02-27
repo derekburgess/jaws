@@ -15,8 +15,11 @@ SCRIPTS = ROOT / "jaws"
 
 mcp = FastMCP("JAWS - Wireshark MCP with Network Analysis Tools")
 
-def _run(args: list[str]) -> str:
-    result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT)
+def _run(args: list[str], timeout: int = 600) -> str:
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return f"ERROR: process timed out after {timeout}s"
     if result.returncode != 0:
         return f"ERROR (exit {result.returncode}): {result.stderr.strip()}"
     return result.stdout.strip() or "(no output)"
@@ -38,9 +41,13 @@ def capture_packets(interface: str, duration: int) -> str:
 def document_organizations() -> str:
     return _run([sys.executable, str(SCRIPTS / "jaws_ipinfo.py"), "--agent"])
 
-@mcp.tool(name="compute_embeddings", description="Transform the network traffic data into embeddings, improving the quality of the data for downstream analysis.")
-def compute_embeddings() -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_compute.py"), "--agent"])
+@mcp.tool(name="compute_embeddings", description=(
+    "Transform the network traffic data into embeddings, improving the quality of the data for downstream analysis. "
+    "Use api='transformers' (default) when a GPU is available — the local Starcoder2 model produces tighter clusters and surfaces anomalies that OpenAI embeddings miss. "
+    "Use api='openai' only as a fallback when no GPU is present or the local model is unavailable."
+))
+def compute_embeddings(api: str = "transformers") -> str:
+    return _run([sys.executable, str(SCRIPTS / "jaws_compute.py"), "--api", api, "--agent"])
 
 @mcp.tool(name="anomaly_detection", description="Analyze the network traffic data and embeddings and return a list of anomalies.")
 def anomaly_detection() -> str:

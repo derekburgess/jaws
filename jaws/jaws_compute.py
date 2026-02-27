@@ -64,11 +64,7 @@ def add_traffic_to_database(src_ip_address, src_port, dst_ip_address, dst_port, 
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-def compute_transformer_embedding(input):
-    tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
-    infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL)  # quantization_config=BitsAndBytesConfig(load_in_8bit=True)
-    # Ensure model and inputs are on the same device to avoid CPU/CUDA mismatches
-    infer = infer.to(device)
+def compute_transformer_embedding(input, tokenizer, infer):
     inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
     with torch.no_grad():
         outputs = infer(**inputs, output_hidden_states=True, use_cache=False)
@@ -94,7 +90,13 @@ def main():
     df = fetch_data_for_embedding(driver, args.database)
     embedding_strings = []
     embedding_tensors = []
+    tokenizer = None
+    infer = None
     try:
+        if args.api == "transformers":
+            tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
+            infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL).to(device)
+
         if not args.agent:
             processing_message = f"Processing packet embeddings({len(df)}) using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
             with Live(Group(
@@ -102,18 +104,18 @@ def main():
                     render_activity_panel("EMBEDDINGS(STR)", embedding_strings, CONSOLE),
                     render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], CONSOLE)
                 ), console=CONSOLE, refresh_per_second=10) as live:
-                
+
                 for _, row in df.iterrows():
                     embedding_string = f"Source: {row['src_ip_address']}:{row['src_port']} ➜ Destination: {row['dst_ip_address']}:{row['dst_port']} | Protocol: {row['protocol']} | Size: {row['total_size']}\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
                     if args.api == "transformers":
-                        embedding = compute_transformer_embedding(embedding_string)
+                        embedding = compute_transformer_embedding(embedding_string, tokenizer, infer)
                     else:
                         embedding = compute_openai_embedding(CLIENT, embedding_string)
-                        
+
                     if embedding is not None:
-                        add_traffic_to_database(row['src_ip_address'], row['src_port'], 
+                        add_traffic_to_database(row['src_ip_address'], row['src_port'],
                                     row['dst_ip_address'], row['dst_port'], row['protocol'],
-                                    embedding, row['org'], row['hostname'], row['location'], 
+                                    embedding, row['org'], row['hostname'], row['location'],
                                     row['total_size'], driver, args.database)
                         embedding_strings.append(embedding_string)
                         embedding_tensors.append(embedding)
@@ -129,14 +131,14 @@ def main():
             for _, row in df.iterrows():
                 embedding_string = f"Source: {row['src_ip_address']}:{row['src_port']} ➜ Destination: {row['dst_ip_address']}:{row['dst_port']} | Protocol: {row['protocol']} | Size: {row['total_size']}\nOrganization: {row['org']} | Hostname: {row['hostname']} | Location: {row['location']}\n"
                 if args.api == "transformers":
-                    embedding = compute_transformer_embedding(embedding_string)
+                    embedding = compute_transformer_embedding(embedding_string, tokenizer, infer)
                 else:
                     embedding = compute_openai_embedding(CLIENT, embedding_string)
-                    
+
                 if embedding is not None:
-                    add_traffic_to_database(row['src_ip_address'], row['src_port'], 
+                    add_traffic_to_database(row['src_ip_address'], row['src_port'],
                                 row['dst_ip_address'], row['dst_port'], row['protocol'],
-                                embedding, row['org'], row['hostname'], row['location'], 
+                                embedding, row['org'], row['hostname'], row['location'],
                                 row['total_size'], driver, args.database)
                     embedding_strings.append(embedding_string)
                     embedding_tensors.append(embedding)
@@ -147,9 +149,15 @@ def main():
         if not args.agent:
             CONSOLE.print(render_error_panel("ERROR", f"{str(e)}", CONSOLE))
         else:
-            return f"\n[ERROR] {str(e)}\n"
+            print(f"\n[ERROR] {str(e)}\n")
         
     finally:
+        if infer is not None:
+            del infer
+        if tokenizer is not None:
+            del tokenizer
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         driver.close()
 
 if __name__ == "__main__":
