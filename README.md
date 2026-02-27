@@ -1,6 +1,11 @@
 # JAWS
 ![hehe](/assets/cover.jpg)
 
+## 2026
+
+A little late to the game, but added an MCP server, which uses the same tools as `jaws-agent`. Essentially, this repo becomes a means of deploy and configuring a Wireshark MCP with some additional network analysis tools/skills. Deploy to a raspberry pi at the edge of a network (passive lan taps work great) and run the MCP server from it.
+
+Removed `smol.py` and never rewrote the agent using LangGraph, maybe next year...
 
 ## 2025
 

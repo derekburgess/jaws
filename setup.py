@@ -23,9 +23,9 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.5.0',
+    version='2.0.0',
 
-    description='Agentic packet capture and anomaly detection system',
+    description='Agentic packet capture and anomaly detection system with MCP server',
     long_description=long_description,
 
     # Choose your license
@@ -46,7 +46,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='networking, analysis, visualization',
+    keywords='networking, analysis, visualization, agents, mcp',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -95,7 +95,8 @@ setup(
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
            'jaws-agent = jaws.jaws_agent:main',
-           'jaws-utils = jaws.jaws_utils:main' 
+           'jaws-utils = jaws.jaws_utils:main',
+           'jaws-mcp = MCP.server:main',
        ],
     },
 )

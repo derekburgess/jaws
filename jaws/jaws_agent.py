@@ -19,7 +19,6 @@ from jaws.jaws_utils import (
 )
 from jaws.tools import *
 
-driver = dbms_connection(DATABASE)
 kernel = Kernel()
 settings = OpenAIChatPromptExecutionSettings()
 
@@ -93,7 +92,7 @@ async def orchestration(input: str) -> str:
         response = await result.get()
         response_text = str(response.content)
         CONSOLE.print(render_response_panel("RESPONSE", response_text, CONSOLE))
-        return response.content
+        return response_text
     except Exception as e:
         CONSOLE.print(render_error_panel("ERROR", str(e), CONSOLE))
         response = None

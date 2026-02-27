@@ -1,5 +1,6 @@
 from datetime import datetime
 import subprocess
+import sys
 import pandas as pd
 
 from typing import Annotated
@@ -12,56 +13,63 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-driver = dbms_connection(DATABASE)
+_driver = None
 
+def _get_driver():
+    global _driver
+    if _driver is None:
+        _driver = dbms_connection(DATABASE)
+    return _driver
 
+def _run(args: list[str]) -> str:
+    result = subprocess.run(args, capture_output=True, text=True)
+    if result.returncode != 0:
+        return f"ERROR (exit {result.returncode}): {result.stderr.strip()}"
+    return result.stdout.strip() or "(no output)"
+
+# Semantic Kernel Tools.
 class ListInterfaces:
     @kernel_function(description="List available network interfaces. You will never want to select any virtual or loopback interfaces such as; 'lo' and 'docker0'.")
     def list_interfaces(self) -> Annotated[str, "A list of available network interfaces."]:
         CONSOLE.print(render_info_panel("TOOL", "Checking for available network interfaces.", CONSOLE))
-        interfaces = subprocess.run(['python', './jaws/jaws_capture.py', '--list', '--agent'], capture_output=True, text=True)
-        return str(interfaces.stdout)
+        return _run([sys.executable, './jaws/jaws_capture.py', '--list', '--agent'])
 
 
 class CapturePackets:
     @kernel_function(description="Captures packets into the database. Pass a duration in seconds depending on the amount of data you want to capture.")
     def capture_packets(self, interface: str, duration: int) -> Annotated[str, "A system message once the process is complete."]:
         CONSOLE.print(render_info_panel("TOOL", f"Capturing network traffic on '{interface}' for {duration} seconds.", CONSOLE))
-        packets = subprocess.run(['python', './jaws/jaws_capture.py', '--interface', interface, '--duration', str(duration), '--agent'], capture_output=True, text=True)
-        return str(packets.stdout)
+        return _run([sys.executable, './jaws/jaws_capture.py', '--interface', interface, '--duration', str(duration), '--agent'])
 
 
 class DocumentOrganizations:
     @kernel_function(description="Enriches data with organization ownership by looking up IP addresses.")
     def document_organizations(self) -> Annotated[str, "A system message once the process is complete."]:
         CONSOLE.print(render_info_panel("TOOL", "Enriching data with organization ownership.", CONSOLE))
-        organizations = subprocess.run(['python', './jaws/jaws_ipinfo.py', '--agent'], capture_output=True, text=True)
-        return str(organizations.stdout)
+        return _run([sys.executable, './jaws/jaws_ipinfo.py', '--agent'])
 
 
 class ComputeEmbeddings:
     @kernel_function(description="Transforms the network traffic data into embeddings, improving the quality of the data for downstream analysis.")
     def compute_embeddings(self) -> Annotated[str, "A system message once the process is complete."]:
         CONSOLE.print(render_info_panel("TOOL", "Transforming data into embeddings.", CONSOLE))
-        embeddings = subprocess.run(['python', './jaws/jaws_compute.py', '--agent'], capture_output=True, text=True)
-        return str(embeddings.stdout)
+        return _run([sys.executable, './jaws/jaws_compute.py', '--agent'])
 
 
 class AnomalyDetection:
     @kernel_function(description="Analyzes the network traffic data and embeddings and returns a list of anomalies.")
-    def anomoly_detection(self) -> Annotated[str, "A string containing a list of anomalies."]:
+    def anomaly_detection(self) -> Annotated[str, "A string containing a list of anomalies."]:
         CONSOLE.print(render_info_panel("TOOL", "Analyzing data for anomalies.", CONSOLE))
-        output = subprocess.run(['python', './jaws/jaws_finder.py', '--agent'], capture_output=True, text=True)
-        CONSOLE.print(render_assistant_panel("OUTPUT", str(output.stdout), CONSOLE))
-        return str(output.stdout)
+        output = _run([sys.executable, './jaws/jaws_finder.py', '--agent'])
+        CONSOLE.print(render_assistant_panel("OUTPUT", output, CONSOLE))
+        return output
 
 
 class DropDatabase:
     @kernel_function(description="Clears the database of all data.")
     def drop_database(self) -> Annotated[str, "A system message once the process is complete."]:
         CONSOLE.print(render_info_panel("TOOL", "Cleaning up the database.", CONSOLE))
-        output = subprocess.run(['python', './jaws/jaws_utils.py', '--agent'], capture_output=True, text=True)
-        return str(output.stdout)
+        return _run([sys.executable, './jaws/jaws_utils.py', '--agent'])
 
 
 class FetchData:
@@ -85,7 +93,7 @@ class FetchData:
         ORDER BY traffic.TIMESTAMP DESC
         LIMIT $limit
         """
-        with driver.session(database=DATABASE) as session:
+        with _get_driver().session(database=DATABASE) as session:
             CONSOLE.print(render_info_panel("DATA", f"Fetching records({limit}) from the database for the last {duration} minutes.", CONSOLE))
             result = session.run(query, duration=duration, limit=limit)
             data = []
