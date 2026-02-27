@@ -55,13 +55,13 @@ def main():
     print(f"""[gray100]
     [grey85]Agentic network security advisor:[/]
     [green1][CLI][/] jaws-agent [Microsoft Semantic Kernel] *Spawns a command center: http://127.0.0.1:7860/
-    [orange1][WARNING][/] Experimental...
+    [orange1][WARNING][/] Experimental
     [/]""")
 
     print(f"""[gray100]
     [grey85]MCP server:[/]
-    [green1][CLI][/] jaws-mcp [grey50]OPTIONAL[/] --database '{DATABASE}'
-    [orange1][WARNING][/] Experimental...
+    [green1][CLI][/] jaws-mcp --sse
+    [orange1][WARNING][/] Experimental
     [/]""")
           
     print(f"""[gray100]
