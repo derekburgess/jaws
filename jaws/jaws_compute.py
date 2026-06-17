@@ -3,7 +3,7 @@ from rich.live import Live
 from rich.console import Group
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModel, BitsAndBytesConfig
 from jaws.config import *
 from jaws.jaws_utils import (
     dbms_connection,
@@ -67,9 +67,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def compute_transformer_embedding(input, tokenizer, infer):
     inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
     with torch.no_grad():
-        outputs = infer(**inputs, output_hidden_states=True, use_cache=False)
-    last_hidden_states = outputs.hidden_states[-1]
-    embeddings = last_hidden_states[:, 0, :].cpu().numpy().tolist()[0]
+        outputs = infer(**inputs)
+    last_hidden_states = outputs.last_hidden_state
+    # jina-embeddings-v2-base-code is a purpose-built embedding model that expects mean pooling
+    # over the real (non-padding) tokens, then L2-normalization for calibrated cosine geometry
+    # in downstream clustering.
+    mask = inputs["attention_mask"].unsqueeze(-1).to(last_hidden_states.dtype)
+    summed = (last_hidden_states * mask).sum(dim=1)
+    counts = mask.sum(dim=1).clamp(min=1e-9)
+    mean_pooled = summed / counts
+    normalized = torch.nn.functional.normalize(mean_pooled, p=2, dim=-1)
+    embeddings = normalized.cpu().numpy().tolist()[0]
     return embeddings
 
 def compute_openai_embedding(client, input):
@@ -94,8 +102,8 @@ def main():
     infer = None
     try:
         if args.api == "transformers":
-            tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL)
-            infer = AutoModelForCausalLM.from_pretrained(PACKET_MODEL).to(device)
+            tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL, trust_remote_code=True)
+            infer = AutoModel.from_pretrained(PACKET_MODEL, trust_remote_code=True).to(device)
 
         if not args.agent:
             processing_message = f"Processing packet embeddings({len(df)}) using: {PACKET_MODEL +f"({device})" if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"

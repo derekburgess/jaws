@@ -1,7 +1,7 @@
 import argparse
 from rich.text import Text
 from rich.panel import Panel
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModel
 from jaws.config import *
 
 
@@ -50,8 +50,8 @@ def render_activity_panel(title, recent_packets, console, height=10):
 def download_model(model):
     try:
         CONSOLE.print(render_info_panel("INFO", f"Downloading: {model}", CONSOLE))
-        AutoTokenizer.from_pretrained(model)
-        AutoModelForCausalLM.from_pretrained(model)
+        AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+        AutoModel.from_pretrained(model, trust_remote_code=True)
         CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Downloaded: {model}", CONSOLE))
     except Exception as e:
         CONSOLE.print(render_error_panel("ERROR", f"{model}\n\n{str(e)}", CONSOLE))

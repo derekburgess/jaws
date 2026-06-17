@@ -23,8 +23,10 @@ OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_REASONING_MODEL = "o4-mini"
 
 # The packet model is used to process packet strings into embeddings.
-PACKET_MODEL = "bigcode/starcoder2-3b"
-PACKET_MODEL_ID = "starcoder"
+# jina-embeddings-v2-base-code is a purpose-built, code-specialized embedding model (mean pooled)
+# loaded with AutoModel and trust_remote_code in jaws_compute/jaws_utils. It runs fully local.
+PACKET_MODEL = "jinaai/jina-embeddings-v2-base-code"
+PACKET_MODEL_ID = "jina-code"
 
 # Saves plots to this location.
 FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
