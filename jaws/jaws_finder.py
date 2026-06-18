@@ -1,5 +1,7 @@
 import os
 import argparse
+import tempfile
+import json
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
@@ -7,41 +9,43 @@ from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-from jaws.config import *
+from jaws.config import DATABASE, FINDER_ENDPOINT
 from jaws.jaws_utils import (
     dbms_connection,
-    render_error_panel,
-    render_info_panel,
-    render_success_panel
+    Reporter
 )
 
 
 def fetch_data_for_dbscan(driver, database):
     query = """
-    MATCH (traffic:TRAFFIC)
-    OPTIONAL MATCH (src_ip:IP_ADDRESS {IP_ADDRESS: traffic.SRC_IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
-    RETURN traffic.SRC_IP_ADDRESS AS ip_address,
-           traffic.SRC_PORT AS port,
-           COALESCE(traffic.ORGANIZATION, org.ORGANIZATION, 'Unknown') AS org,
-           COALESCE(traffic.HOSTNAME, org.HOSTNAME, 'Unknown') AS hostname,
-           COALESCE(traffic.LOCATION, org.LOCATION, 'Unknown') AS location,
-           traffic.EMBEDDING AS embedding,
-           traffic.TOTAL_SIZE AS total_size
+    MATCH (endpoint:ENDPOINT)
+    OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
+    RETURN endpoint.IP_ADDRESS AS ip_address,
+           COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION, 'Unknown') AS org,
+           COALESCE(endpoint.HOSTNAME, ip.HOSTNAME, 'Unknown') AS hostname,
+           COALESCE(endpoint.LOCATION, ip.LOCATION, 'Unknown') AS location,
+           endpoint.BYTES_OUT AS bytes_out,
+           endpoint.PACKETS_OUT AS packets_out,
+           endpoint.BYTES_IN AS bytes_in,
+           endpoint.PACKETS_IN AS packets_in,
+           endpoint.EMBEDDING AS embedding
     """
     with driver.session(database=database) as session:
         result = session.run(query)
         embeddings = []
         data = []
         for record in result:
-            if record['embedding'] is not None:  # Only process records with embeddings
+            if record['embedding'] is not None:  # Only process endpoints with embeddings
                 embeddings.append(np.array(record['embedding']))
                 data.append({
                     'ip_address': record['ip_address'] or 'Unknown',
-                    'port': record['port'] or 0,
                     'org': record['org'] or 'Unknown',
                     'hostname': record['hostname'] or 'Unknown',
                     'location': record['location'] or 'Unknown',
-                    'total_size': record['total_size'] or 0,
+                    'bytes_out': record['bytes_out'] or 0,
+                    'packets_out': record['packets_out'] or 0,
+                    'bytes_in': record['bytes_in'] or 0,
+                    'packets_in': record['packets_in'] or 0,
                 })
         return embeddings, data
 
@@ -61,8 +65,8 @@ def fetch_data_for_portsize(driver, database):
 def add_outlier_to_database(outlier_list, driver, database):
     query = """
     UNWIND $outliers AS outlier
-    MATCH (traffic:TRAFFIC {SRC_IP_ADDRESS: outlier.ip_address, SRC_PORT: outlier.port})
-    SET traffic.OUTLIER = true
+    MATCH (endpoint:ENDPOINT {IP_ADDRESS: outlier.ip_address})
+    SET endpoint.OUTLIER = true
     """
     parameters = {'outliers': outlier_list}
     with driver.session(database=database) as session:
@@ -129,29 +133,32 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
 def main():
     parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
-    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     parser.add_argument("--components", type=int, default=2, help="Number of PCA components to retain for clustering. The first 2 are always used for plotting, so values below 2 are clamped (default: 2).")
     parser.add_argument("--whiten", action="store_true", help="Whiten the PCA components (scale each to unit variance). Improves geometry with few strong components, but amplifies noise when retaining many low-variance components (default: off).")
+    parser.add_argument("--eps", type=float, default=None, help="DBSCAN epsilon. When omitted, it is auto-recommended from the k-distance knee. The knee tends to overshoot on small/homogeneous datasets (folding everything into one cluster, 0 outliers) — pass a smaller value to surface more outliers.")
     args = parser.parse_args()
+    reporter = Reporter()
     if args.components < 2:
         args.components = 2
-    driver = dbms_connection(args.database)
+    # Where plots are written. Falls back to a temp dir when JAWS_FINDER_ENDPOINT
+    # is unset (e.g. a bare MCP/headless run) so saving never crashes, and the
+    # directory is created if missing.
+    endpoint = FINDER_ENDPOINT or os.path.join(tempfile.gettempdir(), "jaws")
+    os.makedirs(endpoint, exist_ok=True)
+    driver = dbms_connection(args.database, reporter)
     if driver is None:
         return
-    
+
     embeddings, data = fetch_data_for_dbscan(driver, args.database)
     plot_data = fetch_data_for_portsize(driver, args.database)
     portsize_info_message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", portsize_info_message, CONSOLE))
-        plot_size_over_ports(plot_data, FINDER_ENDPOINT)
+    if not reporter.agent:
+        reporter.info("INFO", portsize_info_message)
+        plot_size_over_ports(plot_data, endpoint)
 
     embeddings_array = np.array(embeddings)
     pca_info_message = f"Performing PCA(Principal Component Analysis) on embeddings({len(embeddings_array)}).\nThis reduces the dimensionality of the embeddings to {args.components} dimensions."
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", pca_info_message, CONSOLE))
-    else:
-        print(f"[INFO] {pca_info_message}\n")
+    reporter.info("INFO", pca_info_message)
 
     # PCA centers the data automatically, replacing the prior StandardScaler step. Optional
     # whitening (--whiten) scales each component to unit variance: helpful with a few strong
@@ -166,66 +173,52 @@ def main():
         f"PCA explained variance ratio: {per_component} "
         f"(total {explained.sum():.2%} of variance retained in {args.components} dimensions)."
     )
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", explained_variance_message, CONSOLE))
-    else:
-        print(f"[INFO] {explained_variance_message}\n")
+    reporter.info("INFO", explained_variance_message)
 
     kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", kdistance_info_message, CONSOLE))
-    else:
-        print(f"[INFO] {kdistance_info_message}\n")
-    
+    reporter.info("INFO", kdistance_info_message)
+
     min_samples = 2 * args.components
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(principal_components)
     distances, _ = nearest_neighbors.kneighbors(principal_components)
     k_distances = distances[:, min_samples - 1]
     sorted_k_distances = np.sort(k_distances)
-    if not args.agent:
-        plot_k_distances(sorted_k_distances, FINDER_ENDPOINT)
+    if not reporter.agent:
+        plot_k_distances(sorted_k_distances, endpoint)
 
     kneed_info_message = "Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot."
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", kneed_info_message, CONSOLE))
-    else:
-        print(f"[INFO] {kneed_info_message}\n")
+    reporter.info("INFO", kneed_info_message)
 
-    kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
-    if kneedle.knee is not None:
-        eps_value = sorted_k_distances[kneedle.knee]
-        kneed_found_message = f"Knee point found at index: {kneedle.knee}"
-        if not args.agent:
-            CONSOLE.print(render_info_panel("INFO", kneed_found_message, CONSOLE))
-        else:
-            print(f"[INFO] {kneed_found_message}\n")
+    if args.eps is not None:
+        # Explicit override — skip the knee recommendation and the interactive prompt.
+        eps_value = args.eps
+        reporter.info("CONFIG", f"Using provided EPS: {eps_value}")
     else:
-        kneed_not_found_message = "Knee point not found. Using default EPS."
-        if not args.agent:
-            CONSOLE.print(render_info_panel("INFO", kneed_not_found_message, CONSOLE))
+        kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
+        if kneedle.knee is not None:
+            eps_value = sorted_k_distances[kneedle.knee]
+            reporter.info("INFO", f"Knee point found at index: {kneedle.knee}")
         else:
-            print(f"[INFO] {kneed_not_found_message}\n")
-        eps_value = np.median(sorted_k_distances)
+            reporter.info("INFO", "Knee point not found. Using default EPS.")
+            eps_value = np.median(sorted_k_distances)
 
-    if not args.agent:
-        user_input = input(f"[RECOMMENDED EPS] {eps_value} | Press ENTER to accept, or provide a value: ")
-        if user_input:
-            try:
-                eps_value = float(user_input)
-            except ValueError:
-                CONSOLE.print(render_error_panel("ERROR", "Invalid input. Using the recommended EPS value.", CONSOLE))
-    else:
-        print(f"[CONFIG] Skipping user input and passing EPS value.")
-    
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFORMATION", "Matplotlib plots will be generated after passing an EPS value.", CONSOLE))
+        if not reporter.agent:
+            user_input = input(f"[RECOMMENDED EPS] {eps_value} | Press ENTER to accept, or provide a value: ")
+            if user_input:
+                try:
+                    eps_value = float(user_input)
+                except ValueError:
+                    reporter.error("ERROR", "Invalid input. Using the recommended EPS value.")
+            reporter.info("INFORMATION", "Matplotlib plots will be generated after passing an EPS value.")
+        else:
+            reporter.info("CONFIG", "Skipping user input and passing the recommended EPS value.")
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(principal_components)
 
-    if not args.agent:
-        CONSOLE.print(render_info_panel("INFO", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.", CONSOLE))
+    if not reporter.agent:
+        reporter.info("INFO", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.")
 
     plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components: {args.components}, min_samples: {min_samples}, eps: {eps_value}', figsize=(8, 7))
     clustered_indices = clusters != -1
@@ -237,7 +230,7 @@ def main():
                 color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
 
     for i, item in enumerate(data):
-        annotation_text = f"{item['ip_address']}:{item['port']}({item['total_size']})\n{item['org']}\n{item['hostname']}\n{item['location']}"
+        annotation_text = f"{item['ip_address']}\n{item['org']}\n{item['hostname']}\n{item['location']}\nout {item['bytes_out']}B/{item['packets_out']}p | in {item['bytes_in']}B/{item['packets_in']}p"
         if clusters[i] == -1:
             # Outlier
             bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
@@ -271,7 +264,7 @@ def main():
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_outliers = os.path.join(FINDER_ENDPOINT, 'pca_dbscan_outliers.png')
+    save_outliers = os.path.join(endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
     outlier_plotille = plotille.Figure()
@@ -285,34 +278,43 @@ def main():
     outlier_plotille.scatter(clustered_indices_pc1, clustered_indices_pc2, marker="^")
     outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
     display_outlier = outlier_plotille.show(legend=False)
-    
-    if not args.agent:
-        print(display_outlier)
-    
+
+    if not reporter.agent:
+        reporter.raw(display_outlier)
+
     outlier_data = [
         {
             'ip_address': item['ip_address'],
-            'port': item['port'],
             'org': item['org'],
             'hostname': item['hostname'],
             'location': item['location'],
-            'total_size': item['total_size']
+            'bytes_out': item['bytes_out'],
+            'packets_out': item['packets_out'],
+            'bytes_in': item['bytes_in'],
+            'packets_in': item['packets_in'],
         } for i, item in enumerate(data) if clusters[i] == -1
     ]
 
     add_outlier_to_database(outlier_data, driver, args.database)
 
-    formatted_output = """"""
-    for item in outlier_data:
-        formatted_output += f"\nIP Address: {item['ip_address']}\nPort: {item['port']}\nOrganization: {item['org']}\nHostname: {item['hostname']}\nLocation: {item['location']}\nTotal Size: {item['total_size']}\n"
-
-    if not args.agent:
+    if not reporter.agent:
         plt.show()
-        CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Plots saved to: {FINDER_ENDPOINT}", CONSOLE))
+        reporter.success("PROCESS COMPLETE", f"Plots saved to: {endpoint}")
     else:
-        print(formatted_output)
-        print(f"[PROCESS COMPLETE] Graph populated with traffic and outliers.")
-    
+        # Return an actionable, structured result so the caller can tell
+        # "0 outliers found" from "nothing populated", and can see the
+        # clustering parameters that produced it.
+        result = {
+            "endpoints_clustered": len(data),
+            "outliers_flagged": len(outlier_data),
+            "eps": round(float(eps_value), 4),
+            "min_samples": min_samples,
+            "components": args.components,
+            "outliers": outlier_data,
+        }
+        reporter.raw(json.dumps(result, default=str, indent=2))
+        reporter.success("PROCESS COMPLETE", f"Clustered {len(data)} endpoints (per IP); {len(outlier_data)} outlier(s) flagged.")
+
     driver.close()
 
 if __name__ == "__main__":

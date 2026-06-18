@@ -1,5 +1,6 @@
 neo4j
 pyshark
+psutil
 pandas
 numpy
 scikit-learn
@@ -8,9 +9,8 @@ torch
 accelerate
 bitsandbytes
 transformers
-openai
+openai>=2,<3
 vllm
-semantic-kernel
 smolagents
 duckduckgo-search
 langchain
@@ -22,7 +22,6 @@ matplotlib
 requests
 rich
 plotille
-gradio
 ipinfo
 mlflow
 mcp

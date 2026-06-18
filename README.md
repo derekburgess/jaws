@@ -17,7 +17,7 @@ Running `jaws-agent` utilizes Microsoft's [Semantic Kernel](https://github.com/m
 
 ## Context
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, StarCoder2, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, Jina Code embeddings, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
 
 
 ## Prerequisites and initial setup
@@ -123,7 +123,7 @@ Both jaws-compute (text-embedding-3-large) and the jaws-advisor (gpt-4.1) are se
 `OPENAI_API_KEY`
 
 
-Somewhat Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --download model, jaws can download and run on device models from Hugging Face. jaws-compute currently uses bigcode/starcoder2-3b to create embeddings. Feel free to adjust the model usage, but either way create an env variable for:
+Somewhat Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --model jina-code, jaws can download and run on device models from Hugging Face. jaws-compute currently uses jinaai/jina-embeddings-v2-base-code to create embeddings. Feel free to adjust the model usage, but either way create an env variable for:
 
 `HUGGINGFACE_API_KEY`
 
@@ -180,7 +180,7 @@ From the /jaws/ocean directory run:
 
 To pull the Hugging Face models, run jaws-utils with the model argument.
 
-`docker exec -it jaws-container jaws-utils --model starcoder`
+`docker exec -it jaws-container jaws-utils --model jina-code`
 
 
 To use the container run:

@@ -1,25 +1,23 @@
 import argparse
 import ipinfo
-from rich.live import Live
 from rich.console import Group
-from jaws.config import *
+from jaws.config import CONSOLE, DATABASE, IPINFO_API_KEY
 from jaws.jaws_utils import (
     dbms_connection,
-    render_error_panel,
+    Reporter,
     render_info_panel,
-    render_success_panel,
     render_activity_panel
 )
 
 
-def get_ipinfo(ip_address, ipinfo_api_key):
+def get_ipinfo(ip_address, ipinfo_api_key, reporter):
     try:
         handler = ipinfo.getHandler(ipinfo_api_key)
         details = handler.getDetails(ip_address)
         #print(details.all)
         return details.all
     except Exception as e:
-        CONSOLE.print(render_error_panel("ERROR", f"{ip_address} | {e}", CONSOLE))
+        reporter.error("ERROR", f"{ip_address} | {e}")
         return None
 
 
@@ -39,7 +37,7 @@ def add_organization_to_database(ip_address, ipinfo, driver, database):
     MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (org:ORGANIZATION {ORGANIZATION: $org})
     MERGE (ip_address)<-[:OWNERSHIP]-(org)
-    SET org.HOSTNAME = $hostname, org.LOCATION = $location
+    SET ip_address.HOSTNAME = $hostname, ip_address.LOCATION = $location
     """
     with driver.session(database=database) as session:
         session.run(query, {
@@ -53,62 +51,42 @@ def add_organization_to_database(ip_address, ipinfo, driver, database):
 def main():
     parser = argparse.ArgumentParser(description="Update the database with IP organization information from Ipinfo.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
-    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
-    driver = dbms_connection(args.database)
+    reporter = Reporter()
+    driver = dbms_connection(args.database, reporter)
     if driver is None:
         return
-    
+
     ip_addresses = fetch_data_for_organization(driver, args.database)
     if not ip_addresses:
-        if not args.agent:
-            CONSOLE.print(render_info_panel("INFO", f"No undocumented addresses.", CONSOLE))
-            driver.close()
-            return
-        else:
-            return f"[INFO] No undocumented addresses."
-    
-    organizations = []
-    try:
-        if not args.agent:
-            address_message = f"Found undocumented addresses({len(ip_addresses)})"
-            with Live(Group(
-                    render_info_panel("CONFIG", address_message, CONSOLE),
-                    render_activity_panel("ORGANIZATIONS", organizations, CONSOLE)
-                ), console=CONSOLE, refresh_per_second=10) as live:
-                
-                for ip_address in ip_addresses:
-                    ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
-                    if ipinfo:
-                        add_organization_to_database(ip_address, ipinfo, driver, args.database)
-                        org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
-                        org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
-                        organizations.append(org_string)
-                        live.update(Group(
-                            render_info_panel("CONFIG", address_message, CONSOLE),
-                            render_activity_panel("ORGANIZATIONS", organizations, CONSOLE)
-                        ))
+        reporter.info("INFO", "No undocumented addresses.")
+        driver.close()
+        return
 
-                live.stop()
-                CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Organizations({len(organizations)}) added to: '{args.database}'", CONSOLE))
-        else:
+    organizations = []
+    address_message = f"Found undocumented addresses({len(ip_addresses)})"
+
+    def render():
+        return Group(
+            render_info_panel("CONFIG", address_message, CONSOLE),
+            render_activity_panel("ORGANIZATIONS", organizations, CONSOLE)
+        )
+
+    try:
+        with reporter.activity(render) as update:
             for ip_address in ip_addresses:
-                ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY)
+                ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY, reporter)
                 if ipinfo:
                     add_organization_to_database(ip_address, ipinfo, driver, args.database)
                     org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
-            print(f"[PROCESS COMPLETE] Organizations({len(organizations)}) added to: '{args.database}'")
-        return
+                    update(org_string)
+        reporter.success("PROCESS COMPLETE", f"Organizations({len(organizations)}) added to: '{args.database}'")
 
     except Exception as e:
-        if not args.agent:
-            CONSOLE.print(render_error_panel("ERROR", f"{str(e)}", CONSOLE))
-            return
-        else:
-            return f"[ERROR] {str(e)}"
-        
+        reporter.error("ERROR", str(e))
+
     finally:
         driver.close()
 
