@@ -88,8 +88,8 @@ def main():
 
     print(f"""[gray100]
     [grey85]MCP server:[/]
-    [green1][CLI][/] jaws-mcp --sse
-    [grey85]This will run a local MCP server to allow JAWS usage by agents such as Claude Code.[/]
+    [green1][CLI][/] jaws-mcp [grey50]OPTIONAL[/] --host '0.0.0.0' --port 8765 [grey50]OR[/] --stdio
+    [grey85]Runs an SSE MCP server (default) so agents such as Claude Code can use JAWS. Pass --stdio for spawn-based clients.[/]
     [/]""")
 
     print("""[grey50]

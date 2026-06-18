@@ -190,17 +190,17 @@ def fetch_traffic(duration: int = 60, limit: int = 100) -> str:
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sse", action="store_true")
+    parser.add_argument("--stdio", action="store_true", help="Serve over stdio (for MCP clients that spawn the server) instead of the default SSE HTTP server.")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
 
-    if args.sse:
+    if args.stdio:
+        mcp.run(transport="stdio")
+    else:
         mcp.settings.host = args.host
         mcp.settings.port = args.port
         mcp.run(transport="sse")
-    else:
-        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":

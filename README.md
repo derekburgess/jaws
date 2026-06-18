@@ -3,17 +3,13 @@
 
 ## 2026
 
-A little late to the game, but added an MCP server, which uses the same tools as `jaws-agent`. Essentially, this repo becomes a means of deploy and configuring a Wireshark MCP with some additional network analysis tools/skills. Deploy to a raspberry pi at the edge of a network (passive lan taps work great) and run the MCP server from it.
+JAWS is now an MCP server first. The Semantic Kernel `jaws-agent` and the older `smol.py` experiment have been removed — instead of bundling agents, JAWS exposes its pipeline as MCP tools (`jaws-mcp`) that any MCP client (e.g. Claude Code) can drive. Deploy to a Raspberry Pi at the edge of a network (passive LAN taps work great) and run the MCP server from it.
 
-Removed `smol.py` and never rewrote the agent using LangGraph, maybe next year...
+Reworked the analysis model: traffic is now aggregated into one **endpoint profile per IP address** (labeled with its organization), describing inbound/outbound bytes, packets, peers, ports, and protocols. Anomaly detection clusters those endpoints, blending the embedding with standardized behavioral features so volume/fan-out outliers (e.g. unusual outbound traffic) actually surface. Local embeddings moved to sentence-transformers with a small model registry (`config.PACKET_MODELS`), so swapping/adding models is a one-line change.
 
 ## 2025
 
-Refactored the experience to become more agentic. Along with the CLI commands/UX, the agent commands specifically demonstrates agents capable of collecting data, using tools, and providing analysis.
-
-Running `smol.py` utilizes the [smolagents](https://huggingface.co/docs/smolagents/en/index) library to orchistrate 2 agents in a managed hand-off workflow. A manager agent hands the task off to a network analyst, who collects and prepares the data, handing that data back off to the manager, who returns a report.
-
-Running `jaws-agent` utilizes Microsoft's [Semantic Kernel](https://github.com/microsoft/semantic-kernel) library to explore various agent orchsitration paradigms. An interactive command center available at `http://127.0.0.1:7860/` supports conversational and structured report generation. Both agents send emails containing the final report, you will need to set these variables for that to work: `EMAIL_SENDER`, `EMAIL_RECIPIENT`, `EMAIL_PASSWORD`, `EMAIL_SERVER`, `EMAIL_PORT`.
+Refactored the experience to be more agentic — CLI commands plus experimental agents that collected data, used tools, and produced analysis. `smol.py` used smolagents to orchestrate a manager/analyst hand-off; `jaws-agent` used Microsoft Semantic Kernel with a Gradio command center. Both have since been removed in favor of the MCP server (see 2026).
 
 ## Context
 
@@ -118,7 +114,7 @@ To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](ht
 `IPINFO_API_KEY`
 
 
-Both jaws-compute (text-embedding-3-large) and the jaws-advisor (gpt-4.1) are set to use OpenAI by default. These commands require that you have an OpenAI account (not free) and create an env variable for: 
+jaws-compute uses OpenAI (text-embedding-3-large) by default. This requires that you have an OpenAI account (not free) and create an env variable for: 
 
 `OPENAI_API_KEY`
 

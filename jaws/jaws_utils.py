@@ -31,21 +31,6 @@ def render_success_panel(title,message, console):
     return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="green", width=width)
 
 
-def render_input_panel(title,message, console):
-    width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="cornflower_blue", width=width)
-
-
-def render_assistant_panel(title,message, console):
-    width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="yellow", width=width)
-
-
-def render_response_panel(title,message, console):
-    width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="green", width=width)
-
-
 def render_activity_panel(title, recent_packets, console, height=10):
     width = console.size.width
     lines = recent_packets[-(height-2):]
