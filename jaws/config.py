@@ -45,11 +45,17 @@ OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_REASONING_MODEL = "o4-mini"
 
-# The packet model is used to process packet strings into embeddings.
-# jina-embeddings-v2-base-code is a purpose-built, code-specialized embedding model (mean pooled)
-# loaded with AutoModel and trust_remote_code in jaws_compute/jaws_utils. It runs fully local.
-PACKET_MODEL = "jinaai/jina-embeddings-v2-base-code"
-PACKET_MODEL_ID = "jina-code"
+# Local embedding models, selectable by short id (jaws-compute --model <id>). They run
+# fully on-device via sentence-transformers, which reads each model's own pooling and
+# normalization config — so adding a model needs no new code, just an id -> HF name entry.
+PACKET_MODELS = {
+    "jina-code": "jinaai/jina-embeddings-v2-base-code",
+    # Add more here, e.g.:
+    # "bge-small": "BAAI/bge-small-en-v1.5",
+    # "nomic": "nomic-ai/nomic-embed-text-v1.5",
+    # "gte-base": "thenlper/gte-base",
+}
+DEFAULT_PACKET_MODEL = "jina-code"
 
 # Saves plots to this location.
 FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")

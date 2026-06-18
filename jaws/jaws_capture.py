@@ -129,11 +129,8 @@ def main():
 
     try:
         if args.list:
-            interface_list = "\n".join(list_interfaces())
-            if reporter.agent:
-                reporter.raw(interface_list)
-            else:
-                CONSOLE.print(render_info_panel("INTERFACES", interface_list, CONSOLE))
+            interfaces = list_interfaces()
+            reporter.result({"interfaces": interfaces}, summary="\n".join(interfaces))
             return
 
         initialize_schema(driver, args.database, local_ip, reporter)
@@ -145,8 +142,7 @@ def main():
         if args.interface and not args.capture_file:
             available_interfaces = list_interfaces()
             if args.interface not in available_interfaces:
-                reporter.error("ERROR", f"{args.interface} interface not found.\nSelect an interface from the list below.")
-                reporter.info("INTERFACES", "\n".join(available_interfaces))
+                reporter.error("ERROR", f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.")
                 return
 
         if args.capture_file:
@@ -181,7 +177,11 @@ def main():
 
         flush_batch()
 
-        reporter.success("PROCESS COMPLETE", f"Packets({len(packets)}) added to: '{args.database}'")
+        source = args.capture_file if args.capture_file else args.interface
+        reporter.result(
+            {"database": args.database, "source": source, "packets_captured": len(packets)},
+            summary=f"Packets({len(packets)}) added to: '{args.database}'",
+        )
         return
 
     finally:

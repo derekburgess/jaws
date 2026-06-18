@@ -17,7 +17,9 @@ def get_ipinfo(ip_address, ipinfo_api_key, reporter):
         #print(details.all)
         return details.all
     except Exception as e:
-        reporter.error("ERROR", f"{ip_address} | {e}")
+        # Non-fatal: one IP failed to resolve, the run continues. Narrate (stderr in
+        # agent mode) rather than emit a structured error onto the result surface.
+        reporter.info("WARNING", f"{ip_address} | {e}")
         return None
 
 
@@ -59,7 +61,7 @@ def main():
 
     ip_addresses = fetch_data_for_organization(driver, args.database)
     if not ip_addresses:
-        reporter.info("INFO", "No undocumented addresses.")
+        reporter.result({"database": args.database, "organizations_added": 0}, summary="No undocumented addresses.")
         driver.close()
         return
 
@@ -79,10 +81,15 @@ def main():
                 if ipinfo:
                     add_organization_to_database(ip_address, ipinfo, driver, args.database)
                     org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
+                    # The full org→IP→hostname→loc detail is queryable via fetch_traffic;
+                    # here we only stream a human view (pretty mode) and return a count.
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
-                    update(org_string)
-        reporter.success("PROCESS COMPLETE", f"Organizations({len(organizations)}) added to: '{args.database}'")
+                    update()
+        reporter.result(
+            {"database": args.database, "organizations_added": len(organizations)},
+            summary=f"Organizations({len(organizations)}) added to: '{args.database}'",
+        )
 
     except Exception as e:
         reporter.error("ERROR", str(e))

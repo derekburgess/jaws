@@ -2,11 +2,12 @@ import argparse
 from rich.console import Group
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModel
+from sentence_transformers import SentenceTransformer
 from jaws.config import (
     CONSOLE,
     DATABASE,
-    PACKET_MODEL,
+    PACKET_MODELS,
+    DEFAULT_PACKET_MODEL,
     OPENAI_EMBEDDING_MODEL,
     get_openai_client,
 )
@@ -142,22 +143,12 @@ def add_endpoint_to_database(profile, embedding, driver, database):
                     protocols=profile["protocols"])
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-def compute_transformer_embedding(input, tokenizer, infer):
-    inputs = tokenizer(input, return_tensors="pt", max_length=512, truncation=True).to(device)
-    with torch.no_grad():
-        outputs = infer(**inputs)
-    last_hidden_states = outputs.last_hidden_state
-    # jina-embeddings-v2-base-code is a purpose-built embedding model that expects mean pooling
-    # over the real (non-padding) tokens, then L2-normalization for calibrated cosine geometry
-    # in downstream clustering.
-    mask = inputs["attention_mask"].unsqueeze(-1).to(last_hidden_states.dtype)
-    summed = (last_hidden_states * mask).sum(dim=1)
-    counts = mask.sum(dim=1).clamp(min=1e-9)
-    mean_pooled = summed / counts
-    normalized = torch.nn.functional.normalize(mean_pooled, p=2, dim=-1)
-    embeddings = normalized.cpu().numpy().tolist()[0]
-    return embeddings
+device = "cuda" if torch.cuda.is_available() else "cpu"
+def compute_transformer_embedding(input, embedder):
+    # sentence-transformers reads each model's own pooling config and applies it; with
+    # normalize_embeddings it L2-normalizes for calibrated cosine geometry downstream.
+    # One function works for any model in PACKET_MODELS — no per-model code.
+    return embedder.encode(input, normalize_embeddings=True).tolist()
 
 def compute_openai_embedding(client, input):
     response = client.embeddings.create(input=input, model=OPENAI_EMBEDDING_MODEL)
@@ -167,6 +158,7 @@ def compute_openai_embedding(client, input):
 def main():
     parser = argparse.ArgumentParser(description="Compute per-IP endpoint embeddings using either OpenAI or Transformers.")
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai').")
+    parser.add_argument("--model", choices=list(PACKET_MODELS), default=DEFAULT_PACKET_MODEL, help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
     reporter = Reporter()
@@ -178,12 +170,12 @@ def main():
     metadata = fetch_ip_metadata(driver, args.database)
     profiles = build_endpoint_profiles(packets, metadata)
 
+    model_name = PACKET_MODELS[args.model] if args.api == "transformers" else OPENAI_EMBEDDING_MODEL
     embedding_strings = []
     embedding_tensors = []
-    tokenizer = None
-    infer = None
+    embedder = None
 
-    processing_message = f"Embedding {len(profiles)} endpoint profiles using: {PACKET_MODEL +f'({device})' if args.api == 'transformers' else OPENAI_EMBEDDING_MODEL}"
+    processing_message = f"Embedding {len(profiles)} endpoint profiles using: {model_name}{f' ({device})' if args.api == 'transformers' else ''}"
 
     def render():
         return Group(
@@ -194,14 +186,13 @@ def main():
 
     try:
         if args.api == "transformers":
-            tokenizer = AutoTokenizer.from_pretrained(PACKET_MODEL, trust_remote_code=True)
-            infer = AutoModel.from_pretrained(PACKET_MODEL, trust_remote_code=True).to(device)
+            embedder = SentenceTransformer(model_name, device=device, trust_remote_code=True)
 
         with reporter.activity(render) as update:
             for profile in profiles:
                 description = build_endpoint_description(profile)
                 if args.api == "transformers":
-                    embedding = compute_transformer_embedding(description, tokenizer, infer)
+                    embedding = compute_transformer_embedding(description, embedder)
                 else:
                     embedding = compute_openai_embedding(get_openai_client(), description)
 
@@ -211,17 +202,24 @@ def main():
                     embedding_tensors.append(embedding)
                     update()
 
-        reporter.success("PROCESS COMPLETE", f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets in: '{args.database}'")
+        reporter.result(
+            {
+                "database": args.database,
+                "api": args.api,
+                "model": model_name,
+                "endpoints_embedded": len(embedding_strings),
+                "packets": len(packets),
+            },
+            summary=f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets via {args.api} in: '{args.database}'",
+        )
         return
 
     except Exception as e:
         reporter.error("ERROR", str(e))
 
     finally:
-        if infer is not None:
-            del infer
-        if tokenizer is not None:
-            del tokenizer
+        if embedder is not None:
+            del embedder
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         driver.close()

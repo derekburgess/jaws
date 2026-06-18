@@ -117,14 +117,21 @@ def compute_embeddings(api: str = "transformers") -> str:
     "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
     "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
     "tends to overshoot on small captures and return 0 outliers — if outliers_flagged is 0 and you "
-    "expected some, re-run with a smaller eps (e.g. 50-70% of the eps shown in the result)."
+    "expected some, re-run with a smaller eps (e.g. 50-70% of the eps shown in the result). "
+    "`feature_weight` controls how much each endpoint's behavioral numbers (bytes/packets/peers, in & "
+    "out) drive clustering vs. the text profile: 0 clusters on text/org/protocol only, higher (default "
+    "1.0) surfaces volume/fan-out anomalies like unusual outbound traffic. "
+    "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
+    "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it."
 ))
-def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None) -> str:
-    args = ["--components", str(components)]
+def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None, feature_weight: float = 1.0, include_local: bool = False) -> str:
+    args = ["--components", str(components), "--feature-weight", str(feature_weight)]
     if whiten:
         args.append("--whiten")
     if eps is not None:
         args += ["--eps", str(eps)]
+    if include_local:
+        args.append("--include-local")
     return _script("jaws_finder.py", *args)
 
 

@@ -1,15 +1,16 @@
 import argparse
+import json
+import sys
 from contextlib import contextmanager
 from rich.text import Text
 from rich.panel import Panel
 from rich.live import Live
-from transformers import AutoTokenizer, AutoModel
+from sentence_transformers import SentenceTransformer
 from jaws.config import (
     CONSOLE,
     AGENT_MODE,
     DATABASE,
-    PACKET_MODEL,
-    PACKET_MODEL_ID,
+    PACKET_MODELS,
     get_neo4j_driver,
 )
 
@@ -54,55 +55,63 @@ def render_activity_panel(title, recent_packets, console, height=10):
     return Panel(Text(text, justify="center"), title=f"{title}", border_style="blue", width=width, height=height)
 
 
-# Single output abstraction. Each script builds one Reporter and calls its
-# methods instead of branching on the output mode at every call site. In pretty
-# mode (interactive TTY) it renders rich panels; in raw mode (piped, e.g. the
-# MCP server) it emits plain, parseable `[TITLE] message` lines to stdout.
-# Defaults to AGENT_MODE, which is auto-detected from whether stdout is a TTY.
+# Single output abstraction with two distinct surfaces:
+#   - pretty mode (interactive TTY): rich panels for a human.
+#   - agent mode (piped, e.g. the MCP server): a single structured JSON object on
+#     stdout via result(); progress narration (info/success) is routed to stderr so
+#     it never pollutes that machine-readable result, and errors return structured JSON.
+# Defaults to AGENT_MODE, auto-detected from whether stdout is a TTY.
 class Reporter:
     def __init__(self, agent=AGENT_MODE):
         self.agent = agent
 
     def info(self, title, message):
+        # Progress narration. In agent mode it goes to stderr — kept for debugging
+        # (and surfaced by the MCP only on process failure), never on the result.
         if self.agent:
-            print(f"[{title}] {message}")
+            print(f"[{title}] {message}", file=sys.stderr)
         else:
             CONSOLE.print(render_info_panel(title, message, CONSOLE))
 
     def success(self, title, message):
+        # Non-terminal completion narration. Terminal output should use result().
         if self.agent:
-            print(f"[{title}] {message}")
+            print(f"[{title}] {message}", file=sys.stderr)
         else:
             CONSOLE.print(render_success_panel(title, message, CONSOLE))
 
     def error(self, title, message):
+        # Human panel; structured error on stdout for agents.
         if self.agent:
-            print(f"[{title}] {message}")
+            print(json.dumps({"error": message}))
         else:
             CONSOLE.print(render_error_panel(title, message, CONSOLE))
 
+    def result(self, obj, summary=None):
+        # The machine surface: one structured JSON object on stdout in agent mode;
+        # a human summary panel in pretty mode (the detail already scrolled by).
+        if self.agent:
+            print(json.dumps(obj, default=str, indent=2))
+        elif summary is not None:
+            CONSOLE.print(render_success_panel("PROCESS COMPLETE", summary, CONSOLE))
+
     def raw(self, text):
-        # Mode-independent plain output (interface lists, formatted reports,
-        # plotille charts) that agents parse and humans also want to see.
+        # Pretty-mode plain output (plotille charts); callers guard it to non-agent mode.
         print(text)
 
     @contextmanager
     def activity(self, render):
-        """Stream content while iterating, styled or plain.
+        """Drive a live-updating panel group while iterating (pretty mode only).
 
-        `render` is a zero-arg callable returning the renderable to display.
-        Yields an `update(line=None)` callable to invoke after each item:
-          - pretty mode drives a rich.Live (the rolling panel view);
-          - agent mode prints `line` plainly when given, so the agent sees the
-            same per-item content the human watches scroll by, minus borders.
-        Pass no `line` (capture/compute) to keep agent output to the final
-        summary instead of streaming a high-volume firehose.
+        Yields an `update()` callable to invoke after each item. In agent mode it is
+        a no-op — per-item detail belongs in the final structured result(), not streamed
+        onto the machine surface.
         """
         if self.agent:
-            yield lambda line=None: print(line) if line is not None else None
+            yield lambda *a, **k: None
         else:
             with Live(render(), console=CONSOLE, refresh_per_second=10) as live:
-                yield lambda line=None: live.update(render())
+                yield lambda *a, **k: live.update(render())
 
 
 # Downloads the models to the local device.
@@ -110,9 +119,8 @@ class Reporter:
 def download_model(model, reporter):
     try:
         reporter.info("INFO", f"Downloading: {model}")
-        AutoTokenizer.from_pretrained(model, trust_remote_code=True)
-        AutoModel.from_pretrained(model, trust_remote_code=True)
-        reporter.success("PROCESS COMPLETE", f"Downloaded: {model}")
+        SentenceTransformer(model, trust_remote_code=True)
+        reporter.result({"downloaded": model}, summary=f"Downloaded: {model}")
     except Exception as e:
         reporter.error("ERROR", f"{model}\n\n{str(e)}")
 
@@ -190,42 +198,43 @@ def initialize_schema(driver, database, local_ip, reporter):
         
         if errors:
             details = "\n".join(f"  - {error}" for error in errors)
-            reporter.error("ERROR", f"Schema initialization for '{database}' encountered {len(errors)} error(s):\n{details}")
+            reporter.info("WARNING", f"Schema initialization for '{database}' encountered {len(errors)} error(s):\n{details}")
         else:
-            reporter.success("PROCESS COMPLETE", f"Schema has been initialized for: '{database}'")
+            reporter.info("CONFIG", f"Schema ready for: '{database}'")
 
 
 # Drops all entities from the database.
 def drop_database(driver, database, reporter):
     with driver.session(database=database) as session:
-        result = session.run("MATCH (n) RETURN count(n)")
-        count = result.single()[0]
+        count_result = session.run("MATCH (n) RETURN count(n)")
+        count = count_result.single()[0]
         if count == 0:
-            return reporter.info("INFO", f"'{database}' is empty.")
+            return reporter.result({"database": database, "dropped": 0, "empty": True}, summary=f"'{database}' is empty.")
         if not reporter.agent:
             reporter.info("WARNING", f"This will permanently delete all {count} entities from '{database}'.\nType the database name '{database}' to confirm.")
             confirmation = input(f"Type '{database}' to confirm: ")
             if confirmation.strip() != database:
                 return reporter.info("CANCELLED", f"Drop cancelled. '{database}' was not modified.")
         session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
-        return reporter.success("PROCESS COMPLETE", f"Dropped({count}): '{database}'")
+        return reporter.result({"database": database, "dropped": count}, summary=f"Dropped({count}): '{database}'")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Utility functions for JAWS | 1.) Download models 2.) Drop database")
     parser.add_argument("--drop", default=DATABASE, help=f"Specify a database to drop (default: '{DATABASE}').")
-    parser.add_argument("--model", choices=[PACKET_MODEL_ID], help="Specify a model to download.")
+    parser.add_argument("--model", choices=list(PACKET_MODELS), help="Specify a model id to download (see config.PACKET_MODELS).")
     args = parser.parse_args()
     reporter = Reporter()
+
+    if args.model:
+        download_model(PACKET_MODELS[args.model], reporter)
+        return
+
     driver = dbms_connection(args.drop, reporter)
     if driver is None:
         return
-
-    if args.model == PACKET_MODEL_ID:
-        download_model(PACKET_MODEL, reporter)
-    else:
-        drop_database(driver, args.drop, reporter)
-        driver.close()
+    drop_database(driver, args.drop, reporter)
+    driver.close()
 
 if __name__ == "__main__":
     main()

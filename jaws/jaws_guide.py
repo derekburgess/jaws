@@ -1,5 +1,5 @@
 from rich import print
-from jaws.config import DATABASE, PACKET_MODEL_ID
+from jaws.config import DATABASE, DEFAULT_PACKET_MODEL
 
 def main():
     print(r"""[turquoise2]
@@ -50,8 +50,8 @@ def main():
 
     print(f"""[gray100]
     [grey85]If you plan to run transformers on device, it is recommended that you download them first:[/]
-    [green1][green1][CLI][/][/] jaws-utils --model '{PACKET_MODEL_ID}' 
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{PACKET_MODEL_ID}'
+    [green1][green1][CLI][/][/] jaws-utils --model '{DEFAULT_PACKET_MODEL}' 
+    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{DEFAULT_PACKET_MODEL}'
     [orange1][WARNING][/] This will download a large amount of data and may take some time.
     [/]""")
 
@@ -74,8 +74,9 @@ def main():
 
     print(f"""[gray100]
     [grey85]To compute embeddings:[/]
-    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --database '{DATABASE}'
+    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --model '{DEFAULT_PACKET_MODEL}' --database '{DATABASE}'
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
+    [grey85]--model selects a local transformers model when --api transformers (see config.PACKET_MODELS).[/]
     [/]""")
    
     print(f"""[gray100]
