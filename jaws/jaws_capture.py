@@ -2,17 +2,16 @@ import os
 import argparse
 import time
 import socket
+from datetime import datetime, timezone
 import psutil
 import pyshark
-from rich.live import Live
 from rich.console import Group
-from jaws.config import *
+from jaws.config import CONSOLE, DATABASE
 from jaws.jaws_utils import (
     dbms_connection,
     initialize_schema,
-    render_error_panel,
+    Reporter,
     render_info_panel,
-    render_success_panel,
     render_activity_panel
 )
 
@@ -45,32 +44,36 @@ def list_interfaces():
     return interface_list
 
 
-def add_packet_to_database(driver, packet_data, database):
+BATCH_SIZE = 100
+
+
+def add_packets_to_database(driver, packets_batch, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
-        MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: $src_ip_address})
-        MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: $dst_ip_address})
-        
-        MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: $src_port, IP_ADDRESS: $src_ip_address})
-        MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: $dst_port, IP_ADDRESS: $dst_ip_address})
-        
-        CREATE (packet:PACKET {
-            PROTOCOL: $protocol,
-            SIZE: $size,
-            PAYLOAD: $payload,
-            TIMESTAMP: datetime(),
-            SRC_IP: $src_ip_address,
-            DST_IP: $dst_ip_address,
-            SRC_PORT: $src_port,
-            DST_PORT: $dst_port
+        UNWIND $packets AS packet
+        MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: packet.src_ip_address})
+        MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: packet.dst_ip_address})
+
+        MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: packet.src_port, IP_ADDRESS: packet.src_ip_address})
+        MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: packet.dst_port, IP_ADDRESS: packet.dst_ip_address})
+
+        CREATE (p:PACKET {
+            PROTOCOL: packet.protocol,
+            SIZE: packet.size,
+            PAYLOAD: packet.payload,
+            TIMESTAMP: datetime(packet.timestamp),
+            SRC_IP: packet.src_ip_address,
+            DST_IP: packet.dst_ip_address,
+            SRC_PORT: packet.src_port,
+            DST_PORT: packet.dst_port
         })
-        
-        CREATE (src_port)-[:SENT]->(packet)
-        CREATE (packet)-[:RECEIVED]->(dst_port)
-        """, packet_data))
+
+        CREATE (src_port)-[:SENT]->(p)
+        CREATE (p)-[:RECEIVED]->(dst_port)
+        """, packets=packets_batch))
 
 
-def process_packet(packet, driver, database, local_ip):
+def process_packet(packet, local_ip):
     packet_data = {
         "protocol": packet.highest_layer,
         "src_ip_address": packet.ip.src if hasattr(packet, 'ip') else '0.0.0.0',
@@ -78,7 +81,8 @@ def process_packet(packet, driver, database, local_ip):
         "dst_ip_address": packet.ip.dst if hasattr(packet, 'ip') else '0.0.0.0',
         "dst_port": 0,
         "size": len(packet),
-        "payload": None
+        "payload": None,
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
     if hasattr(packet, 'tcp') or hasattr(packet, 'udp'):
@@ -89,9 +93,8 @@ def process_packet(packet, driver, database, local_ip):
             "payload": layer.payload if hasattr(layer, 'payload') else None
         })
 
-    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']}({packet_data['size']}) **PAYLOAD NOT DISPLAYED**"
-    add_packet_to_database(driver, packet_data, database)
-    return packet_string
+    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']}({packet_data['size']})"
+    return packet_data, packet_string
 
 
 def main():
@@ -101,85 +104,89 @@ def main():
     parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
-    parser.add_argument("--agent", action="store_true", help="Disable rich output for agent use.")
     args = parser.parse_args()
+    reporter = Reporter()
     local_ip = get_local_ip()
-    driver = dbms_connection(args.database)
+    driver = dbms_connection(args.database, reporter)
     if driver is None:
         return
-    
-    if args.list:
-        interface_list = "\n".join(list_interfaces())
-        if not args.agent:
-            CONSOLE.print(render_info_panel("INTERFACES", interface_list, CONSOLE))
-        else:
-            print(interface_list)
-        return
-    
-    initialize_schema(driver, args.database, local_ip)
 
-    if args.capture_file and not os.path.isfile(args.capture_file):
-        CONSOLE.print(render_error_panel("ERROR", f"File not found, please check your file path:\n{args.capture_file}", CONSOLE))
-        return
-    
-    if args.interface and not args.capture_file:
-        available_interfaces = list_interfaces()
-        if args.interface not in available_interfaces:
-            CONSOLE.print(render_error_panel("ERROR", f"{args.interface} interface not found.\nSelect an interface from the list below.", CONSOLE))
-            CONSOLE.print(render_info_panel("INTERFACES", "\n".join(available_interfaces), CONSOLE))
-            driver.close()
-            return
-    
+    capture = None
     packets = []
-    try:
-        if args.capture_file:
-            file_message = f"Import: {args.capture_file} | {local_ip}"
-            with Live(Group(
-                render_info_panel("CONFIG", file_message, CONSOLE),
-                render_activity_panel("PACKETS", packets, CONSOLE)
-            ), console=CONSOLE, refresh_per_second=10) as live:
-                file_capture = pyshark.FileCapture(args.capture_file)
-                for packet in file_capture:
-                    packet_string = process_packet(packet, driver, args.database, local_ip)
-                    packets.append(packet_string)
-                    live.update(Group(
-                        render_info_panel("CONFIG", file_message, CONSOLE),
-                        render_activity_panel("PACKETS", packets, CONSOLE)
-                    ))
-        else:
-            interface_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
-            if not args.agent:
-                with Live(Group(
-                    render_info_panel("CONFIG", interface_message, CONSOLE),
-                    render_activity_panel("PACKETS", packets, CONSOLE)
-                ), console=CONSOLE, refresh_per_second=10) as live:
-                    interface_capture = pyshark.LiveCapture(interface=args.interface)
-                    start_time = time.time()
-                    for packet in interface_capture.sniff_continuously():
-                        packet_string = process_packet(packet, driver, args.database, local_ip)
-                        packets.append(packet_string)
-                        live.update(Group(
-                            render_info_panel("CONFIG", interface_message, CONSOLE),
-                            render_activity_panel("PACKETS", packets, CONSOLE)
-                        ))
-                        if time.time() - start_time > args.duration:
-                            break
-            else:
-                interface_capture = pyshark.LiveCapture(interface=args.interface)
-                start_time = time.time()
-                for packet in interface_capture.sniff_continuously():
-                    packet_string = process_packet(packet, driver, args.database, local_ip)
-                    packets.append(packet_string)
-                    if time.time() - start_time > args.duration:
-                        break
+    batch = []
 
-        if not args.agent:
-            CONSOLE.print(render_success_panel("PROCESS COMPLETE", f"Packets({len(packets)}) added to: '{args.database}'", CONSOLE))
+    def flush_batch():
+        if batch:
+            add_packets_to_database(driver, batch, args.database)
+            batch.clear()
+
+    def close_capture():
+        if capture is not None:
+            try:
+                capture.close()
+            except Exception:
+                pass
+
+    try:
+        if args.list:
+            interfaces = list_interfaces()
+            reporter.result({"interfaces": interfaces}, summary="\n".join(interfaces))
+            return
+
+        initialize_schema(driver, args.database, local_ip, reporter)
+
+        if args.capture_file and not os.path.isfile(args.capture_file):
+            reporter.error("ERROR", f"File not found, please check your file path:\n{args.capture_file}")
+            return
+
+        if args.interface and not args.capture_file:
+            available_interfaces = list_interfaces()
+            if args.interface not in available_interfaces:
+                reporter.error("ERROR", f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.")
+                return
+
+        if args.capture_file:
+            config_message = f"Import: {args.capture_file} | {local_ip}"
         else:
-            print(f"[PROCESS COMPLETE] Packets({len(packets)}) added to: '{args.database}'")
+            config_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
+
+        def render():
+            return Group(
+                render_info_panel("CONFIG", config_message, CONSOLE),
+                render_activity_panel("PACKETS", packets, CONSOLE)
+            )
+
+        with reporter.activity(render) as update:
+            if args.capture_file:
+                capture = pyshark.FileCapture(args.capture_file)
+                packet_source = capture
+            else:
+                capture = pyshark.LiveCapture(interface=args.interface)
+                packet_source = capture.sniff_continuously()
+
+            start_time = time.time()
+            for packet in packet_source:
+                packet_data, packet_string = process_packet(packet, local_ip)
+                batch.append(packet_data)
+                packets.append(packet_string)
+                if len(batch) >= BATCH_SIZE:
+                    flush_batch()
+                update()
+                if not args.capture_file and time.time() - start_time > args.duration:
+                    break
+
+        flush_batch()
+
+        source = args.capture_file if args.capture_file else args.interface
+        reporter.result(
+            {"database": args.database, "source": source, "packets_captured": len(packets)},
+            summary=f"Packets({len(packets)}) added to: '{args.database}'",
+        )
         return
-    
+
     finally:
+        flush_batch()
+        close_capture()
         driver.close()
 
 if __name__ == "__main__":

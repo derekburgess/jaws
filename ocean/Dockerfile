@@ -28,7 +28,6 @@ WORKDIR /jaws
 
 RUN git clone https://github.com/derekburgess/jaws.git .
 RUN pip install -r requirements.txt
-RUN pip install -i https://pypi.org/simple/ bitsandbytes
 RUN pip install .
 
 #RUN jaws-anchor

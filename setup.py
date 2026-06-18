@@ -17,6 +17,15 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+# Read run-time dependencies from requirements.txt so it stays the single
+# source of truth (skipping blanks and comments).
+with open(path.join(here, 'requirements.txt'), encoding='utf-8') as f:
+    install_requires = [
+        line.strip()
+        for line in f
+        if line.strip() and not line.startswith('#')
+    ]
+
 setup(
     name='JAWS',
 
@@ -25,7 +34,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version='2.0.0',
 
-    description='Agentic packet capture and anomaly detection system with MCP server',
+    description='Packet capture and anomaly detection system with MCP server',
     long_description=long_description,
 
     # Choose your license
@@ -46,7 +55,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='networking, analysis, visualization, agents, mcp',
+    keywords='networking, analysis, visualization, mcp',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -60,7 +69,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
+    install_requires=install_requires,
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -94,7 +103,6 @@ setup(
            'jaws-ipinfo = jaws.jaws_ipinfo:main',
            'jaws-compute = jaws.jaws_compute:main',
            'jaws-finder = jaws.jaws_finder:main',
-           'jaws-agent = jaws.jaws_agent:main',
            'jaws-utils = jaws.jaws_utils:main',
            'jaws-mcp = MCP.server:main',
        ],

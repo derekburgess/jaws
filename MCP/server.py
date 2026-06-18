@@ -1,152 +1,206 @@
-"""JAWS MCP Server — exposes JAWS network-monitoring tools via FastMCP stdio."""
+"""JAWS MCP Server — exposes the full JAWS network-analysis pipeline via FastMCP."""
 
 from mcp.server.fastmcp import FastMCP
 import subprocess
 import sys
 import os
-import smtplib
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import json
 from pathlib import Path
+
+from jaws.config import DATABASE, get_neo4j_driver
 
 ROOT = Path(__file__).parent.parent   # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
 
-mcp = FastMCP("JAWS - Wireshark MCP with Network Analysis Tools")
+# No hard-coded wall-clock timeout. Capture is bounded by `duration`, and compute /
+# anomaly detection are bounded by the dataset, so the scripts self-terminate — an
+# arbitrary server-side number would only ever be wrong for someone's hardware. The
+# real limit is the MCP client's own per-tool-call timeout (e.g. Claude Code's
+# MCP_TOOL_TIMEOUT). An operator who wants a server-side backstop can set
+# JAWS_MCP_TIMEOUT (seconds); by default there is none.
+_env_timeout = os.environ.get("JAWS_MCP_TIMEOUT")
+TIMEOUT = int(_env_timeout) if _env_timeout else None
 
-def _run(args: list[str], timeout: int = 600) -> str:
+INSTRUCTIONS = """JAWS captures network traffic into a Neo4j graph, enriches it with OSINT, embeds it, and flags anomalies.
+
+The tools form a linear pipeline — run them in order:
+  1. list_interfaces      — choose a physical interface (virtual/loopback are filtered out).
+  2. capture_packets      — sniff that interface for N seconds into the graph.
+  3. document_organizations — enrich the captured IPs with org/ASN ownership.
+  4. compute_embeddings   — aggregate each IP's traffic into an endpoint profile and embed it.
+  5. anomaly_detection    — cluster the endpoint (per-IP) embeddings (PCA + DBSCAN) and flag outliers.
+
+The unit of analysis is the IP address (labeled with its organization): each IP becomes one
+endpoint profile describing its outbound and inbound traffic, and outliers are anomalous IPs —
+including unusual outbound traffic from the local host.
+
+Anytime:
+  - fetch_traffic   — read the per-IP endpoint profiles back from the graph.
+  - drop_database   — wipe the graph (typically before a fresh capture session).
+
+Notes:
+  - Keep captures short (30-120s); capture again rather than running one long session.
+  - After every capture, run document_organizations and compute_embeddings before anomaly_detection.
+  - Use compute_embeddings(api='transformers') on a GPU host; otherwise api='openai'. The local
+    transformer model must be downloaded on the host beforehand (`jaws-utils --model ...`); this is
+    a one-time setup step done outside the MCP.
+  - compute_embeddings and anomaly_detection can run for a while on large captures — if your client
+    aborts them early, raise its per-tool-call timeout (e.g. Claude Code's MCP_TOOL_TIMEOUT).
+  - All tools operate on the single '%s' database.""" % DATABASE
+
+mcp = FastMCP("JAWS - Wireshark MCP with Network Analysis Tools", instructions=INSTRUCTIONS)
+
+
+def _run(args: list[str], timeout: int | None = TIMEOUT) -> str:
     try:
         result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return f"ERROR: process timed out after {timeout}s"
+        return f"ERROR: process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s"
+    out = (result.stdout or "").strip()
+    err = (result.stderr or "").strip()
     if result.returncode != 0:
-        return f"ERROR (exit {result.returncode}): {result.stderr.strip()}"
-    return result.stdout.strip() or "(no output)"
+        # Prefer stderr (tracebacks / argparse errors); fall back to stdout.
+        return f"ERROR (exit {result.returncode}): {err or out or 'no output'}"
+    return out or "(no output)"
 
-@mcp.tool(name="list_interfaces", description="List available network interfaces. Never select virtual or loopback interfaces such as 'lo' and 'docker0'.")
+
+def _script(name: str, *args: str) -> str:
+    return _run([sys.executable, str(SCRIPTS / name), *args])
+
+
+@mcp.tool(name="list_interfaces", description=(
+    "Step 1. List the physical network interfaces available for capture, one per line. "
+    "Virtual/loopback interfaces (lo, docker, tailscale) are already filtered out. "
+    "Pick one of these names to pass to capture_packets."
+))
 def list_interfaces() -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_capture.py"), "--list", "--agent"])
+    return _script("jaws_capture.py", "--list")
 
-@mcp.tool(name="capture_packets", description="Capture packets into the database. Pass a duration in seconds depending on the amount of data you want to capture.")
-def capture_packets(interface: str, duration: int) -> str:
-    return _run([
-        sys.executable, str(SCRIPTS / "jaws_capture.py"),
+
+@mcp.tool(name="capture_packets", description=(
+    "Step 2. Capture live packets from an interface into the graph for `duration` seconds. "
+    "Use an interface name from list_interfaces. Keep captures short (30-120s) and capture "
+    "again rather than running one long session. The call runs for roughly `duration` seconds."
+))
+def capture_packets(interface: str, duration: int = 60) -> str:
+    return _script(
+        "jaws_capture.py",
         "--interface", interface,
         "--duration", str(duration),
-        "--agent",
-    ])
+    )
 
-@mcp.tool(name="document_organizations", description="Enrich data with organization ownership by looking up IP addresses.")
+
+@mcp.tool(name="document_organizations", description=(
+    "Step 3. Enrich the captured IP addresses with organization/ASN ownership via Ipinfo. "
+    "Run after each capture and before compute_embeddings."
+))
 def document_organizations() -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_ipinfo.py"), "--agent"])
+    return _script("jaws_ipinfo.py")
+
 
 @mcp.tool(name="compute_embeddings", description=(
-    "Transform the network traffic data into embeddings, improving the quality of the data for downstream analysis. "
-    "Use api='transformers' (default) when a GPU is available — the local Starcoder2 model produces tighter clusters and surfaces anomalies that OpenAI embeddings miss. "
-    "Use api='openai' only as a fallback when no GPU is present or the local model is unavailable."
+    "Step 4. Aggregate each IP's captured traffic (both directions) into an endpoint profile and embed "
+    "that profile — one vector per IP — for downstream clustering. "
+    "Use api='transformers' (default) on a GPU host — the local model produces tighter clusters and "
+    "surfaces anomalies that OpenAI embeddings miss (the model must be pre-downloaded on the host). "
+    "Use api='openai' as a fallback when no GPU is available. May run for a while on large captures."
 ))
 def compute_embeddings(api: str = "transformers") -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_compute.py"), "--api", api, "--agent"])
+    return _script("jaws_compute.py", "--api", api)
 
-@mcp.tool(name="anomaly_detection", description="Analyze the network traffic data and embeddings and return a list of anomalies.")
-def anomaly_detection() -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_finder.py"), "--agent"])
 
-@mcp.tool(name="drop_database", description="Clear the database of all data.")
+@mcp.tool(name="anomaly_detection", description=(
+    "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and flag outlier IPs. Returns a "
+    "JSON summary: endpoints_clustered, outliers_flagged, the DBSCAN params (eps/min_samples/components), "
+    "and the list of outlier endpoints (an empty list means zero outliers were found, not a failure). "
+    "`components` is the number of PCA dimensions to retain (minimum 2). `whiten` scales each PCA "
+    "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
+    "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
+    "tends to overshoot on small captures and return 0 outliers — if outliers_flagged is 0 and you "
+    "expected some, re-run with a smaller eps (e.g. 50-70% of the eps shown in the result). "
+    "`feature_weight` controls how much each endpoint's behavioral numbers (bytes/packets/peers, in & "
+    "out) drive clustering vs. the text profile: 0 clusters on text/org/protocol only, higher (default "
+    "1.0) surfaces volume/fan-out anomalies like unusual outbound traffic. "
+    "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
+    "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it."
+))
+def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None, feature_weight: float = 1.0, include_local: bool = False) -> str:
+    args = ["--components", str(components), "--feature-weight", str(feature_weight)]
+    if whiten:
+        args.append("--whiten")
+    if eps is not None:
+        args += ["--eps", str(eps)]
+    if include_local:
+        args.append("--include-local")
+    return _script("jaws_finder.py", *args)
+
+
+@mcp.tool(name="drop_database", description=(
+    "Wipe ALL data from the graph. Irreversible. Typically run before starting a fresh capture session."
+))
 def drop_database() -> str:
-    return _run([sys.executable, str(SCRIPTS / "jaws_utils.py"), "--agent"])
+    return _script("jaws_utils.py")
 
-_driver = None
 
-def _get_driver():
-    global _driver
-    if _driver is None:
-        from neo4j import GraphDatabase
-        uri = os.environ["NEO4J_URI"]
-        user = os.environ["NEO4J_USERNAME"]
-        password = os.environ["NEO4J_PASSWORD"]
-        _driver = GraphDatabase.driver(uri, auth=(user, password))
-    return _driver
+_FETCH_QUERY = """
+MATCH (endpoint:ENDPOINT)
+WHERE endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
+OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
+RETURN DISTINCT
+    endpoint.IP_ADDRESS AS ip_address,
+    COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
+    COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
+    COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,
+    endpoint.BYTES_OUT AS bytes_out,
+    endpoint.PACKETS_OUT AS packets_out,
+    endpoint.OUT_PEERS AS out_peers,
+    endpoint.OUT_PORTS AS out_ports,
+    endpoint.BYTES_IN AS bytes_in,
+    endpoint.PACKETS_IN AS packets_in,
+    endpoint.IN_PEERS AS in_peers,
+    endpoint.IN_PORTS AS in_ports,
+    endpoint.PROTOCOLS AS protocols,
+    endpoint.OUTLIER AS outlier,
+    endpoint.TIMESTAMP AS timestamp
+ORDER BY endpoint.TIMESTAMP DESC
+LIMIT $limit
+"""
+
 
 @mcp.tool(name="fetch_traffic", description=(
-    "Fetch data from the database and return it as a string. "
-    "Pass a duration in minutes to time-limit the data. "
-    "Pass a limit to control the number of entries returned."
+    "Read processed per-IP endpoint profiles back from the graph as JSON. Each row is one IP with its "
+    "org/hostname/location and directional traffic (bytes/packets/peers/ports, outbound and inbound), "
+    "plus its outlier flag. `duration` is how many minutes of history to include; `limit` caps the rows. "
+    "Most recent first."
 ))
-def fetch_traffic(duration: int, limit: int) -> str:
-    database = os.environ.get("NEO4J_DATABASE", "captures")
-    query = """
-    MATCH (traffic:TRAFFIC)
-    WHERE traffic.TIMESTAMP > datetime() - duration({minutes: $duration})
-    RETURN DISTINCT
-        traffic.SRC_IP_ADDRESS AS src_ip_address,
-        traffic.SRC_PORT AS src_port,
-        traffic.DST_IP_ADDRESS AS dst_ip_address,
-        traffic.DST_PORT AS dst_port,
-        traffic.PROTOCOL AS protocol,
-        traffic.ORGANIZATION AS org,
-        traffic.HOSTNAME AS hostname,
-        traffic.LOCATION AS location,
-        traffic.TOTAL_SIZE AS total_size,
-        traffic.OUTLIER AS outlier,
-        traffic.TIMESTAMP AS timestamp
-    ORDER BY traffic.TIMESTAMP DESC
-    LIMIT $limit
-    """
-    driver = _get_driver()
-    with driver.session(database=database) as session:
-        result = session.run(query, duration=duration, limit=limit)
-        data = [dict(record) for record in result]
-    return str(data)
+def fetch_traffic(duration: int = 60, limit: int = 100) -> str:
+    try:
+        driver = get_neo4j_driver()
+        with driver.session(database=DATABASE) as session:
+            result = session.run(_FETCH_QUERY, duration=duration, limit=limit)
+            data = [record.data() for record in result]
+    except Exception as e:
+        return f"ERROR: could not fetch endpoints ({e})"
+    if not data:
+        return f"(no endpoint profiles found in the last {duration} minutes)"
+    # default=str renders Neo4j DateTime values; the rest are JSON-native.
+    return json.dumps(data, default=str, indent=2)
 
-"""
-# ---------------------------------------------------------------------------
-# Tool 8: send_email
-# ---------------------------------------------------------------------------
-
-@mcp.tool(description="Send an email to High Command with the entire contents of the report.")
-def send_email(content: str) -> str:
-    sender = os.environ["EMAIL_SENDER"]
-    recipient = os.environ["EMAIL_RECIPIENT"]
-    password = os.environ["EMAIL_PASSWORD"]
-    server_host = os.environ["EMAIL_SERVER"]
-    port = int(os.environ["EMAIL_PORT"])
-
-    message = MIMEMultipart()
-    message["From"] = sender
-    message["To"] = recipient
-    message["Subject"] = "Situation Report"
-    body = (
-        f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        f"{content}\n\n"
-        "** This is an automated report from the JAWS Network Monitoring System. **"
-    )
-    message.attach(MIMEText(body, "plain"))
-
-    with smtplib.SMTP(server_host, port) as server:
-        server.starttls()
-        server.login(sender, password)
-        server.send_message(message)
-
-    return f"Report emailed to: {recipient}"
-
-"""
 
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sse", action="store_true")
+    parser.add_argument("--stdio", action="store_true", help="Serve over stdio (for MCP clients that spawn the server) instead of the default SSE HTTP server.")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
 
-    if args.sse:
+    if args.stdio:
+        mcp.run(transport="stdio")
+    else:
         mcp.settings.host = args.host
         mcp.settings.port = args.port
         mcp.run(transport="sse")
-    else:
-        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
