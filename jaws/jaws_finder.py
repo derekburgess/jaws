@@ -29,6 +29,19 @@ NUMERIC_FEATURES = ["bytes_out", "bytes_in", "packets_out", "packets_in", "out_p
 LOCAL_ORG = "YOU ARE HERE"
 
 
+def _whole_number_formatter(val, chars, delta, left=False):
+    # plotille label formatter: render axis tick labels as whole numbers instead of
+    # full float precision (e.g. 4 rather than 3.73886505).
+    s = f"{val:.0f}"
+    return f"{s:<{chars}}" if left else f"{s:>{chars}}"
+
+
+def new_plotille_figure():
+    fig = plotille.Figure()
+    fig.register_label_formatter(float, _whole_number_formatter)
+    return fig
+
+
 def build_feature_matrix(embeddings, data, components, whiten, feature_weight):
     """Combine text-embedding PCA components with standardized numeric features.
 
@@ -133,7 +146,7 @@ def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
     plt.savefig(save_portsize, dpi=90)
 
-    portsize_plotille = plotille.Figure()
+    portsize_plotille = new_plotille_figure()
     portsize_plotille.x_label = 'SIZE'
     portsize_plotille.y_label = 'PORT'
     portsize_plotille.color_mode = 'byte'
@@ -160,7 +173,7 @@ def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
     plt.savefig(save_kdistance, dpi=90)
 
-    kdistance_plotille = plotille.Figure()
+    kdistance_plotille = new_plotille_figure()
     kdistance_plotille.x_label = 'INDEX'
     kdistance_plotille.y_label = 'K-DISTANCE'
     kdistance_plotille.color_mode = 'byte'
@@ -258,7 +271,7 @@ def main():
             eps_value = np.median(sorted_k_distances)
 
         if not reporter.agent:
-            user_input = input(f"[RECOMMENDED EPS] {eps_value} | Press ENTER to accept, or provide a value: ")
+            user_input = input(f"[RECOMMENDED EPS] {eps_value:.2f} | Press ENTER to accept, or provide a value: ")
             if user_input:
                 try:
                     eps_value = float(user_input)
@@ -322,7 +335,7 @@ def main():
     save_outliers = os.path.join(endpoint, 'pca_dbscan_outliers.png')
     plt.savefig(save_outliers, dpi=90)
 
-    outlier_plotille = plotille.Figure()
+    outlier_plotille = new_plotille_figure()
     outlier_plotille.color_mode = 'byte'
     outlier_plotille.width = 80
     outlier_plotille.height = 20

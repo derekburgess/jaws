@@ -18,32 +18,32 @@ from jaws.config import (
 # Utility functions imported elsewhere.
 def render_error_panel(title, message, console):
     width = console.size.width
-    return Panel(Text(message, justify="center"), title=f"{title}", border_style="red", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="red", width=width)
 
 
 def render_info_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="center"), title=f"{title}", border_style="yellow", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="yellow", width=width)
 
 
 def render_success_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="center"), title=f"{title}", border_style="green", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="green", width=width)
 
 
 def render_input_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", border_style="blue", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="cornflower_blue", width=width)
 
 
 def render_assistant_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", border_style="yellow", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="yellow", width=width)
 
 
 def render_response_panel(title,message, console):
     width = console.size.width
-    return Panel(Text(message, justify="left"), title=f"{title}", border_style="green", width=width)
+    return Panel(Text(message, justify="left"), title=f"{title}", title_align="left", border_style="green", width=width)
 
 
 def render_activity_panel(title, recent_packets, console, height=10):
@@ -52,7 +52,7 @@ def render_activity_panel(title, recent_packets, console, height=10):
     while len(lines) < (height-2):
         lines.insert(0, "")
     text = "\n".join(lines)
-    return Panel(Text(text, justify="center"), title=f"{title}", border_style="blue", width=width, height=height)
+    return Panel(Text(text, justify="left"), title=f"{title}", title_align="left", border_style="cornflower_blue", width=width, height=height)
 
 
 # Single output abstraction with two distinct surfaces:
