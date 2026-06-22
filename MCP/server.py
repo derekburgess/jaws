@@ -6,6 +6,7 @@ import sys
 import os
 import json
 from pathlib import Path
+from typing import Any
 
 from jaws.config import DATABASE, get_neo4j_driver
 
@@ -35,7 +36,9 @@ endpoint profile describing its outbound and inbound traffic, and outliers are a
 including unusual outbound traffic from the local host.
 
 Anytime:
-  - fetch_traffic   — read the per-IP endpoint profiles back from the graph.
+  - fetch_traffic   — read the per-IP endpoint profiles back from the graph (windowed overview).
+  - inspect_endpoint — drill into ONE IP (e.g. an outlier): its profile, who it talked to (peers),
+                       and a raw packet sample. The join key from an anomaly back to its detail.
   - drop_database   — wipe the graph (typically before a fresh capture session).
 
 Notes:
@@ -51,20 +54,63 @@ Notes:
 mcp = FastMCP("JAWS - Wireshark MCP with Network Analysis Tools", instructions=INSTRUCTIONS)
 
 
-def _run(args: list[str], timeout: int | None = TIMEOUT) -> str:
+def _try_json(text: str) -> Any:
+    """json.loads that returns None instead of raising on non-JSON input."""
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
+    """Run a JAWS CLI and return its result as a native dict.
+
+    In agent mode (the subprocess inherits a non-TTY stdout) every CLI prints
+    exactly one JSON document on stdout via the Reporter, already wrapped in the
+    {"ok": bool, ...} envelope — ok=True merged with the result fields on success,
+    {"ok": false, "error": ...} on failure. We parse that here and return the dict
+    so the MCP payload arrives already-structured: returning a `dict[str, Any]`
+    makes FastMCP emit it as structuredContent verbatim, instead of wrapping a JSON
+    string inside another JSON string ({"result": "{...}"}, the double-encoding the
+    client otherwise has to parse twice).
+
+    The contract is uniform: every dict returned here carries a boolean `ok`, so a
+    client branches on that one field deterministically — never string-matching
+    prose or testing for the presence of an "error" key. Subprocess-level outcomes
+    the Reporter never sees (timeout, a crash before any JSON is printed, non-JSON
+    stdout) are stamped with ok=False here so they conform to the same shape.
+    """
     try:
         result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return f"ERROR: process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s"
+        return {"ok": False, "error": f"process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s"}
     out = (result.stdout or "").strip()
     err = (result.stderr or "").strip()
+    parsed = _try_json(out)
     if result.returncode != 0:
-        # Prefer stderr (tracebacks / argparse errors); fall back to stdout.
-        return f"ERROR (exit {result.returncode}): {err or out or 'no output'}"
-    return out or "(no output)"
+        # A non-zero exit may still carry the structured envelope on stdout (a
+        # reporter.error already stamped ok=False); prefer it, else synthesize one
+        # from stderr (tracebacks / argparse) or stdout.
+        if isinstance(parsed, dict):
+            parsed.setdefault("ok", False)
+            return parsed
+        return {"ok": False, "error": err or out or "no output", "exit_code": result.returncode}
+    if isinstance(parsed, dict):
+        # Already enveloped by the Reporter; backstop ok in case a CLI printed a
+        # bare dict outside reporter.result.
+        parsed.setdefault("ok", True)
+        return parsed
+    if parsed is not None:
+        # Valid JSON that isn't an object (e.g. a bare array) — keep it addressable.
+        return {"ok": True, "result": parsed}
+    if not out:
+        return {"ok": False, "error": "process produced no output"}
+    # Unexpected non-JSON on stdout in agent mode — a contract violation. Preserve
+    # it rather than crash, but mark it failed so the client doesn't read it as a result.
+    return {"ok": False, "error": "process produced non-JSON output", "raw": out}
 
 
-def _script(name: str, *args: str) -> str:
+def _script(name: str, *args: str) -> dict[str, Any]:
     return _run([sys.executable, str(SCRIPTS / name), *args])
 
 
@@ -73,7 +119,7 @@ def _script(name: str, *args: str) -> str:
     "Virtual/loopback interfaces (lo, docker, tailscale) are already filtered out. "
     "Pick one of these names to pass to capture_packets."
 ))
-def list_interfaces() -> str:
+def list_interfaces() -> dict[str, Any]:
     return _script("jaws_capture.py", "--list")
 
 
@@ -82,7 +128,7 @@ def list_interfaces() -> str:
     "Use an interface name from list_interfaces. Keep captures short (30-120s) and capture "
     "again rather than running one long session. The call runs for roughly `duration` seconds."
 ))
-def capture_packets(interface: str, duration: int = 60) -> str:
+def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
     return _script(
         "jaws_capture.py",
         "--interface", interface,
@@ -94,7 +140,7 @@ def capture_packets(interface: str, duration: int = 60) -> str:
     "Step 3. Enrich the captured IP addresses with organization/ASN ownership via Ipinfo. "
     "Run after each capture and before compute_embeddings."
 ))
-def document_organizations() -> str:
+def document_organizations() -> dict[str, Any]:
     return _script("jaws_ipinfo.py")
 
 
@@ -105,14 +151,20 @@ def document_organizations() -> str:
     "surfaces anomalies that OpenAI embeddings miss (the model must be pre-downloaded on the host). "
     "Use api='openai' as a fallback when no GPU is available. May run for a while on large captures."
 ))
-def compute_embeddings(api: str = "transformers") -> str:
+def compute_embeddings(api: str = "transformers") -> dict[str, Any]:
     return _script("jaws_compute.py", "--api", api)
 
 
 @mcp.tool(name="anomaly_detection", description=(
-    "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and flag outlier IPs. Returns a "
-    "JSON summary: endpoints_clustered, outliers_flagged, the DBSCAN params (eps/min_samples/components), "
-    "and the list of outlier endpoints (an empty list means zero outliers were found, not a failure). "
+    "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and score every IP for anomaly. "
+    "Returns a JSON summary: endpoints_clustered, outliers_flagged, the DBSCAN params "
+    "(eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
+    "list of clustered IPs sorted by `anomaly_score` (descending), so there is always a ranking to "
+    "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (L2 norm of its "
+    "per-feature robust-z — overall behavioral distance from the typical host), `is_outlier` (the DBSCAN "
+    "verdict), and `reasons` — the features that made it stand out, each with its value, unit, robust_z, "
+    "and direction (high/low), so you can tell a high-bytes_out exfil from a low-interval_cv beacon from "
+    "a high-out_peers multicast instead of guessing. outliers_flagged == 0 is not a failure. "
     "`components` is the number of PCA dimensions to retain (minimum 2). `whiten` scales each PCA "
     "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
     "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
@@ -124,7 +176,7 @@ def compute_embeddings(api: str = "transformers") -> str:
     "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
     "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it."
 ))
-def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None, feature_weight: float = 1.0, include_local: bool = False) -> str:
+def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None, feature_weight: float = 1.0, include_local: bool = False) -> dict[str, Any]:
     args = ["--components", str(components), "--feature-weight", str(feature_weight)]
     if whiten:
         args.append("--whiten")
@@ -138,7 +190,7 @@ def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | No
 @mcp.tool(name="drop_database", description=(
     "Wipe ALL data from the graph. Irreversible. Typically run before starting a fresh capture session."
 ))
-def drop_database() -> str:
+def drop_database() -> dict[str, Any]:
     return _script("jaws_utils.py")
 
 
@@ -160,6 +212,8 @@ RETURN DISTINCT
     endpoint.IN_PEERS AS in_peers,
     endpoint.IN_PORTS AS in_ports,
     endpoint.PROTOCOLS AS protocols,
+    endpoint.INTERVAL_MEAN AS interval_mean,
+    endpoint.INTERVAL_CV AS interval_cv,
     endpoint.OUTLIER AS outlier,
     endpoint.TIMESTAMP AS timestamp
 ORDER BY endpoint.TIMESTAMP DESC
@@ -168,23 +222,185 @@ LIMIT $limit
 
 
 @mcp.tool(name="fetch_traffic", description=(
-    "Read processed per-IP endpoint profiles back from the graph as JSON. Each row is one IP with its "
-    "org/hostname/location and directional traffic (bytes/packets/peers/ports, outbound and inbound), "
-    "plus its outlier flag. `duration` is how many minutes of history to include; `limit` caps the rows. "
-    "Most recent first."
+    "Read processed per-IP endpoint profiles back from the graph. Returns an object with an `endpoints` "
+    "list (most recent first) and a `count`; each endpoint is one IP with its org/hostname/location and "
+    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag. "
+    "`duration` is how many minutes of history to include; `limit` caps the rows. "
+    "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
+    "and see exactly who it talked to, use inspect_endpoint instead."
 ))
-def fetch_traffic(duration: int = 60, limit: int = 100) -> str:
+def fetch_traffic(duration: int = 60, limit: int = 100) -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
         with driver.session(database=DATABASE) as session:
             result = session.run(_FETCH_QUERY, duration=duration, limit=limit)
             data = [record.data() for record in result]
     except Exception as e:
-        return f"ERROR: could not fetch endpoints ({e})"
-    if not data:
-        return f"(no endpoint profiles found in the last {duration} minutes)"
-    # default=str renders Neo4j DateTime values; the rest are JSON-native.
-    return json.dumps(data, default=str, indent=2)
+        return {"ok": False, "error": f"could not fetch endpoints ({e})"}
+    # Round-trip through json with default=str to coerce Neo4j DateTime values into
+    # JSON-native strings, so FastMCP can serialize the returned dict cleanly.
+    endpoints = json.loads(json.dumps(data, default=str))
+    return {"ok": True, "endpoints": endpoints, "count": len(endpoints), "duration_minutes": duration}
+
+
+# The join key back to detail: every PACKET node carries the full 5-tuple as
+# properties (SRC_IP/DST_IP/SRC_PORT/DST_PORT/PROTOCOL/SIZE/TIMESTAMP), so an IP is
+# directly addressable with no traversal. anomaly_detection / fetch_traffic hand back
+# an IP; these three queries turn that IP into its profile, its peer list, and a raw
+# packet sample.
+
+# One ENDPOINT (the aggregated profile) for a specific IP — the same fields
+# fetch_traffic returns, scoped to $ip. Empty when the IP was captured but
+# compute_embeddings hasn't run yet (the peers/packets below still resolve from raw
+# PACKET nodes in that case).
+_INSPECT_PROFILE_QUERY = """
+MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
+OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip})<-[:OWNERSHIP]-(org:ORGANIZATION)
+RETURN
+    endpoint.IP_ADDRESS AS ip_address,
+    COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
+    COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
+    COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,
+    endpoint.BYTES_OUT AS bytes_out,
+    endpoint.PACKETS_OUT AS packets_out,
+    endpoint.OUT_PEERS AS out_peers,
+    endpoint.OUT_PORTS AS out_ports,
+    endpoint.BYTES_IN AS bytes_in,
+    endpoint.PACKETS_IN AS packets_in,
+    endpoint.IN_PEERS AS in_peers,
+    endpoint.IN_PORTS AS in_ports,
+    endpoint.PROTOCOLS AS protocols,
+    endpoint.INTERVAL_MEAN AS interval_mean,
+    endpoint.INTERVAL_CV AS interval_cv,
+    endpoint.OUTLIER AS outlier,
+    endpoint.TIMESTAMP AS timestamp
+"""
+
+# True totals for the IP across the whole capture (NOT truncated by the peer/packet
+# limits below), so the caller knows when the returned lists are samples.
+_INSPECT_TOTALS_QUERY = """
+MATCH (p:PACKET)
+WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
+RETURN count(p) AS packets,
+       count(DISTINCT CASE WHEN p.SRC_IP = $ip THEN p.DST_IP ELSE p.SRC_IP END) AS peers
+"""
+
+# The conversation breakdown: every other IP this one exchanged packets with, split by
+# direction (outbound = this IP is the source). This is the handle the profile lacks —
+# it stores OUT_PEERS as a count, never which peers. Ranked by total bytes so the
+# heaviest conversations surface first.
+_INSPECT_PEERS_QUERY = """
+MATCH (p:PACKET)
+WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
+WITH p,
+     CASE WHEN p.SRC_IP = $ip THEN p.DST_IP ELSE p.SRC_IP END AS peer,
+     (p.SRC_IP = $ip) AS outbound
+WITH peer,
+     sum(CASE WHEN outbound THEN p.SIZE ELSE 0 END) AS bytes_out,
+     sum(CASE WHEN outbound THEN 1 ELSE 0 END) AS packets_out,
+     sum(CASE WHEN NOT outbound THEN p.SIZE ELSE 0 END) AS bytes_in,
+     sum(CASE WHEN NOT outbound THEN 1 ELSE 0 END) AS packets_in,
+     collect(DISTINCT p.PROTOCOL) AS protocols,
+     collect(DISTINCT p.SRC_PORT) AS src_ports,
+     collect(DISTINCT p.DST_PORT) AS dst_ports
+OPTIONAL MATCH (peer_ip:IP_ADDRESS {IP_ADDRESS: peer})<-[:OWNERSHIP]-(peer_org:ORGANIZATION)
+RETURN peer AS peer_ip,
+       peer_org.ORGANIZATION AS peer_org,
+       peer_ip.HOSTNAME AS peer_hostname,
+       peer_ip.LOCATION AS peer_location,
+       bytes_out, packets_out, bytes_in, packets_in,
+       (bytes_out + bytes_in) AS bytes_total,
+       protocols, src_ports, dst_ports
+ORDER BY bytes_total DESC
+LIMIT $peer_limit
+"""
+
+# A raw, most-recent packet sample for the IP — for inspecting a specific conversation
+# at 5-tuple granularity once the peer breakdown points somewhere interesting.
+_INSPECT_PACKETS_QUERY = """
+MATCH (p:PACKET)
+WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
+RETURN p.SRC_IP AS src_ip, p.SRC_PORT AS src_port,
+       p.DST_IP AS dst_ip, p.DST_PORT AS dst_port,
+       p.PROTOCOL AS protocol, p.SIZE AS size,
+       p.TIMESTAMP AS timestamp
+ORDER BY p.TIMESTAMP DESC
+LIMIT $packet_limit
+"""
+
+
+def _clean_ports(*port_lists) -> list[int]:
+    """Merge collected SRC/DST port lists into one sorted set of real ports.
+
+    DBSCAN's profile uses dst_port for both directions; for a human-facing peer
+    breakdown the useful answer is just every non-ephemeral-placeholder port seen in
+    the conversation, so we union src+dst, drop the 0/None placeholders, and sort.
+    """
+    ports = set()
+    for lst in port_lists:
+        for p in lst or []:
+            if p:
+                ports.add(int(p))
+    return sorted(ports)
+
+
+@mcp.tool(name="inspect_endpoint", description=(
+    "Drill into ONE specific IP — the join key from an anomaly back to its detail. Hand it an IP (e.g. an "
+    "outlier from anomaly_detection or any IP from fetch_traffic) and it returns, addressably by that IP: "
+    "`profile` — the endpoint's aggregated profile (org/hostname/location, directional bytes/packets/peers/"
+    "ports, timing, outlier flag), or null if the IP was captured but compute_embeddings hasn't run yet; "
+    "`totals` — the true packet and distinct-peer counts for the IP across the whole capture (so you can tell "
+    "when the lists below are samples); `peers` — WHO this IP actually exchanged packets with, one row per "
+    "peer (peer IP + org/hostname/location, bytes/packets out & in, ports, protocols), ranked by total bytes; "
+    "and `packets` — a most-recent raw 5-tuple packet sample. `peer_limit` caps the peer rows, `packet_limit` "
+    "caps the packet sample. This answers 'now show me this IP's packets and peers' without pulling and "
+    "filtering the whole window client-side."
+))
+def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 20) -> dict[str, Any]:
+    try:
+        driver = get_neo4j_driver()
+        with driver.session(database=DATABASE) as session:
+            profile_rows = [r.data() for r in session.run(_INSPECT_PROFILE_QUERY, ip=ip_address)]
+            totals = session.run(_INSPECT_TOTALS_QUERY, ip=ip_address).single()
+            peer_rows = [r.data() for r in session.run(_INSPECT_PEERS_QUERY, ip=ip_address, peer_limit=peer_limit)]
+            packet_rows = [r.data() for r in session.run(_INSPECT_PACKETS_QUERY, ip=ip_address, packet_limit=packet_limit)]
+    except Exception as e:
+        return {"ok": False, "error": f"could not inspect endpoint {ip_address!r} ({e})"}
+
+    peers = []
+    for r in peer_rows:
+        peers.append({
+            "peer_ip": r["peer_ip"],
+            "peer_org": r["peer_org"],
+            "peer_hostname": r["peer_hostname"],
+            "peer_location": r["peer_location"],
+            "bytes_out": r["bytes_out"],
+            "packets_out": r["packets_out"],
+            "bytes_in": r["bytes_in"],
+            "packets_in": r["packets_in"],
+            "bytes_total": r["bytes_total"],
+            "protocols": sorted(p for p in (r["protocols"] or []) if p),
+            "ports": _clean_ports(r["src_ports"], r["dst_ports"]),
+        })
+
+    total_packets = totals["packets"] if totals else 0
+    total_peers = totals["peers"] if totals else 0
+
+    payload = {
+        "ip_address": ip_address,
+        # True if the IP appears anywhere in the capture (raw packets) or as a profile.
+        "found": bool(total_packets > 0 or profile_rows),
+        "profile": profile_rows[0] if profile_rows else None,
+        "totals": {"packets": total_packets, "peers": total_peers},
+        "peers": peers,
+        "peers_returned": len(peers),
+        "packets": packet_rows,
+        "packets_returned": len(packet_rows),
+    }
+    # Coerce Neo4j DateTime values (in profile.timestamp and each packet) to strings so
+    # FastMCP can serialize the dict cleanly, matching fetch_traffic.
+    payload = json.loads(json.dumps(payload, default=str))
+    return {"ok": True, **payload}
 
 
 def main():

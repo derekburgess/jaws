@@ -1,5 +1,6 @@
 import argparse
 from rich.console import Group
+import numpy as np
 import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer
@@ -26,7 +27,8 @@ def fetch_packets(driver, database):
     MATCH (p:PACKET)
     RETURN p.SRC_IP AS src_ip, p.DST_IP AS dst_ip,
            p.SRC_PORT AS src_port, p.DST_PORT AS dst_port,
-           p.SIZE AS size, p.PROTOCOL AS protocol
+           p.SIZE AS size, p.PROTOCOL AS protocol,
+           p.TIMESTAMP.epochMillis AS ts_ms
     """
     with driver.session(database=database) as session:
         result = session.run(query)
@@ -48,6 +50,33 @@ def fetch_ip_metadata(driver, database):
     with driver.session(database=database) as session:
         result = session.run(query)
         return {record["ip_address"]: record.data() for record in result}
+
+
+# Minimum packets in an endpoint's stream before its timing is meaningful. Two
+# packets give one interval (no variance); three give two intervals — the floor for
+# a coefficient of variation. Below this, timing is left undefined (None) and the
+# finder imputes it, so sparse endpoints aren't mistaken for perfectly regular beacons.
+MIN_TIMING_PACKETS = 3
+
+
+def endpoint_timing(ts_ms):
+    """Inter-packet cadence for one endpoint's combined packet stream.
+
+    Returns (interval_mean, interval_cv) in seconds, or (None, None) when there are
+    too few packets to assess. `interval_cv` (std/mean of inter-packet gaps) is the
+    beaconing signal: a low CV means highly regular callbacks (C2-like), a high CV
+    means bursty/human traffic. `interval_mean` is the typical gap, i.e. the period.
+    """
+    ts = np.sort(np.asarray(ts_ms, dtype=float)) / 1000.0
+    ts = ts[~np.isnan(ts)]
+    if len(ts) < MIN_TIMING_PACKETS:
+        return None, None
+    diffs = np.diff(ts)
+    mean = float(diffs.mean())
+    if mean <= 0:
+        return None, None
+    cv = float(diffs.std() / mean)
+    return mean, cv
 
 
 def build_endpoint_profiles(packets, metadata):
@@ -81,11 +110,22 @@ def build_endpoint_profiles(packets, metadata):
     # Inbound: IP is the destination — peers are sources, ports are its own that received.
     inbound = aggregate("dst_ip", "src_ip", "dst_port")
 
+    # Timing is computed over each IP's combined stream (every packet it sends OR
+    # receives), so a single-peer endpoint with regular callbacks reads as low-CV
+    # while a busy multi-peer server's interleaved conversations read as high-CV.
+    has_ts = "ts_ms" in packets.columns
+    timing = {}
+    if has_ts:
+        for ip in set(packets["src_ip"]) | set(packets["dst_ip"]):
+            mask = (packets["src_ip"] == ip) | (packets["dst_ip"] == ip)
+            timing[ip] = endpoint_timing(packets.loc[mask, "ts_ms"])
+
     profiles = []
     for ip in sorted(set(outbound) | set(inbound)):
         out = outbound.get(ip, {})
         inb = inbound.get(ip, {})
         meta = metadata.get(ip, {})
+        interval_mean, interval_cv = timing.get(ip, (None, None))
         profiles.append({
             "ip_address": ip,
             "org": meta.get("org"),
@@ -100,6 +140,8 @@ def build_endpoint_profiles(packets, metadata):
             "in_peers": inb.get("peers", 0),
             "in_ports": inb.get("ports", []),
             "protocols": sorted(set(out.get("protocols", [])) | set(inb.get("protocols", []))),
+            "interval_mean": interval_mean,
+            "interval_cv": interval_cv,
         })
     return profiles
 
@@ -130,6 +172,8 @@ def add_endpoint_to_database(profile, embedding, driver, database):
         endpoint.IN_PEERS = $in_peers,
         endpoint.IN_PORTS = $in_ports,
         endpoint.PROTOCOLS = $protocols,
+        endpoint.INTERVAL_MEAN = $interval_mean,
+        endpoint.INTERVAL_CV = $interval_cv,
         endpoint.TIMESTAMP = datetime()
     """
     with driver.session(database=database) as session:
@@ -140,7 +184,9 @@ def add_endpoint_to_database(profile, embedding, driver, database):
                     out_peers=profile["out_peers"], out_ports=profile["out_ports"],
                     bytes_in=profile["bytes_in"], packets_in=profile["packets_in"],
                     in_peers=profile["in_peers"], in_ports=profile["in_ports"],
-                    protocols=profile["protocols"])
+                    protocols=profile["protocols"],
+                    interval_mean=profile.get("interval_mean"),
+                    interval_cv=profile.get("interval_cv"))
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"

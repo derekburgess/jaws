@@ -61,7 +61,7 @@ def main():
 
     ip_addresses = fetch_data_for_organization(driver, args.database)
     if not ip_addresses:
-        reporter.result({"database": args.database, "organizations_added": 0}, summary="No undocumented addresses.")
+        reporter.result({"database": args.database, "addresses_scanned": 0, "organizations_added": 0}, summary="No undocumented addresses.")
         driver.close()
         return
 
@@ -86,8 +86,16 @@ def main():
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
                     update()
+        # `addresses_scanned` is the denominator — the undocumented IPs considered
+        # this run — so a reader can see `organizations_added` is an incremental
+        # count (this run only), not a running total of all endpoints. Any gap is
+        # IPs that failed to resolve, not data loss.
         reporter.result(
-            {"database": args.database, "organizations_added": len(organizations)},
+            {
+                "database": args.database,
+                "addresses_scanned": len(ip_addresses),
+                "organizations_added": len(organizations),
+            },
             summary=f"Organizations({len(organizations)}) added to: '{args.database}'",
         )
 

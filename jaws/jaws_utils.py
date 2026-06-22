@@ -66,17 +66,21 @@ class Reporter:
             CONSOLE.print(render_success_panel(title, message, CONSOLE))
 
     def error(self, title, message):
-        # Human panel; structured error on stdout for agents.
+        # Human panel; structured error on stdout for agents. Every agent-mode
+        # payload carries a boolean `ok` so callers branch on a field, not on the
+        # presence of an "error" key — the failure half of the {"ok": ...} envelope.
         if self.agent:
-            print(json.dumps({"error": message}))
+            print(json.dumps({"ok": False, "error": message}))
         else:
             CONSOLE.print(render_error_panel(title, message, CONSOLE))
 
     def result(self, obj, summary=None):
         # The machine surface: one structured JSON object on stdout in agent mode;
         # a human summary panel in pretty mode (the detail already scrolled by).
+        # The success half of the envelope: ok=True merged with the result fields
+        # (obj is always a dict and never carries its own "ok").
         if self.agent:
-            print(json.dumps(obj, default=str, indent=2))
+            print(json.dumps({"ok": True, **obj}, default=str, indent=2))
         elif summary is not None:
             CONSOLE.print(render_success_panel("PROCESS COMPLETE", summary, CONSOLE))
 
