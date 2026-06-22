@@ -71,6 +71,54 @@ FEATURE_UNITS = {
 REASON_Z_THRESHOLD = 2.5
 
 
+# The capture host's own IP is owned by this synthetic org (see initialize_schema).
+# It is a structural hub — it talks to every peer, so it dominates behavioral clustering
+# — and is excluded from the clustered set by default. Its outbound traffic still shows
+# up as each remote endpoint's inbound, so outbound anomalies remain detectable.
+LOCAL_ORG = "YOU ARE HERE"
+
+
+# An endpoint's *_out / *_in counts are from ITS OWN perspective: bytes_out is what the
+# endpoint sent, bytes_in what it received. Because the capture host is excluded from
+# clustering by default, every scored endpoint is REMOTE — and a remote endpoint's
+# bytes_out is data it sent TO the host, i.e. traffic the host DOWNLOADED, the opposite of
+# exfiltration. Read naively, "bytes_out high" inverts the threat model (the tool's concern
+# is outbound *from the host*). These maps re-state each directional feature in the capture
+# host's frame so a reason can't be misread; the local host, when included, is its own frame
+# (its perspective IS the host's). Keyed by flow: "out" = endpoint-as-source, "in" = -as-dest.
+HOST_FRAME_REMOTE = {
+    "out": "remote → host: traffic the capture host downloaded (NOT host exfil)",
+    "in":  "host → remote: traffic the capture host sent to this IP (outbound-from-host signal)",
+}
+HOST_FRAME_LOCAL = {
+    "out": "host → network: traffic the capture host sent out (outbound-from-host signal)",
+    "in":  "network → host: traffic the capture host received (download)",
+}
+
+# Which directional flow each feature belongs to, for host-frame glossing. "out" features
+# count the endpoint as source, "in" as destination; the out/in ratios and bytes_per_peer
+# are out-dominant when high. Features absent here (bytes_per_packet, peers, timing) carry
+# no host-relative direction and get no gloss.
+FEATURE_FLOW = {
+    "bytes_out": "out", "packets_out": "out",
+    "bytes_in": "in", "packets_in": "in",
+    "bytes_out_in_ratio": "out", "packets_out_in_ratio": "out",
+    "bytes_per_peer": "out",
+}
+
+
+def host_relative_gloss(feature, is_local):
+    """Defender-frame interpretation of a directional feature, or None if it has none.
+
+    Disambiguates a flagged feature relative to the capture host so an agent doesn't read a
+    remote endpoint's bytes_out (a host download) as exfiltration. See HOST_FRAME_* above.
+    """
+    flow = FEATURE_FLOW.get(feature)
+    if flow is None:
+        return None
+    return (HOST_FRAME_LOCAL if is_local else HOST_FRAME_REMOTE)[flow]
+
+
 def build_numeric_features(data):
     """Assemble the raw numeric matrix: base counts + derived ratios + timing.
 
@@ -133,17 +181,26 @@ def score_endpoints(data, clusters):
 
     ranked = []
     for i, item in enumerate(data):
+        # The clustered set is remote by default; a remote endpoint's *_out is data it sent
+        # TO the host (a download). is_local flips the host-frame gloss for the capture host.
+        is_local = item["org"] == LOCAL_ORG
         reasons = []
         for j, name in enumerate(NUMERIC_FEATURE_NAMES):
             zj = float(z[i, j])
             if abs(zj) >= REASON_Z_THRESHOLD:
-                reasons.append({
+                reason = {
                     "feature": name,
                     "value": round(float(raw[i, j]), 4),
                     "unit": FEATURE_UNITS[name],
                     "robust_z": round(zj, 2),
                     "direction": "high" if zj > 0 else "low",
-                })
+                }
+                # Defender-frame disambiguation so "bytes_out high" on a remote IP reads as
+                # a host download, not exfil (omitted for non-directional features).
+                gloss = host_relative_gloss(name, is_local)
+                if gloss:
+                    reason["host_relative"] = gloss
+                reasons.append(reason)
         reasons.sort(key=lambda r: abs(r["robust_z"]), reverse=True)
         ranked.append({
             "ip_address": item["ip_address"],
@@ -164,11 +221,76 @@ def score_endpoints(data, clusters):
     return ranked
 
 
-# The capture host's own IP is owned by this synthetic org (see initialize_schema).
-# It is a structural hub — it talks to every peer, so it dominates behavioral clustering
-# — and is excluded from the clustered set by default. Its outbound traffic still shows
-# up as each remote endpoint's inbound, so outbound anomalies remain detectable.
-LOCAL_ORG = "YOU ARE HERE"
+# The host-outbound view answers the tool's stated purpose directly — "unusual outbound
+# traffic FROM the capture host." Clustering excludes the host (a structural hub), so its
+# real outbound is scattered as small bytes_in across many remote endpoints and never
+# dominates an anomaly_score; the remote-endpoint ranking is driven by inbound/download
+# volume instead. This view re-centers on the host: for every destination the host SENT to,
+# it measures the host's own upload (host as packet SOURCE, computed from raw packets so it
+# isolates host→peer flow rather than the peer's total inbound from all sources) and ranks
+# destinations on that distribution. upload_download_ratio >> 1 is the exfil shape.
+HOST_OUTBOUND_FEATURES = ["upload_bytes", "upload_packets", "upload_download_ratio"]
+HOST_OUTBOUND_UNITS = {
+    "upload_bytes": "bytes",
+    "upload_packets": "packets",
+    "upload_download_ratio": "ratio",
+}
+# All three features are host→remote outbound, so every reason is unambiguously the
+# outbound-from-host signal (no perspective flip needed — this view is already host-framed).
+HOST_OUTBOUND_GLOSS = {
+    "upload_bytes": "host → remote: data the capture host sent out (outbound from host)",
+    "upload_packets": "host → remote: packets the capture host sent out (outbound from host)",
+    "upload_download_ratio": "host sent more to this peer than it received (exfil-shaped when high)",
+}
+
+
+def score_host_outbound(rows):
+    """Rank the host's outbound destinations on the host-upload distribution.
+
+    `rows` is one dict per destination the host sent to (upload/download bytes & packets).
+    Adds `upload_download_ratio`, an `outbound_score` (L2 norm of the robust-z vector over
+    the host-upload features — same method as score_endpoints, but on the host's OWN
+    outbound rather than a remote's perspective), and host-frame `reasons`. Returns the
+    list sorted by outbound_score descending; an empty input yields an empty list.
+    """
+    if not rows:
+        return []
+    for r in rows:
+        r["upload_download_ratio"] = r["upload_bytes"] / (r["download_bytes"] + 1.0)
+    raw = np.array([[float(r[f]) for f in HOST_OUTBOUND_FEATURES] for r in rows])
+    z = robust_z_scores(raw)
+    scores = np.linalg.norm(z, axis=1)
+
+    ranked = []
+    for i, r in enumerate(rows):
+        reasons = []
+        for j, name in enumerate(HOST_OUTBOUND_FEATURES):
+            zj = float(z[i, j])
+            if abs(zj) >= REASON_Z_THRESHOLD:
+                reasons.append({
+                    "feature": name,
+                    "value": round(float(raw[i, j]), 4),
+                    "unit": HOST_OUTBOUND_UNITS[name],
+                    "robust_z": round(zj, 2),
+                    "direction": "high" if zj > 0 else "low",
+                    "host_relative": HOST_OUTBOUND_GLOSS[name],
+                })
+        reasons.sort(key=lambda x: abs(x["robust_z"]), reverse=True)
+        ranked.append({
+            "ip_address": r["ip_address"],
+            "org": r["org"],
+            "hostname": r["hostname"],
+            "location": r["location"],
+            "upload_bytes": r["upload_bytes"],
+            "upload_packets": r["upload_packets"],
+            "download_bytes": r["download_bytes"],
+            "download_packets": r["download_packets"],
+            "upload_download_ratio": round(float(r["upload_download_ratio"]), 4),
+            "outbound_score": round(float(scores[i]), 4),
+            "reasons": reasons,
+        })
+    ranked.sort(key=lambda e: e["outbound_score"], reverse=True)
+    return ranked
 
 
 def _whole_number_formatter(val, chars, delta, left=False):
@@ -262,9 +384,55 @@ def fetch_data_for_portsize(driver, database):
     """
     with driver.session(database=database) as session:
         result = session.run(query)
-        plot_data = [{'size': record['size'], 'src_port': record['src_port'], 'dst_port': record['dst_port']} 
+        plot_data = [{'size': record['size'], 'src_port': record['src_port'], 'dst_port': record['dst_port']}
                      for record in result]
     return plot_data
+
+
+def fetch_host_outbound(driver, database):
+    """Aggregate the capture host's outbound traffic per destination, from raw packets.
+
+    Finds the host IP(s) (owned by LOCAL_ORG), then for every peer the host exchanged
+    packets with sums the host's upload (host as SOURCE) and download (host as
+    DESTINATION) separately — so each row is the true host→peer flow, not the peer's total
+    inbound from every source. Rows are restricted to peers the host actually sent to
+    (upload_packets > 0). Returns (local_ips, rows); local_ips is empty when the host was
+    never captured (e.g. an imported pcap with no local endpoint), in which case rows is
+    empty too and the caller surfaces an empty host-outbound view rather than crashing.
+    """
+    local_query = """
+    MATCH (org:ORGANIZATION {ORGANIZATION: $local_org})-[:OWNERSHIP]->(ip:IP_ADDRESS)
+    RETURN collect(ip.IP_ADDRESS) AS local_ips
+    """
+    # peer = the non-local side of each packet; outbound = the host was the source. Group
+    # by peer, split bytes/packets by direction, then join the peer's OSINT metadata.
+    peer_query = """
+    MATCH (p:PACKET)
+    WHERE p.SRC_IP IN $local_ips OR p.DST_IP IN $local_ips
+    WITH p,
+         CASE WHEN p.SRC_IP IN $local_ips THEN p.DST_IP ELSE p.SRC_IP END AS peer,
+         (p.SRC_IP IN $local_ips) AS outbound
+    WHERE NOT peer IN $local_ips AND peer <> '0.0.0.0'
+    WITH peer,
+         sum(CASE WHEN outbound THEN p.SIZE ELSE 0 END) AS upload_bytes,
+         sum(CASE WHEN outbound THEN 1 ELSE 0 END) AS upload_packets,
+         sum(CASE WHEN NOT outbound THEN p.SIZE ELSE 0 END) AS download_bytes,
+         sum(CASE WHEN NOT outbound THEN 1 ELSE 0 END) AS download_packets
+    WHERE upload_packets > 0
+    OPTIONAL MATCH (pip:IP_ADDRESS {IP_ADDRESS: peer})<-[:OWNERSHIP]-(porg:ORGANIZATION)
+    RETURN peer AS ip_address,
+           COALESCE(porg.ORGANIZATION, 'Unknown') AS org,
+           COALESCE(pip.HOSTNAME, 'Unknown') AS hostname,
+           COALESCE(pip.LOCATION, 'Unknown') AS location,
+           upload_bytes, upload_packets, download_bytes, download_packets
+    ORDER BY upload_bytes DESC
+    """
+    with driver.session(database=database) as session:
+        local_ips = session.run(local_query, {"local_org": LOCAL_ORG}).single()["local_ips"]
+        if not local_ips:
+            return [], []
+        rows = [record.data() for record in session.run(peer_query, {"local_ips": local_ips})]
+    return local_ips, rows
 
 
 def add_outlier_to_database(scored_list, flagged_list, driver, database):
@@ -632,6 +800,21 @@ def main():
 
     add_outlier_to_database(ranked_endpoints, flagged, driver, args.database)
 
+    # First-class host-outbound view: outbound FROM the capture host, per destination,
+    # isolated from raw packets (host as source). The remote-endpoint ranking above is
+    # dominated by inbound/download volume and structurally demotes the host's own outbound
+    # (the documented purpose) — this re-centers on it, independent of clustering and the
+    # --include-local flag. Empty when the host wasn't captured (e.g. an imported pcap).
+    local_ips, host_rows = fetch_host_outbound(driver, args.database)
+    host_destinations = score_host_outbound(host_rows)
+    host_flagged = [d for d in host_destinations if d["reasons"]]
+    if not reporter.agent and host_destinations:
+        top = host_destinations[0]
+        reporter.info("HOST OUTBOUND",
+                      f"Top outbound destination from the host: {top['ip_address']} ({top['org']}) "
+                      f"— {top['upload_bytes']} bytes up / {top['download_bytes']} down "
+                      f"(score {top['outbound_score']}). {len(host_flagged)} destination(s) flagged.")
+
     # Structured result with the clustering diagnostics folded in (so the caller gets
     # the useful numbers as fields, not prose). `endpoints` is the full ranked list;
     # an empty `flagged` set (outliers_flagged == 0) means DBSCAN flagged nothing —
@@ -651,13 +834,43 @@ def main():
         "pca_variance_total": round(float(explained.sum()), 4),
         "units": FEATURE_UNITS,
         "reason_z_threshold": REASON_Z_THRESHOLD,
+        # Counts are from each endpoint's OWN perspective. With the capture host excluded
+        # (the default), endpoints are remote, so a remote IP's bytes_out/packets_out is
+        # traffic it sent TO the host (a host download) and bytes_in/packets_in is traffic
+        # the host sent to it (the outbound-from-host signal). Each directional reason
+        # carries a `host_relative` gloss; don't read a high bytes_out on a remote IP as exfil.
+        "perspective": (
+            "Endpoint counts are from the endpoint's own perspective. Scored endpoints are "
+            "remote (capture host excluded by default): bytes_out/packets_out = traffic the "
+            "remote IP sent to the host (host download); bytes_in/packets_in = traffic the host "
+            "sent to it (outbound from host). See each reason's host_relative field. The "
+            "host_outbound section re-frames the same capture from the host's perspective."
+        ),
         "endpoints": ranked_endpoints,
+        # The defender-frame counterpart to `endpoints`: the capture host's OWN outbound,
+        # per destination, ranked on the host-upload distribution. Directly serves the
+        # tool's purpose ("unusual outbound from the local host"), which the remote-endpoint
+        # ranking demotes. `local_ips` is empty when no local host was captured.
+        "host_outbound": {
+            "local_ips": local_ips,
+            "destinations_ranked": len(host_destinations),
+            "flagged": len(host_flagged),
+            "units": HOST_OUTBOUND_UNITS,
+            "note": (
+                "Outbound FROM the capture host, per destination, isolated from raw packets "
+                "(host as source, so upload_bytes is host→peer, not the peer's total inbound). "
+                "`outbound_score` ranks destinations on the host-upload distribution; "
+                "upload_download_ratio high = exfil-shaped (host sent far more than it received). "
+                "Use this, not the download-dominated `endpoints` ranking, to judge host exfil/beaconing."
+            ),
+            "destinations": host_destinations,
+        },
     }
 
     if not reporter.agent:
         plt.show()
 
-    reporter.result(result, summary=f"Clustered {len(data)} endpoints (per IP); {len(flagged)} outlier(s) flagged, all ranked by anomaly_score. Plots saved to: {endpoint}")
+    reporter.result(result, summary=f"Clustered {len(data)} endpoints (per IP); {len(flagged)} outlier(s) flagged, all ranked by anomaly_score; {len(host_flagged)} host-outbound destination(s) flagged. Plots saved to: {endpoint}")
 
     driver.close()
 
