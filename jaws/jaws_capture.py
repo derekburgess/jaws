@@ -93,7 +93,7 @@ def process_packet(packet, local_ip):
             "payload": layer.payload if hasattr(layer, 'payload') else None
         })
 
-    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']} | {packet_data['protocol']}({packet_data['size']})"
+    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['protocol']}({packet_data['size']}) ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']}"
     return packet_data, packet_string
 
 

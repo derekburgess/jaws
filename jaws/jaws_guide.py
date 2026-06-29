@@ -13,8 +13,8 @@ def main():
     print(f"""[gray100]
     JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
     the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
-    It also provides a set of commands to transform and process packets into plots and reports using: 
-    K-means, DBSCAN, OpenAI, and local transformers.
+    It also provides a set of commands to transform and process packets into plots and reports using:
+    PCA, DBSCAN, OpenAI, and local transformers.
     [/]""")
     
     print(f"""[gray100]
@@ -80,10 +80,15 @@ def main():
     [/]""")
    
     print(f"""[gray100]
-    [grey85]To view cluster plots of embeddings:[/]
-    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}' --components 2 --whiten
-    [grey85]You can pass --components to set the number of PCA dimensions to retain for clustering (min 2, default 2).[/]
-    [grey85]You can also pass --whiten which scales each PCA component to unit variance. (default: off).[/]
+    [grey85]To cluster embeddings and surface outliers (PCA + DBSCAN, with a scored host-outbound view):[/]
+    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}' --components 2 --whiten --eps 0.5 --feature-weight 1.0 --include-local --ablate
+    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-finder
+    [grey85]--components sets the number of PCA dimensions to retain for clustering (min 2, default 2).[/]
+    [grey85]--whiten scales each PCA component to unit variance (default: off).[/]
+    [grey85]--eps overrides the DBSCAN epsilon; omit it to accept the auto-recommended knee value.[/]
+    [grey85]--feature-weight sets the influence of the behavioral numeric features on clustering (0 = embedding-only, default 1.0).[/]
+    [grey85]--include-local keeps the capture host in the clustered set (off by default — it is a structural hub).[/]
+    [grey85]--ablate compares text-only vs numeric-only vs blended clustering (silhouette + Jaccard) without writing to the database.[/]
     [/]""")
 
     print(f"""[gray100]

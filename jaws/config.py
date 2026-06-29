@@ -48,6 +48,11 @@ OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 # normalization config — so adding a model needs no new code, just an id -> HF name entry.
 PACKET_MODELS = {
     "jina-code": "jinaai/jina-embeddings-v2-base-code",
+    # Cisco's security-domain bi-encoder (ModernBERT, 768-dim, sentence-transformers
+    # native). An alternative to jina-code's code-token specialization: tests whether a
+    # cybersecurity-trained embedder clusters endpoints better. Both are 768-dim, so the
+    # downstream PCA/DBSCAN path is unchanged. Predownload via `jaws-utils --model securebert`.
+    "securebert": "cisco-ai/SecureBERT2.0-biencoder",
     # Add more here, e.g.:
     # "bge-small": "BAAI/bge-small-en-v1.5",
     # "nomic": "nomic-ai/nomic-embed-text-v1.5",

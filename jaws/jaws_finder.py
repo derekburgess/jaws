@@ -634,7 +634,7 @@ def main():
 
     embeddings, data, excluded_local = fetch_data_for_dbscan(driver, args.database, args.include_local)
     if excluded_local:
-        reporter.info("CONFIG", f"Excluded the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to keep it.")
+        reporter.info("CONFIG", f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.")
 
     if args.ablate:
         min_samples = 2 * args.components
@@ -679,7 +679,7 @@ def main():
     )
     reporter.info("INFO", explained_variance_message)
 
-    kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN(Density-Based Spatial Clustering of Applications with Noise)."
+    kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN."
     reporter.info("INFO", kdistance_info_message)
 
     min_samples = 2 * args.components
@@ -719,7 +719,7 @@ def main():
                     eps_source = "manual"
                 except ValueError:
                     reporter.error("ERROR", "Invalid input. Using the recommended EPS value.")
-            reporter.info("INFORMATION", "Matplotlib plots will be generated after passing an EPS value.")
+            reporter.info("INFO", "Matplotlib plots will be generated after passing an EPS value.")
         else:
             reporter.info("CONFIG", "Skipping user input and passing the recommended EPS value.")
 
