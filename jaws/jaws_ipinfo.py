@@ -10,11 +10,9 @@ from jaws.jaws_utils import (
 )
 
 
-def get_ipinfo(ip_address, ipinfo_api_key, reporter):
+def get_ipinfo(handler, ip_address, reporter):
     try:
-        handler = ipinfo.getHandler(ipinfo_api_key)
         details = handler.getDetails(ip_address)
-        #print(details.all)
         return details.all
     except Exception as e:
         # Non-fatal: one IP failed to resolve, the run continues. Narrate (stderr in
@@ -75,15 +73,18 @@ def main():
         )
 
     try:
+        # One handler for the whole run — it caches lookups internally, which a
+        # per-IP handler would defeat.
+        handler = ipinfo.getHandler(IPINFO_API_KEY)
         with reporter.activity(render) as update:
             for ip_address in ip_addresses:
-                ipinfo = get_ipinfo(ip_address, IPINFO_API_KEY, reporter)
-                if ipinfo:
-                    add_organization_to_database(ip_address, ipinfo, driver, args.database)
-                    org_name = ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown')))
+                ipinfo_details = get_ipinfo(handler, ip_address, reporter)
+                if ipinfo_details:
+                    add_organization_to_database(ip_address, ipinfo_details, driver, args.database)
+                    org_name = ipinfo_details.get('org', ipinfo_details.get('company', {}).get('name', ipinfo_details.get('asn', {}).get('name', 'Unknown')))
                     # The full org→IP→hostname→loc detail is queryable via fetch_traffic;
                     # here we only stream a human view (pretty mode) and return a count.
-                    org_string = f"{org_name} ➜ {ip_address}\n{ipinfo.get('hostname', 'Unknown')}, {ipinfo.get('loc', 'Unknown')}\n"
+                    org_string = f"{org_name} ➜ {ip_address}\n{ipinfo_details.get('hostname', 'Unknown')}, {ipinfo_details.get('loc', 'Unknown')}\n"
                     organizations.append(org_string)
                     update()
         # `addresses_scanned` is the denominator — the undocumented IPs considered

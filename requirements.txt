@@ -6,11 +6,9 @@ numpy
 scikit-learn
 kneed
 torch
-transformers
 sentence-transformers
 openai>=2,<3
 matplotlib
-requests
 rich
 plotille
 ipinfo

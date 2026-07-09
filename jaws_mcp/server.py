@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from jaws.config import DATABASE, get_neo4j_driver
+from jaws.config import DATABASE, PACKET_MODELS, DEFAULT_PACKET_MODEL, get_neo4j_driver
 
 ROOT = Path(__file__).parent.parent   # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
@@ -147,12 +147,17 @@ def document_organizations() -> dict[str, Any]:
 @mcp.tool(name="compute_embeddings", description=(
     "Step 4. Aggregate each IP's captured traffic (both directions) into an endpoint profile and embed "
     "that profile — one vector per IP — for downstream clustering. "
-    "Use api='transformers' (default) on a GPU host — the local model produces tighter clusters and "
-    "surfaces anomalies that OpenAI embeddings miss (the model must be pre-downloaded on the host). "
-    "Use api='openai' as a fallback when no GPU is available. May run for a while on large captures."
+    "Use api='transformers' (the default HERE; the CLI's default is 'openai') on a GPU host — the local "
+    "model produces tighter clusters and surfaces anomalies that OpenAI embeddings miss (the model must "
+    "be pre-downloaded on the host). Use api='openai' as a fallback when no GPU is available. "
+    f"`model` selects the local transformers model when api='transformers': one of {list(PACKET_MODELS)} "
+    f"(default '{DEFAULT_PACKET_MODEL}'); ignored for api='openai'. "
+    "May run for a while on large captures."
 ))
-def compute_embeddings(api: str = "transformers") -> dict[str, Any]:
-    return _script("jaws_compute.py", "--api", api)
+def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL) -> dict[str, Any]:
+    if model not in PACKET_MODELS:
+        return {"ok": False, "error": f"unknown model '{model}'; available: {list(PACKET_MODELS)}"}
+    return _script("jaws_compute.py", "--api", api, "--model", model)
 
 
 @mcp.tool(name="anomaly_detection", description=(
@@ -207,7 +212,7 @@ _FETCH_QUERY = """
 MATCH (endpoint:ENDPOINT)
 WHERE endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
 OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
-RETURN DISTINCT
+RETURN
     endpoint.IP_ADDRESS AS ip_address,
     COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
     COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
@@ -236,7 +241,8 @@ LIMIT $limit
     "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag. "
     "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
     "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
-    "`duration` is how many minutes of history to include; `limit` caps the rows. "
+    "`duration` is how many minutes back to include, measured by when each profile was COMPUTED (the "
+    "compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
     "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
     "and see exactly who it talked to, use inspect_endpoint instead."
 ))

@@ -190,20 +190,34 @@ def add_endpoint_to_database(profile, embedding, driver, database):
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-def compute_transformer_embedding(input, embedder):
+def compute_transformer_embeddings(descriptions, embedder):
     # sentence-transformers reads each model's own pooling config and applies it; with
     # normalize_embeddings it L2-normalizes for calibrated cosine geometry downstream.
-    # One function works for any model in PACKET_MODELS — no per-model code.
-    return embedder.encode(input, normalize_embeddings=True).tolist()
+    # One function works for any model in PACKET_MODELS — no per-model code. Encoding
+    # the whole profile set in one call lets the library batch on the device, which is
+    # dramatically faster than per-profile encodes on a GPU.
+    return embedder.encode(descriptions, normalize_embeddings=True).tolist()
 
-def compute_openai_embedding(client, input):
-    response = client.embeddings.create(input=input, model=OPENAI_EMBEDDING_MODEL)
-    return response.data[0].embedding
+
+# One request per chunk instead of one per profile — fewer round-trips and less
+# rate-limit exposure. 512 short profiles stays well inside the API's per-request
+# input-count and token limits.
+OPENAI_EMBEDDING_BATCH = 512
+
+def compute_openai_embeddings(client, descriptions):
+    embeddings = []
+    for start in range(0, len(descriptions), OPENAI_EMBEDDING_BATCH):
+        chunk = descriptions[start:start + OPENAI_EMBEDDING_BATCH]
+        response = client.embeddings.create(input=chunk, model=OPENAI_EMBEDDING_MODEL)
+        # The API tags each embedding with its input index; sort to guarantee the
+        # output order matches the input order.
+        embeddings.extend(item.embedding for item in sorted(response.data, key=lambda d: d.index))
+    return embeddings
 
 
 def main():
     parser = argparse.ArgumentParser(description="Compute per-IP endpoint embeddings using either OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai').")
+    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai' — for easy demos without a GPU; note the MCP server defaults to 'transformers', the preferred path on a GPU host).")
     parser.add_argument("--model", choices=list(PACKET_MODELS), default=DEFAULT_PACKET_MODEL, help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     args = parser.parse_args()
@@ -234,19 +248,23 @@ def main():
         if args.api == "transformers":
             embedder = SentenceTransformer(model_name, device=device, trust_remote_code=True)
 
-        with reporter.activity(render) as update:
-            for profile in profiles:
-                description = build_endpoint_description(profile)
-                if args.api == "transformers":
-                    embedding = compute_transformer_embedding(description, embedder)
-                else:
-                    embedding = compute_openai_embedding(get_openai_client(), description)
+        # Embed every profile in one batched pass (the panels then narrate the DB
+        # writes). reporter.info first so a human sees progress during a long encode.
+        reporter.info("CONFIG", processing_message)
+        descriptions = [build_endpoint_description(profile) for profile in profiles]
+        if not descriptions:
+            embeddings = []
+        elif args.api == "transformers":
+            embeddings = compute_transformer_embeddings(descriptions, embedder)
+        else:
+            embeddings = compute_openai_embeddings(get_openai_client(), descriptions)
 
-                if embedding is not None:
-                    add_endpoint_to_database(profile, embedding, driver, args.database)
-                    embedding_strings.append(description)
-                    embedding_tensors.append(embedding)
-                    update()
+        with reporter.activity(render) as update:
+            for profile, description, embedding in zip(profiles, descriptions, embeddings):
+                add_endpoint_to_database(profile, embedding, driver, args.database)
+                embedding_strings.append(description)
+                embedding_tensors.append(embedding)
+                update()
 
         reporter.result(
             {

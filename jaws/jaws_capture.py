@@ -1,6 +1,5 @@
 import os
 import argparse
-import time
 import socket
 from datetime import datetime, timezone
 import psutil
@@ -54,9 +53,6 @@ def add_packets_to_database(driver, packets_batch, database):
         MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: packet.src_ip_address})
         MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: packet.dst_ip_address})
 
-        MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: packet.src_port, IP_ADDRESS: packet.src_ip_address})
-        MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: packet.dst_port, IP_ADDRESS: packet.dst_ip_address})
-
         CREATE (p:PACKET {
             PROTOCOL: packet.protocol,
             SIZE: packet.size,
@@ -68,12 +64,21 @@ def add_packets_to_database(driver, packets_batch, database):
             DST_PORT: packet.dst_port
         })
 
-        CREATE (src_port)-[:SENT]->(p)
-        CREATE (p)-[:RECEIVED]->(dst_port)
+        // Port 0 is the placeholder for non-TCP/UDP packets — don't materialize it
+        // as a PORT node. The FOREACH-over-CASE is Cypher's conditional write: the
+        // list has one element (run the MERGE/CREATE) or none (skip).
+        FOREACH (_ IN CASE WHEN packet.src_port <> 0 THEN [1] ELSE [] END |
+            MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: packet.src_port, IP_ADDRESS: packet.src_ip_address})
+            CREATE (src_port)-[:SENT]->(p)
+        )
+        FOREACH (_ IN CASE WHEN packet.dst_port <> 0 THEN [1] ELSE [] END |
+            MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: packet.dst_port, IP_ADDRESS: packet.dst_ip_address})
+            CREATE (p)-[:RECEIVED]->(dst_port)
+        )
         """, packets=packets_batch))
 
 
-def process_packet(packet, local_ip):
+def process_packet(packet):
     # sniff_time is the packet's actual capture time (from the frame header), so
     # imported pcap files keep their original timing — the INTERVAL_MEAN/INTERVAL_CV
     # features measure network cadence, not how fast the file was read. It is a naive
@@ -112,6 +117,14 @@ def main():
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
     args = parser.parse_args()
     reporter = Reporter()
+
+    # Listing interfaces is a purely local operation — resolve it before touching
+    # Neo4j so it works (e.g. as the MCP's step 1) even when the database is down.
+    if args.list:
+        interfaces = list_interfaces()
+        reporter.result({"interfaces": interfaces}, summary="\n".join(interfaces))
+        return
+
     local_ip = get_local_ip()
     driver = dbms_connection(args.database, reporter)
     if driver is None:
@@ -134,11 +147,6 @@ def main():
                 pass
 
     try:
-        if args.list:
-            interfaces = list_interfaces()
-            reporter.result({"interfaces": interfaces}, summary="\n".join(interfaces))
-            return
-
         initialize_schema(driver, args.database, local_ip, reporter)
 
         if args.capture_file and not os.path.isfile(args.capture_file):
@@ -169,23 +177,28 @@ def main():
             )
 
         with reporter.activity(render) as update:
-            if args.capture_file:
-                capture = pyshark.FileCapture(args.capture_file)
-                packet_source = capture
-            else:
-                capture = pyshark.LiveCapture(interface=args.interface)
-                packet_source = capture.sniff_continuously()
-
-            start_time = time.time()
-            for packet in packet_source:
-                packet_data, packet_string = process_packet(packet, local_ip)
+            def on_packet(packet):
+                packet_data, packet_string = process_packet(packet)
                 batch.append(packet_data)
                 packets.append(packet_string)
                 if len(batch) >= BATCH_SIZE:
                     flush_batch()
                 update()
-                if not args.capture_file and time.time() - start_time > args.duration:
-                    break
+
+            if args.capture_file:
+                capture = pyshark.FileCapture(args.capture_file)
+                for packet in capture:
+                    on_packet(packet)
+            else:
+                capture = pyshark.LiveCapture(interface=args.interface)
+                try:
+                    # apply_on_packets enforces a wall-clock timeout, so the capture
+                    # ends after `duration` seconds even on a quiet interface (an
+                    # elapsed check inside the loop would only run when a packet
+                    # arrives, blocking indefinitely with no traffic).
+                    capture.apply_on_packets(on_packet, timeout=args.duration)
+                except TimeoutError:
+                    pass  # the normal end of a timed capture
 
         flush_batch()
 

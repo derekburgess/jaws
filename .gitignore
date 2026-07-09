@@ -4,5 +4,4 @@ __pycache__/
 /JAWS.egg-info
 /build/
 /logs/
-/.gradio/
 .claude/

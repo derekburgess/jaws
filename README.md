@@ -118,6 +118,8 @@ jaws-compute uses OpenAI (text-embedding-3-large) by default. This requires that
 
 `OPENAI_API_KEY`
 
+Note: the MCP server (`jaws-mcp`) defaults to `transformers` instead, since it typically runs on a GPU host — the CLI default stays `openai` for easy demos.
+
 
 Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --model jina-code, jaws can download and run on device models from Hugging Face (see `config.PACKET_MODELS`; the default is jinaai/jina-embeddings-v2-base-code). The bundled models are public and download without any API key — you only need an env variable if you add a gated model to the registry:
 
