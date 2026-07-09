@@ -27,9 +27,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /jaws
 
 RUN git clone https://github.com/derekburgess/jaws.git .
-RUN pip install -r requirements.txt
+# pyproject.toml reads requirements.txt, so this single install pulls all dependencies.
 RUN pip install .
-
-#RUN jaws-anchor
 
 CMD ["tail", "-f", "/dev/null"]

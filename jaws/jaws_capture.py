@@ -74,6 +74,12 @@ def add_packets_to_database(driver, packets_batch, database):
 
 
 def process_packet(packet, local_ip):
+    # sniff_time is the packet's actual capture time (from the frame header), so
+    # imported pcap files keep their original timing — the INTERVAL_MEAN/INTERVAL_CV
+    # features measure network cadence, not how fast the file was read. It is a naive
+    # local datetime; astimezone() attaches the local zone and converts to UTC.
+    sniff_time = getattr(packet, 'sniff_time', None)
+    timestamp = sniff_time.astimezone(timezone.utc) if sniff_time else datetime.now(timezone.utc)
     packet_data = {
         "protocol": packet.highest_layer,
         "src_ip_address": packet.ip.src if hasattr(packet, 'ip') else '0.0.0.0',
@@ -82,7 +88,7 @@ def process_packet(packet, local_ip):
         "dst_port": 0,
         "size": len(packet),
         "payload": None,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": timestamp.isoformat()
     }
 
     if hasattr(packet, 'tcp') or hasattr(packet, 'udp'):
@@ -99,7 +105,7 @@ def process_packet(packet, local_ip):
 
 def main():
     parser = argparse.ArgumentParser(description="Collect packets from a network interface and stores them in the database.")
-    parser.add_argument("--interface", default="Ethernet", help="Specify the network interface to use (default: 'Ethernet').")
+    parser.add_argument("--interface", default=None, help="Specify the network interface to use (default: the first active interface from --list).")
     parser.add_argument("--file", dest="capture_file", help="Path to a Wireshark capture file.")
     parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
@@ -139,9 +145,15 @@ def main():
             reporter.error("ERROR", f"File not found, please check your file path:\n{args.capture_file}")
             return
 
-        if args.interface and not args.capture_file:
+        if not args.capture_file:
             available_interfaces = list_interfaces()
-            if args.interface not in available_interfaces:
+            if args.interface is None:
+                if not available_interfaces:
+                    reporter.error("ERROR", "No active network interfaces found.")
+                    return
+                args.interface = available_interfaces[0]
+                reporter.info("CONFIG", f"No interface specified, defaulting to: '{args.interface}'")
+            elif args.interface not in available_interfaces:
                 reporter.error("ERROR", f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.")
                 return
 

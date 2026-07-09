@@ -3,7 +3,7 @@
     "JAWS": {
       "type": "stdio",
       "command": "python",
-      "args": ["/path/to/jaws/MCP/server.py"]
+      "args": ["/path/to/jaws/jaws_mcp/server.py"]
     }
   }
 }

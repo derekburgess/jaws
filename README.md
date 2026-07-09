@@ -5,7 +5,7 @@
 
 JAWS is now an MCP server first. The Semantic Kernel `jaws-agent` and the older `smol.py` experiment have been removed — instead of bundling agents, JAWS exposes its pipeline as MCP tools (`jaws-mcp`) that any MCP client (e.g. Claude Code) can drive. Deploy to a Raspberry Pi at the edge of a network (passive LAN taps work great) and run the MCP server from it.
 
-Reworked the analysis model: traffic is now aggregated into one **endpoint profile per IP address** (labeled with its organization), describing inbound/outbound bytes, packets, peers, ports, and protocols. Anomaly detection clusters those endpoints, blending the embedding with standardized behavioral features so volume/fan-out outliers (e.g. unusual outbound traffic) actually surface. Local embeddings moved to sentence-transformers with a small model registry (`config.PACKET_MODELS`), so swapping/adding models is a one-line change.
+Reworked the analysis model: traffic is now aggregated into one **endpoint profile per IP address** (labeled with its organization), describing inbound/outbound bytes, packets, peers, ports, protocols, and inter-packet timing. Anomaly detection clusters those endpoints, blending the embedding with standardized behavioral features so volume/fan-out outliers (e.g. unusual outbound traffic) actually surface — and every endpoint now gets an interpretable **anomaly score** (aggregate robust-z over the raw behavioral features) with per-feature *reasons* in real units, so a flag explains itself (high outbound bytes vs. suspiciously regular beacon-like timing). A dedicated **host-outbound view** ranks the capture host's own upload destinations from raw packets, answering the exfiltration/beaconing question directly, and `jaws-finder --ablate` quantifies how much the text embedding actually contributes versus the numeric features (text-only vs. numeric-only vs. blended, with silhouette and Jaccard agreement). On the MCP side, `inspect_endpoint` drills from any flagged IP back to its peers and raw packets. Local embeddings moved to sentence-transformers with a small model registry (`config.PACKET_MODELS`), so swapping/adding models is a one-line change.
 
 ## 2025
 
@@ -13,7 +13,7 @@ Refactored the experience to be more agentic — CLI commands plus experimental 
 
 ## Context
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: K-means, DBSCAN, OpenAI, Jina Code embeddings, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and easy of use.
+JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: PCA, DBSCAN, OpenAI, Jina Code embeddings, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and ease of use.
 
 
 ## Prerequisites and initial setup
@@ -119,7 +119,7 @@ jaws-compute uses OpenAI (text-embedding-3-large) by default. This requires that
 `OPENAI_API_KEY`
 
 
-Somewhat Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --model jina-code, jaws can download and run on device models from Hugging Face. jaws-compute currently uses jinaai/jina-embeddings-v2-base-code to create embeddings. Feel free to adjust the model usage, but either way create an env variable for:
+Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --model jina-code, jaws can download and run on device models from Hugging Face (see `config.PACKET_MODELS`; the default is jinaai/jina-embeddings-v2-base-code). The bundled models are public and download without any API key — you only need an env variable if you add a gated model to the registry:
 
 `HUGGINGFACE_API_KEY`
 
@@ -132,17 +132,12 @@ The command jaws-finder displays several plots using Matplot, but also saves tho
 ### Install the JAWS Python Package
 
 
-From the /jaws root directory, install dependencies:
-
-`pip install -r requirements.txt`
-
-
-Install JAWS using:
+From the /jaws root directory, install JAWS (dependencies are pulled in automatically from requirements.txt):
 
 `pip install .`
 
 
-If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run jaws-guide for the rest of the instructions and commend overview.
+If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run jaws-guide for the rest of the instructions and command overview.
 
 
 ### Neo4j Docker Container
@@ -159,7 +154,7 @@ Then run:
 `docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-neodbms`
 
 
-If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run jaws-guide for the rest of the instructions and commend overview.
+If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run jaws-guide for the rest of the instructions and command overview.
 
 
 ### JAWS Compute Docker Container

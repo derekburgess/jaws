@@ -63,8 +63,8 @@ def main():
 
     print(f"""[gray100]
     [grey85]To capture or import packets:[/]
-    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'Ethernet' OR --file PATH --duration 10 --database '{DATABASE}'
-    [grey85]You can use jaws-capture --list to list available interfaces.[/]
+    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'eth0' OR --file PATH --duration 10 --database '{DATABASE}'
+    [grey85]You can use jaws-capture --list to list available interfaces. When --interface is omitted, the first active interface is used.[/]
     [/]""")
 
     print(f"""[gray100]

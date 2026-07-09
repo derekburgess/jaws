@@ -636,12 +636,18 @@ def main():
     if excluded_local:
         reporter.info("CONFIG", f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.")
 
+    # Clustering (and ablation) needs at least min_samples endpoints — below that PCA/
+    # NearestNeighbors raise. Catch it here with an actionable message instead.
+    min_samples = 2 * args.components
+    if len(data) < min_samples:
+        if not data:
+            reporter.error("ERROR", "No embedded endpoints found. Run jaws-capture, jaws-ipinfo, and jaws-compute first.")
+        else:
+            reporter.error("ERROR", f"Clustering needs at least {min_samples} embedded endpoints (have {len(data)}). Capture more traffic or lower --components.")
+        driver.close()
+        return
+
     if args.ablate:
-        min_samples = 2 * args.components
-        if len(data) < min_samples:
-            reporter.error("ERROR", f"Ablation needs at least {min_samples} embedded endpoints (have {len(data)}). Capture more traffic or lower --components.")
-            driver.close()
-            return
         result = run_ablation(embeddings, data, args.components, args.whiten, args.feature_weight)
         reporter.info("ABLATION", format_ablation_table(result))
         reporter.result(
@@ -682,7 +688,6 @@ def main():
     kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN."
     reporter.info("INFO", kdistance_info_message)
 
-    min_samples = 2 * args.components
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
     nearest_neighbors.fit(features)
     distances, _ = nearest_neighbors.kneighbors(features)
