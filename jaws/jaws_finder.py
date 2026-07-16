@@ -10,7 +10,7 @@ from sklearn.metrics import silhouette_score
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import plotille
-from jaws.config import DATABASE, FINDER_ENDPOINT
+from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
 from jaws.jaws_utils import (
     dbms_connection,
     Reporter,
@@ -37,11 +37,13 @@ RATIO_FEATURES = {
     "bytes_per_peer": lambda d: d["bytes_out"] / (d["out_peers"] + 1.0),
 }
 
-# Temporal cadence features (set by jaws_compute). INTERVAL_CV — the coefficient of
-# variation of inter-packet gaps — is the beaconing signal: a low CV means highly
-# regular callbacks (C2-like), a high CV means bursty/human traffic. INTERVAL_MEAN is
-# the typical period. Endpoints with too few packets carry None and are median-imputed
-# below so they read as "average regularity" rather than as perfect beacons.
+# Temporal cadence features (set by jaws_compute, from the endpoint's more regular
+# single DIRECTION — a combined stream's request/response pairing forces CV toward 1.0
+# and hides real beacons). INTERVAL_CV — the coefficient of variation of inter-packet
+# gaps — is the beaconing signal: a low CV means highly regular callbacks (C2-like), a
+# high CV means bursty/human traffic. INTERVAL_MEAN is the typical period. Endpoints
+# with too few packets in each direction carry None and are median-imputed below so
+# they read as "average regularity" rather than as perfect beacons.
 TIMING_FEATURES = ["interval_mean", "interval_cv"]
 
 NUMERIC_FEATURE_COUNT = len(BASE_FEATURES) + len(RATIO_FEATURES) + len(TIMING_FEATURES)
@@ -238,9 +240,9 @@ def score_endpoints(data, clusters):
     # Timing z-scores are only meaningful with enough intervals behind them: profiles
     # computed under the old MIN_TIMING_PACKETS gate (3) carry an interval_cv from a
     # 2-interval burst, so a lone handshake reads as cv ≈ 0.33 — "beacon-like" — for a
-    # benign CDN. packets_out + packets_in is exactly the combined stream the timing
-    # was computed over; below the current gate, neutralize timing so old graphs are
-    # fixed without re-computing (new computes leave timing None below the gate anyway).
+    # benign CDN. Timing is now per direction, so packets_out + packets_in below the
+    # gate guarantees neither direction met it; neutralize timing there so old graphs
+    # are fixed without re-computing (new computes leave timing None below the gate).
     timing_idx = [NUMERIC_FEATURE_NAMES.index(f) for f in TIMING_FEATURES]
     for i, item in enumerate(data):
         if item["packets_out"] + item["packets_in"] < MIN_TIMING_PACKETS:
@@ -275,6 +277,10 @@ def score_endpoints(data, clusters):
             "ip_address": item["ip_address"],
             "endpoint_type": item.get("endpoint_type"),
             "org": item["org"],
+            # Hosting/CDN ASNs label the infrastructure provider, not the actual
+            # service — keep "org: Google LLC" on a GCP customer VM from reading as
+            # Google's own reputation.
+            "cloud_hosted": is_cloud_hosted(item["org"]),
             "hostname": item["hostname"],
             "location": item["location"],
             "bytes_out": item["bytes_out"],
@@ -350,6 +356,7 @@ def score_host_outbound(rows):
         ranked.append({
             "ip_address": r["ip_address"],
             "org": r["org"],
+            "cloud_hosted": is_cloud_hosted(r["org"]),
             "hostname": r["hostname"],
             "location": r["location"],
             "upload_bytes": r["upload_bytes"],
@@ -967,8 +974,10 @@ def main():
             f"{LOW_DIRECTION_CAP} each, so a silent endpoint can never outrank a genuine spike — "
             "except interval_cv, where low = beacon-regular and keeps full weight. interval_mean "
             f"is capped at {LOW_DIRECTION_CAP} in BOTH directions: cadence is context, not signal "
-            "(interval_cv carries the beacon indicator). Timing features contribute 0 to the score "
-            f"for endpoints with fewer than {MIN_TIMING_PACKETS} packets (their interval fields "
+            "(interval_cv carries the beacon indicator). Timing is measured on the endpoint's more "
+            "regular single direction (a combined stream's request/response pairing forces CV "
+            "toward 1.0 and hides real beacons); it contributes 0 to the score for endpoints with "
+            f"fewer than {MIN_TIMING_PACKETS} packets in each direction (their interval fields "
             "read null). Reasons cite unweighted robust-z in both directions."
         ),
         # Multicast/broadcast/unspecified addresses are one-way by construction (no

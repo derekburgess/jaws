@@ -82,7 +82,7 @@ def fetch_ip_metadata(driver, database):
 
 
 def endpoint_timing(ts_groups):
-    """Inter-packet cadence for one endpoint's combined packet stream.
+    """Inter-packet cadence for one packet stream (one endpoint, one direction).
 
     `ts_groups` is a list of timestamp arrays (ms), ONE PER CAPTURE SESSION: intervals
     are computed within each group and pooled, never across groups, so the dead gap
@@ -143,21 +143,32 @@ def build_endpoint_profiles(packets, metadata):
     # Inbound: IP is the destination — peers are sources, ports are its own that received.
     inbound = aggregate("dst_ip", "src_ip", "dst_port")
 
-    # Timing is computed over each IP's combined stream (every packet it sends OR
-    # receives), so a single-peer endpoint with regular callbacks reads as low-CV
-    # while a busy multi-peer server's interleaved conversations read as high-CV.
-    # The stream is split per capture session (legacy packets with no CAPTURE_ID
-    # group together) so intervals never span the gap between two capture runs.
+    # Timing is computed PER DIRECTION (packets the IP sends; packets it receives)
+    # and the more regular qualifying direction is reported. A combined stream
+    # interleaves request/response pairs, and alternating near-zero reply gaps with
+    # the true period forces CV toward 1.0 for ANY regular ping-pong — masking a
+    # metronomic beacon (per-direction CV ≈ 0) behind an arithmetic artifact, while
+    # interval_mean halves to the pair gap instead of the period. Within a direction,
+    # a busy multi-peer server's interleaved conversations still read as high-CV.
+    # Each direction's stream is split per capture session (legacy packets with no
+    # CAPTURE_ID group together) so intervals never span the gap between two runs.
     has_ts = "ts_ms" in packets.columns
     timing = {}
     if has_ts:
         session_col = packets["capture_id"].fillna("") if "capture_id" in packets.columns \
             else pd.Series("", index=packets.index)
         for ip in set(packets["src_ip"]) | set(packets["dst_ip"]):
-            mask = (packets["src_ip"] == ip) | (packets["dst_ip"] == ip)
-            stream = packets.loc[mask, "ts_ms"]
-            groups = [g.values for _, g in stream.groupby(session_col.loc[mask])]
-            timing[ip] = endpoint_timing(groups)
+            directions = []
+            for ip_col in ("src_ip", "dst_ip"):
+                mask = packets[ip_col] == ip
+                stream = packets.loc[mask, "ts_ms"]
+                groups = [g.values for _, g in stream.groupby(session_col.loc[mask])]
+                mean, cv = endpoint_timing(groups)
+                if cv is not None:
+                    directions.append((cv, mean))
+            if directions:
+                cv, mean = min(directions)
+                timing[ip] = (mean, cv)
 
     profiles = []
     for ip in sorted(set(outbound) | set(inbound)):

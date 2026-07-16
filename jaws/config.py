@@ -53,6 +53,37 @@ def get_openai_client():
 
 IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 
+# ASNs that primarily host or front OTHER organizations' workloads (IaaS, CDN, reverse
+# proxies). Ipinfo labels an IP with its ASN's owner, so on these networks the org
+# string names the infrastructure provider, not the actual counterparty — "AS396982
+# Google LLC" is some GCP customer's VM, not Google (Google's own services ride
+# AS15169). Triage surfaces attach `cloud_hosted` from this set so the provider's name
+# isn't read as the service's reputation — attacker infrastructure lives in exactly
+# these networks. Curated, not exhaustive: extend as new hosting ASNs show up. Lives in
+# config (not jaws_utils) so the MCP server can import it without pulling in
+# sentence_transformers.
+HOSTING_ASNS = {
+    "AS396982",            # Google Cloud Platform (customer VMs)
+    "AS16509", "AS14618",  # Amazon AWS / EC2
+    "AS8075",              # Microsoft (Azure customers share it with Microsoft's own services)
+    "AS13335",             # Cloudflare (reverse proxy — the origin is hidden behind it)
+    "AS54113",             # Fastly (CDN)
+    "AS16625", "AS20940",  # Akamai (CDN)
+    "AS14061",             # DigitalOcean
+    "AS16276",             # OVH
+    "AS24940",             # Hetzner
+    "AS63949",             # Linode (Akamai)
+    "AS20473",             # Vultr
+    "AS31898",             # Oracle Cloud
+    "AS45102",             # Alibaba Cloud
+}
+
+
+def is_cloud_hosted(org):
+    """True when an org label's leading ASN is a hosting/CDN provider (HOSTING_ASNS)."""
+    parts = org.split() if org else []
+    return bool(parts) and parts[0] in HOSTING_ASNS
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 

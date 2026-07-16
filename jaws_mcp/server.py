@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from jaws.config import DATABASE, PACKET_MODELS, DEFAULT_PACKET_MODEL, get_neo4j_driver
+from jaws.config import DATABASE, PACKET_MODELS, DEFAULT_PACKET_MODEL, get_neo4j_driver, is_cloud_hosted
 
 ROOT = Path(__file__).parent.parent   # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
@@ -235,8 +235,12 @@ def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MO
     "`endpoints` ranking; use `host_outbound.destinations` to judge host exfiltration or beaconing. "
     "Multicast/broadcast addresses (SSDP/mDNS chatter — one-way by construction) are excluded from both "
     "rankings and listed under `excluded_non_conversational`; each ranked endpoint carries its "
-    "`endpoint_type` (public/private/multicast/…). "
-    "`components` is the number of PCA dimensions to retain (minimum 2). `whiten` scales each PCA "
+    "`endpoint_type` (public/private/multicast/…) and `cloud_hosted` — true when the org's ASN is a "
+    "hosting/CDN provider (GCP/AWS/Cloudflare/…), meaning the org label names the infrastructure "
+    "provider, NOT the actual service behind the IP — don't clear a finding on the provider's name. "
+    "`components` is the number of PCA dimensions to retain (minimum 2); if the result's "
+    "`pca_variance_total` comes back well under ~0.5, the projection is dropping structure — re-run "
+    "with components=3. `whiten` scales each PCA "
     "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
     "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
     "tends to overshoot on small captures and return 0 outliers — if outliers_flagged is 0 and you "
@@ -265,6 +269,8 @@ def drop_database() -> dict[str, Any]:
     return _script("jaws_utils.py")
 
 
+# Ranked by total bytes, not recency: every profile in a compute run shares one
+# TIMESTAMP, so a recency sort is degenerate and `limit` would truncate arbitrarily.
 _FETCH_QUERY = """
 MATCH (endpoint:ENDPOINT)
 WHERE endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
@@ -289,17 +295,19 @@ RETURN
     endpoint.INTERVAL_CV AS interval_cv,
     endpoint.OUTLIER AS outlier,
     endpoint.TIMESTAMP AS timestamp
-ORDER BY endpoint.TIMESTAMP DESC
+ORDER BY endpoint.BYTES_OUT + endpoint.BYTES_IN DESC
 LIMIT $limit
 """
 
 
 @mcp.tool(name="fetch_traffic", description=(
     "Read processed per-IP endpoint profiles back from the graph. Returns an object with an `endpoints` "
-    "list (most recent first) and a `count`; each endpoint is one IP with its org/hostname/location and "
-    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag and "
+    "list (ranked by total bytes, heaviest conversations first) and a `count`; each endpoint is one IP "
+    "with its org/hostname/location and "
+    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag, "
     "`endpoint_type` (public/private/multicast/… — multicast/broadcast rows are protocol chatter, not "
-    "conversation partners, and are excluded from anomaly rankings). "
+    "conversation partners, and are excluded from anomaly rankings), and `cloud_hosted` (the org's ASN "
+    "is a hosting/CDN provider, so the org names the infrastructure provider, not the actual service). "
     "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
     "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
     "`duration_minutes` is how many minutes back to include, measured by when each profile was COMPUTED "
@@ -318,6 +326,8 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
     # Round-trip through json with default=str to coerce Neo4j DateTime values into
     # JSON-native strings, so FastMCP can serialize the returned dict cleanly.
     endpoints = json.loads(json.dumps(data, default=str))
+    for endpoint in endpoints:
+        endpoint["cloud_hosted"] = is_cloud_hosted(endpoint.get("org"))
     return {"ok": True, "endpoints": endpoints, "count": len(endpoints), "duration_minutes": duration_minutes}
 
 
@@ -356,8 +366,10 @@ RETURN
     endpoint.TIMESTAMP AS timestamp
 """
 
-# True totals for the IP across the whole capture (NOT truncated by the peer/packet
-# limits below), so the caller knows when the returned lists are samples.
+# True totals for the IP across EVERY session in the graph (NOT truncated by the
+# peer/packet limits below), so the caller knows when the returned lists are samples.
+# The profile above is scoped to one session, so totals can legitimately exceed it —
+# the payload labels this with totals.scope so the mismatch doesn't read as a bug.
 _INSPECT_TOTALS_QUERY = """
 MATCH (p:PACKET)
 WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
@@ -427,10 +439,14 @@ def _clean_ports(*port_lists) -> list[int]:
 @mcp.tool(name="inspect_endpoint", description=(
     "Drill into ONE specific IP — the join key from an anomaly back to its detail. Hand it an IP (e.g. an "
     "outlier from anomaly_detection or any IP from fetch_traffic) and it returns, addressably by that IP: "
-    "`profile` — the endpoint's aggregated profile (org/hostname/location, directional bytes/packets/peers/"
-    "ports, timing, outlier flag), or null if the IP was captured but compute_embeddings hasn't run yet; "
-    "`totals` — the true packet and distinct-peer counts for the IP across the whole capture (so you can tell "
-    "when the lists below are samples); `peers` — WHO this IP actually exchanged packets with, one row per "
+    "`profile` — the endpoint's aggregated profile (org/hostname/location, a `cloud_hosted` hosting-ASN "
+    "hint, directional bytes/packets/peers/"
+    "ports, timing, outlier flag), or null if the IP was captured but compute_embeddings hasn't run yet — "
+    "the profile describes ONE capture session (its `capture_id`); "
+    "`totals` — the true packet and distinct-peer counts for the IP across every session in the graph "
+    "(labeled `scope: all_sessions` — totals exceeding the profile's counts means older sessions also saw "
+    "this IP, not an inconsistency; it also tells you when the lists below are samples); `peers` — WHO this "
+    "IP actually exchanged packets with across all sessions, one row per "
     "peer (peer IP + org/hostname/location, bytes/packets out & in, ports, protocols), ranked by total bytes; "
     "and `packets` — a most-recent raw 5-tuple packet sample. Directions are from the inspected IP's OWN "
     "perspective (outbound = this IP is the packet source): for a remote IP, its outbound bytes are what it "
@@ -468,12 +484,16 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
     total_packets = totals["packets"] if totals else 0
     total_peers = totals["peers"] if totals else 0
 
+    profile = profile_rows[0] if profile_rows else None
+    if profile:
+        profile["cloud_hosted"] = is_cloud_hosted(profile.get("org"))
+
     payload = {
         "ip_address": ip_address,
         # True if the IP appears anywhere in the capture (raw packets) or as a profile.
         "found": bool(total_packets > 0 or profile_rows),
-        "profile": profile_rows[0] if profile_rows else None,
-        "totals": {"packets": total_packets, "peers": total_peers},
+        "profile": profile,
+        "totals": {"packets": total_packets, "peers": total_peers, "scope": "all_sessions"},
         "peers": peers,
         "peers_returned": len(peers),
         "packets": packet_rows,
