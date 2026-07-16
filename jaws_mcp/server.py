@@ -215,7 +215,8 @@ def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MO
 @mcp.tool(name="anomaly_detection", description=(
     "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and score every IP for anomaly. "
     "Returns a JSON summary: endpoints_clustered, outliers_flagged, `clusters`/`cluster_sizes` (so 0 "
-    "outliers from one tight cluster reads differently than 0 from an over-generous eps), the DBSCAN "
+    "outliers from one tight cluster reads differently than 0 from an over-generous eps; `cluster_sizes` "
+    "excludes DBSCAN noise, so sum(cluster_sizes) + outliers_flagged == endpoints_clustered), the DBSCAN "
     "params (eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
     "list of clustered IPs sorted by `anomaly_score` (descending), so there is always a ranking to "
     "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (behavioral distance "
@@ -381,6 +382,13 @@ RETURN count(p) AS packets,
 # direction (outbound = this IP is the source). This is the handle the profile lacks —
 # it stores OUT_PEERS as a count, never which peers. Ranked by total bytes so the
 # heaviest conversations surface first.
+# Ports are split by role via the flow heuristic: per packet, the service-identifying
+# side is min(src, dst) — ephemeral client ports are allocated high (Linux default
+# 32768+), so a naive src∪dst union balloons with one throwaway port per connection
+# across sessions while burying the one port that says what the conversation IS. The
+# high side is collected only to be counted (churn signal); exact per-packet ports
+# remain available in the `packets` sample. Port-0 placeholders (no TCP/UDP layer)
+# yield null from the guarded CASE and collect() skips nulls.
 _INSPECT_PEERS_QUERY = """
 MATCH (p:PACKET)
 WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
@@ -393,8 +401,12 @@ WITH peer,
      sum(CASE WHEN NOT outbound THEN p.SIZE ELSE 0 END) AS bytes_in,
      sum(CASE WHEN NOT outbound THEN 1 ELSE 0 END) AS packets_in,
      collect(DISTINCT p.PROTOCOL) AS protocols,
-     collect(DISTINCT p.SRC_PORT) AS src_ports,
-     collect(DISTINCT p.DST_PORT) AS dst_ports
+     collect(DISTINCT CASE WHEN p.SRC_PORT > 0 AND p.DST_PORT > 0
+                           THEN CASE WHEN p.SRC_PORT < p.DST_PORT THEN p.SRC_PORT ELSE p.DST_PORT END
+                      END) AS service_ports,
+     collect(DISTINCT CASE WHEN p.SRC_PORT > 0 AND p.DST_PORT > 0
+                           THEN CASE WHEN p.SRC_PORT < p.DST_PORT THEN p.DST_PORT ELSE p.SRC_PORT END
+                      END) AS high_ports
 OPTIONAL MATCH (peer_ip:IP_ADDRESS {IP_ADDRESS: peer})<-[:OWNERSHIP]-(peer_org:ORGANIZATION)
 RETURN peer AS peer_ip,
        peer_org.ORGANIZATION AS peer_org,
@@ -402,7 +414,7 @@ RETURN peer AS peer_ip,
        peer_ip.LOCATION AS peer_location,
        bytes_out, packets_out, bytes_in, packets_in,
        (bytes_out + bytes_in) AS bytes_total,
-       protocols, src_ports, dst_ports
+       protocols, service_ports, high_ports
 ORDER BY bytes_total DESC
 LIMIT $peer_limit
 """
@@ -421,19 +433,16 @@ LIMIT $packet_limit
 """
 
 
-def _clean_ports(*port_lists) -> list[int]:
-    """Merge collected SRC/DST port lists into one sorted set of real ports.
+def _split_ports(service_ports, high_ports) -> tuple[list[int], int]:
+    """Turn the query's per-role port collections into (service_ports, ephemeral count).
 
-    DBSCAN's profile uses dst_port for both directions; for a human-facing peer
-    breakdown the useful answer is just every non-ephemeral-placeholder port seen in
-    the conversation, so we union src+dst, drop the 0/None placeholders, and sort.
+    A port equal on both sides of a packet (e.g. NTP 123↔123) lands in both
+    collections; subtracting the service set keeps it from double-counting as
+    ephemeral churn.
     """
-    ports = set()
-    for lst in port_lists:
-        for p in lst or []:
-            if p:
-                ports.add(int(p))
-    return sorted(ports)
+    service = sorted(int(p) for p in (service_ports or []) if p)
+    ephemeral = {int(p) for p in (high_ports or []) if p} - set(service)
+    return service, len(ephemeral)
 
 
 @mcp.tool(name="inspect_endpoint", description=(
@@ -447,7 +456,10 @@ def _clean_ports(*port_lists) -> list[int]:
     "(labeled `scope: all_sessions` — totals exceeding the profile's counts means older sessions also saw "
     "this IP, not an inconsistency; it also tells you when the lists below are samples); `peers` — WHO this "
     "IP actually exchanged packets with across all sessions, one row per "
-    "peer (peer IP + org/hostname/location, bytes/packets out & in, ports, protocols), ranked by total bytes; "
+    "peer (peer IP + org/hostname/location, bytes/packets out & in, protocols, `service_ports` — the "
+    "service-identifying low side of each port pair, e.g. 443 — and `ephemeral_ports`, a count of distinct "
+    "high-side client ports: high churn means many short-lived connections rather than one long tunnel), "
+    "ranked by total bytes; "
     "and `packets` — a most-recent raw 5-tuple packet sample. Directions are from the inspected IP's OWN "
     "perspective (outbound = this IP is the packet source): for a remote IP, its outbound bytes are what it "
     "sent TO the capture host (a host download), and its inbound bytes are what the host sent to it (outbound "
@@ -467,6 +479,7 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
 
     peers = []
     for r in peer_rows:
+        service_ports, ephemeral_ports = _split_ports(r["service_ports"], r["high_ports"])
         peers.append({
             "peer_ip": r["peer_ip"],
             "peer_org": r["peer_org"],
@@ -478,7 +491,8 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
             "packets_in": r["packets_in"],
             "bytes_total": r["bytes_total"],
             "protocols": sorted(p for p in (r["protocols"] or []) if p),
-            "ports": _clean_ports(r["src_ports"], r["dst_ports"]),
+            "service_ports": service_ports,
+            "ephemeral_ports": ephemeral_ports,
         })
 
     total_packets = totals["packets"] if totals else 0
