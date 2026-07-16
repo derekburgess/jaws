@@ -46,6 +46,34 @@ def list_interfaces():
 BATCH_SIZE = 100
 
 
+# Every capture/import run is one SESSION, recorded as a CAPTURE node and stamped on
+# each of its PACKETs (a property join, like the rest of the packet schema — no
+# per-packet edges). Sessions are what make an accumulating graph analyzable: without
+# them, profiles aggregate "all traffic ever in this graph" and inter-packet timing
+# spans the dead gap between two capture runs, so a real beacon's interval_cv is
+# inflated by a 20-minute pause. jaws_compute scopes to a session ('latest' by
+# default), which is why drop_database between captures is optional, not required.
+def register_capture(driver, database, capture_id, source):
+    # MERGE, not CREATE: two runs starting the same second share one session, which
+    # is the honest reading of "same second" at capture granularity.
+    query = """
+    MERGE (c:CAPTURE {CAPTURE_ID: $capture_id})
+    ON CREATE SET c.STARTED = datetime()
+    SET c.SOURCE = $source
+    """
+    with driver.session(database=database) as session:
+        session.run(query, capture_id=capture_id, source=source)
+
+
+def finalize_capture(driver, database, capture_id, packet_count):
+    query = """
+    MATCH (c:CAPTURE {CAPTURE_ID: $capture_id})
+    SET c.PACKETS = $packet_count
+    """
+    with driver.session(database=database) as session:
+        session.run(query, capture_id=capture_id, packet_count=packet_count)
+
+
 def add_packets_to_database(driver, packets_batch, database):
     with driver.session(database=database) as session:
         session.execute_write(lambda tx: tx.run("""
@@ -58,6 +86,7 @@ def add_packets_to_database(driver, packets_batch, database):
             SIZE: packet.size,
             PAYLOAD: packet.payload,
             TIMESTAMP: datetime(packet.timestamp),
+            CAPTURE_ID: packet.capture_id,
             SRC_IP: packet.src_ip_address,
             DST_IP: packet.dst_ip_address,
             SRC_PORT: packet.src_port,
@@ -165,10 +194,14 @@ def main():
                 reporter.error("ERROR", f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.")
                 return
 
+        source = args.capture_file if args.capture_file else args.interface
+        capture_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        register_capture(driver, args.database, capture_id, source)
+
         if args.capture_file:
-            config_message = f"Import: {args.capture_file} | {local_ip}"
+            config_message = f"Import: {args.capture_file} | {local_ip} | session {capture_id}"
         else:
-            config_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds"
+            config_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds | session {capture_id}"
 
         def render():
             return Group(
@@ -179,6 +212,7 @@ def main():
         with reporter.activity(render) as update:
             def on_packet(packet):
                 packet_data, packet_string = process_packet(packet)
+                packet_data["capture_id"] = capture_id
                 batch.append(packet_data)
                 packets.append(packet_string)
                 if len(batch) >= BATCH_SIZE:
@@ -201,11 +235,11 @@ def main():
                     pass  # the normal end of a timed capture
 
         flush_batch()
+        finalize_capture(driver, args.database, capture_id, len(packets))
 
-        source = args.capture_file if args.capture_file else args.interface
         reporter.result(
-            {"database": args.database, "source": source, "packets_captured": len(packets)},
-            summary=f"Packets({len(packets)}) added to: '{args.database}'",
+            {"database": args.database, "source": source, "capture_id": capture_id, "packets_captured": len(packets)},
+            summary=f"Packets({len(packets)}) added to: '{args.database}' as session '{capture_id}'",
         )
         return
 

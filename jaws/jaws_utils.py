@@ -1,4 +1,5 @@
 import argparse
+import ipaddress
 import json
 import sys
 from contextlib import contextmanager
@@ -13,6 +14,55 @@ from jaws.config import (
     PACKET_MODELS,
     get_neo4j_driver,
 )
+
+
+# Address-scope classification shared by compute (tags each profile), finder (excludes
+# non-conversational endpoints from the rankings), and ipinfo (skips lookups that can
+# only return bogons). Multicast/broadcast destinations never reply, so directional
+# ratios computed against them (out/in, upload/download) are structurally one-sided —
+# without this, SSDP/mDNS chatter tops both anomaly rankings looking "exfil-shaped".
+NON_CONVERSATIONAL_TYPES = {"multicast", "broadcast", "unspecified"}
+
+
+def classify_endpoint(ip_string):
+    """Coarse endpoint_type for an IP, via stdlib ipaddress.
+
+    Returns one of: 'multicast', 'broadcast', 'unspecified', 'loopback', 'link-local',
+    'private', 'public', 'reserved', or 'unknown' (unparseable). Types in
+    NON_CONVERSATIONAL_TYPES are one-way by construction and are kept out of anomaly
+    rankings; 'public' is the only type worth an ipinfo lookup. Order matters below:
+    loopback/link-local addresses are also is_private, so they are checked first.
+    """
+    try:
+        ip = ipaddress.ip_address(ip_string)
+    except ValueError:
+        return "unknown"
+    if ip.is_multicast:
+        return "multicast"
+    if ip == ipaddress.IPv4Address("255.255.255.255"):
+        return "broadcast"
+    if ip.is_unspecified:
+        return "unspecified"
+    if ip.is_loopback:
+        return "loopback"
+    if ip.is_link_local:
+        return "link-local"
+    if ip.is_private:
+        return "private"
+    if ip.is_global:
+        return "public"
+    return "reserved"
+
+
+# Minimum packets in an endpoint's combined stream before its timing is meaningful.
+# Six packets give five inter-packet intervals — enough for a coefficient of variation
+# that reflects cadence rather than a single burst. Below this, timing is left
+# undefined (None) at compute time and the finder imputes it, so sparse endpoints
+# aren't mistaken for perfectly regular beacons (the old gate of 3 let a lone
+# handshake read as interval_cv ≈ 0.33, i.e. "beacon-like"). Lives here so
+# jaws_compute (the gate) and jaws_finder (suppression for graphs computed under the
+# old gate) share one value.
+MIN_TIMING_PACKETS = 6
 
 
 # Utility functions imported elsewhere.
@@ -174,6 +224,20 @@ def initialize_schema(driver, database, local_ip, reporter):
             "label": "ENDPOINT",
             "properties": ["IP_ADDRESS"],
             "query": "CREATE INDEX endpoint_ip_index IF NOT EXISTS FOR (e:ENDPOINT) ON (e.IP_ADDRESS)"
+        },
+        {
+            "type": "constraint",
+            "name": "capture_id_unique",
+            "label": "CAPTURE",
+            "properties": ["CAPTURE_ID"],
+            "query": "CREATE CONSTRAINT capture_id_unique IF NOT EXISTS FOR (c:CAPTURE) REQUIRE c.CAPTURE_ID IS UNIQUE"
+        },
+        {
+            "type": "index",
+            "name": "packet_capture_index",
+            "label": "PACKET",
+            "properties": ["CAPTURE_ID"],
+            "query": "CREATE INDEX packet_capture_index IF NOT EXISTS FOR (p:PACKET) ON (p.CAPTURE_ID)"
         }
     ]
     

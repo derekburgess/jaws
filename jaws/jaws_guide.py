@@ -65,6 +65,7 @@ def main():
     [grey85]To capture or import packets:[/]
     [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'eth0' OR --file PATH --duration 10 --database '{DATABASE}'
     [grey85]You can use jaws-capture --list to list available interfaces. When --interface is omitted, the first active interface is used.[/]
+    [grey85]Each run is its own capture session (capture_id); sessions accumulate — no need to drop the database between captures.[/]
     [/]""")
 
     print(f"""[gray100]
@@ -74,9 +75,10 @@ def main():
 
     print(f"""[gray100]
     [grey85]To compute embeddings:[/]
-    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --model '{DEFAULT_PACKET_MODEL}' --database '{DATABASE}'
+    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --model '{DEFAULT_PACKET_MODEL}' --database '{DATABASE}' --session 'latest'
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
     [grey85]--model selects a local transformers model when --api transformers (see config.PACKET_MODELS).[/]
+    [grey85]--session selects which capture session to profile: 'latest' (default), 'all', or a capture_id.[/]
     [/]""")
    
     print(f"""[gray100]

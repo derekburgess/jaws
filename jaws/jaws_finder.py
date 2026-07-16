@@ -13,7 +13,10 @@ import plotille
 from jaws.config import DATABASE, FINDER_ENDPOINT
 from jaws.jaws_utils import (
     dbms_connection,
-    Reporter
+    Reporter,
+    classify_endpoint,
+    NON_CONVERSATIONAL_TYPES,
+    MIN_TIMING_PACKETS
 )
 
 
@@ -69,6 +72,59 @@ FEATURE_UNITS = {
 # endpoint was anomalous. ~2.5 robust deviations is a clear departure from the pack
 # without naming every minor wobble.
 REASON_Z_THRESHOLD = 2.5
+
+# The anomaly score aggregates each endpoint's robust-z vector as the L2 norm of its
+# SCORE_TOP_K largest |z| components, not the full vector. About half the numeric
+# features are correlated through bytes_out, so a full-vector norm let a silent
+# one-packet endpoint stack six mild "low" deviations and outrank a genuine
+# single-feature spike; top-k keeps a multi-feature anomaly ahead of a single-feature
+# one without rewarding that redundancy.
+SCORE_TOP_K = 3
+
+# "Low" deviations (quieter than the pack) are weak threat signal compared to "high"
+# ones — and they are exactly what correlated features stack — so each one's score
+# contribution is down-weighted AND capped. The cap matters more than the weight: on a
+# homogeneous pack the MAD is tiny, so a silent one-packet endpoint's lows reach
+# robust-z ≈ −40 per feature and no linear weight tames that. "Quieter than typical"
+# saturates as a signal, so a low contributes at most a clear-deviation's worth
+# (~REASON_Z_THRESHOLD); with SCORE_TOP_K lows the score tops out near
+# sqrt(SCORE_TOP_K) * cap ≈ 5.2, below any genuinely strong single high. EXCEPT where
+# low is itself the signal: a low interval_cv is the beaconing indicator and keeps
+# full, uncapped weight. Reasons still cite the full unweighted robust-z in both
+# directions; the weighting shapes only the ranking.
+LOW_DIRECTION_WEIGHT = 0.5
+LOW_DIRECTION_CAP = 3.0
+LOW_SIGNAL_FEATURES = {"interval_cv"}
+
+# Features whose deviations saturate in BOTH directions. interval_mean is cadence —
+# context, not signal (interval_cv carries the beacon indicator) — and the population
+# median interval is typically sub-second with a tiny MAD, so a benign endpoint polling
+# every few seconds lands at robust-z 10-17 and owns the top of the ranking on cadence
+# alone. "Slower cadence than the pack" saturates exactly like "quieter than the pack"
+# does: cap its score contribution (full weight, same cap as lows) so timing context
+# can't outrank a genuine volume/shape spike. Reasons still cite the raw robust-z.
+SATURATING_FEATURES = {"interval_mean"}
+
+
+def deviation_score(z, feature_names):
+    """One rankable score per row of a robust-z matrix.
+
+    L2 norm over the SCORE_TOP_K largest |z| per row, with negative deviations
+    down-weighted by LOW_DIRECTION_WEIGHT and capped at LOW_DIRECTION_CAP, except for
+    LOW_SIGNAL_FEATURES which count like highs, and SATURATING_FEATURES capped in both
+    directions (see the constants above for why this replaces a full-vector norm).
+    Columns align with `feature_names`.
+    """
+    low_signal = np.array([name in LOW_SIGNAL_FEATURES for name in feature_names])
+    is_capped_low = (z < 0) & ~low_signal
+    weighted = np.abs(z)
+    weighted[is_capped_low] = np.minimum(
+        weighted[is_capped_low] * LOW_DIRECTION_WEIGHT, LOW_DIRECTION_CAP)
+    saturating = np.array([name in SATURATING_FEATURES for name in feature_names])
+    weighted[:, saturating] = np.minimum(weighted[:, saturating], LOW_DIRECTION_CAP)
+    k = min(SCORE_TOP_K, weighted.shape[1])
+    top = np.sort(weighted, axis=1)[:, -k:]
+    return np.sqrt(np.sum(top ** 2, axis=1))
 
 
 # The capture host's own IP is owned by this synthetic org (see initialize_schema).
@@ -166,18 +222,31 @@ def robust_z_scores(raw):
 def score_endpoints(data, clusters):
     """Attach a rankable anomaly score and reason codes to every endpoint.
 
-    `anomaly_score` is the L2 norm of an endpoint's per-feature robust-z vector — its
-    overall behavioral distance from the pack — so endpoints that deviate on several
-    features outrank those that deviate on one, and the score exists even when DBSCAN
-    flags nothing. `reasons` cites the features whose |robust-z| clears
-    REASON_Z_THRESHOLD, each with its raw value, unit, and direction, turning
+    `anomaly_score` is the deviation_score of the endpoint's per-feature robust-z
+    vector (top-k, low-direction-weighted L2 — see deviation_score) — its behavioral
+    distance from the pack — so endpoints that deviate strongly on a few features
+    outrank those that are mildly odd on many correlated ones, and the score exists
+    even when DBSCAN flags nothing. `reasons` cites the features whose |robust-z|
+    clears REASON_Z_THRESHOLD, each with its raw value, unit, and direction, turning
     'flagged' into 'flagged because bytes_out is far above the typical host'.
     `is_outlier` carries the DBSCAN verdict so the geometric flag and the
     interpretable score coexist. Returns the full list sorted by score descending.
     """
     raw = build_numeric_features(data)
     z = robust_z_scores(raw)
-    scores = np.linalg.norm(z, axis=1)
+
+    # Timing z-scores are only meaningful with enough intervals behind them: profiles
+    # computed under the old MIN_TIMING_PACKETS gate (3) carry an interval_cv from a
+    # 2-interval burst, so a lone handshake reads as cv ≈ 0.33 — "beacon-like" — for a
+    # benign CDN. packets_out + packets_in is exactly the combined stream the timing
+    # was computed over; below the current gate, neutralize timing so old graphs are
+    # fixed without re-computing (new computes leave timing None below the gate anyway).
+    timing_idx = [NUMERIC_FEATURE_NAMES.index(f) for f in TIMING_FEATURES]
+    for i, item in enumerate(data):
+        if item["packets_out"] + item["packets_in"] < MIN_TIMING_PACKETS:
+            z[i, timing_idx] = 0.0
+
+    scores = deviation_score(z, NUMERIC_FEATURE_NAMES)
 
     ranked = []
     for i, item in enumerate(data):
@@ -204,6 +273,7 @@ def score_endpoints(data, clusters):
         reasons.sort(key=lambda r: abs(r["robust_z"]), reverse=True)
         ranked.append({
             "ip_address": item["ip_address"],
+            "endpoint_type": item.get("endpoint_type"),
             "org": item["org"],
             "hostname": item["hostname"],
             "location": item["location"],
@@ -248,10 +318,11 @@ def score_host_outbound(rows):
     """Rank the host's outbound destinations on the host-upload distribution.
 
     `rows` is one dict per destination the host sent to (upload/download bytes & packets).
-    Adds `upload_download_ratio`, an `outbound_score` (L2 norm of the robust-z vector over
-    the host-upload features — same method as score_endpoints, but on the host's OWN
-    outbound rather than a remote's perspective), and host-frame `reasons`. Returns the
-    list sorted by outbound_score descending; an empty input yields an empty list.
+    Adds `upload_download_ratio`, an `outbound_score` (deviation_score of the robust-z
+    vector over the host-upload features — same aggregation as score_endpoints, but on
+    the host's OWN outbound rather than a remote's perspective), and host-frame
+    `reasons`. Returns the list sorted by outbound_score descending; an empty input
+    yields an empty list.
     """
     if not rows:
         return []
@@ -259,7 +330,7 @@ def score_host_outbound(rows):
         r["upload_download_ratio"] = r["upload_bytes"] / (r["download_bytes"] + 1.0)
     raw = np.array([[float(r[f]) for f in HOST_OUTBOUND_FEATURES] for r in rows])
     z = robust_z_scores(raw)
-    scores = np.linalg.norm(z, axis=1)
+    scores = deviation_score(z, HOST_OUTBOUND_FEATURES)
 
     ranked = []
     for i, r in enumerate(rows):
@@ -287,6 +358,9 @@ def score_host_outbound(rows):
             "download_packets": r["download_packets"],
             "upload_download_ratio": round(float(r["upload_download_ratio"]), 4),
             "outbound_score": round(float(scores[i]), 4),
+            # Explicit per-row verdict (a reason cleared REASON_Z_THRESHOLD), so the
+            # top-level `flagged` count is joinable without inferring from `reasons`.
+            "is_flagged": bool(reasons),
             "reasons": reasons,
         })
     ranked.sort(key=lambda e: e["outbound_score"], reverse=True)
@@ -334,6 +408,7 @@ def fetch_data_for_dbscan(driver, database, include_local=False):
     MATCH (endpoint:ENDPOINT)
     OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
     RETURN endpoint.IP_ADDRESS AS ip_address,
+           endpoint.CAPTURE_ID AS capture_id,
            COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION, 'Unknown') AS org,
            COALESCE(endpoint.HOSTNAME, ip.HOSTNAME, 'Unknown') AS hostname,
            COALESCE(endpoint.LOCATION, ip.LOCATION, 'Unknown') AS location,
@@ -352,14 +427,31 @@ def fetch_data_for_dbscan(driver, database, include_local=False):
         embeddings = []
         data = []
         excluded_local = 0
+        excluded_non_conversational = []
         for record in result:
             if record['embedding'] is not None:  # Only process endpoints with embeddings
                 if not include_local and record['org'] == LOCAL_ORG:
                     excluded_local += 1
                     continue
+                ip_address = record['ip_address'] or 'Unknown'
+                # Multicast/broadcast destinations never reply, so their profiles are
+                # one-way protocol chatter (SSDP/mDNS) whose out/in shape reads as
+                # exfil. They stay in the graph (tagged, inspectable) but are not
+                # clustered or ranked. Classified here from the IP rather than the
+                # stored ENDPOINT_TYPE so graphs computed before the tag existed are
+                # filtered too.
+                endpoint_type = classify_endpoint(ip_address)
+                if endpoint_type in NON_CONVERSATIONAL_TYPES:
+                    excluded_non_conversational.append(
+                        {"ip_address": ip_address, "endpoint_type": endpoint_type})
+                    continue
                 embeddings.append(np.array(record['embedding']))
                 data.append({
-                    'ip_address': record['ip_address'] or 'Unknown',
+                    'ip_address': ip_address,
+                    'endpoint_type': endpoint_type,
+                    # Session scope this profile was computed from ('all', a concrete
+                    # CAPTURE_ID, or None on graphs computed before sessions existed).
+                    'capture_id': record['capture_id'],
                     'org': record['org'] or 'Unknown',
                     'hostname': record['hostname'] or 'Unknown',
                     'location': record['location'] or 'Unknown',
@@ -374,7 +466,7 @@ def fetch_data_for_dbscan(driver, database, include_local=False):
                     'interval_mean': record['interval_mean'],
                     'interval_cv': record['interval_cv'],
                 })
-        return embeddings, data, excluded_local
+        return embeddings, data, excluded_local, excluded_non_conversational
 
 
 def fetch_data_for_portsize(driver, database):
@@ -389,16 +481,18 @@ def fetch_data_for_portsize(driver, database):
     return plot_data
 
 
-def fetch_host_outbound(driver, database):
+def fetch_host_outbound(driver, database, capture_id=None):
     """Aggregate the capture host's outbound traffic per destination, from raw packets.
 
     Finds the host IP(s) (owned by LOCAL_ORG), then for every peer the host exchanged
     packets with sums the host's upload (host as SOURCE) and download (host as
     DESTINATION) separately — so each row is the true host→peer flow, not the peer's total
     inbound from every source. Rows are restricted to peers the host actually sent to
-    (upload_packets > 0). Returns (local_ips, rows); local_ips is empty when the host was
-    never captured (e.g. an imported pcap with no local endpoint), in which case rows is
-    empty too and the caller surfaces an empty host-outbound view rather than crashing.
+    (upload_packets > 0). `capture_id` scopes the packet scan to one capture session so
+    this view describes the same traffic the ENDPOINT profiles do; None scans everything.
+    Returns (local_ips, rows); local_ips is empty when the host was never captured
+    (e.g. an imported pcap with no local endpoint), in which case rows is empty too and
+    the caller surfaces an empty host-outbound view rather than crashing.
     """
     local_query = """
     MATCH (org:ORGANIZATION {ORGANIZATION: $local_org})-[:OWNERSHIP]->(ip:IP_ADDRESS)
@@ -408,7 +502,8 @@ def fetch_host_outbound(driver, database):
     # by peer, split bytes/packets by direction, then join the peer's OSINT metadata.
     peer_query = """
     MATCH (p:PACKET)
-    WHERE p.SRC_IP IN $local_ips OR p.DST_IP IN $local_ips
+    WHERE (p.SRC_IP IN $local_ips OR p.DST_IP IN $local_ips)
+      AND ($capture_id IS NULL OR p.CAPTURE_ID = $capture_id)
     WITH p,
          CASE WHEN p.SRC_IP IN $local_ips THEN p.DST_IP ELSE p.SRC_IP END AS peer,
          (p.SRC_IP IN $local_ips) AS outbound
@@ -431,7 +526,8 @@ def fetch_host_outbound(driver, database):
         local_ips = session.run(local_query, {"local_org": LOCAL_ORG}).single()["local_ips"]
         if not local_ips:
             return [], []
-        rows = [record.data() for record in session.run(peer_query, {"local_ips": local_ips})]
+        rows = [record.data() for record in
+                session.run(peer_query, {"local_ips": local_ips, "capture_id": capture_id})]
     return local_ips, rows
 
 
@@ -632,9 +728,11 @@ def main():
     if driver is None:
         return
 
-    embeddings, data, excluded_local = fetch_data_for_dbscan(driver, args.database, args.include_local)
+    embeddings, data, excluded_local, excluded_nc = fetch_data_for_dbscan(driver, args.database, args.include_local)
     if excluded_local:
         reporter.info("CONFIG", f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.")
+    if excluded_nc:
+        reporter.info("CONFIG", f"Excluding {len(excluded_nc)} non-conversational endpoint(s) (multicast/broadcast) from clustering and ranking: {', '.join(e['ip_address'] for e in excluded_nc)}")
 
     # Clustering (and ablation) needs at least min_samples endpoints — below that PCA/
     # NearestNeighbors raise. Catch it here with an actionable message instead.
@@ -730,6 +828,11 @@ def main():
 
     dbscan = DBSCAN(eps=eps_value, min_samples=min_samples)
     clusters = dbscan.fit_predict(features)
+    # Cluster count and sizes distinguish "one tight benign cluster" from "a generous
+    # eps absorbed everything" when reading outliers_flagged == 0.
+    cluster_sizes = sorted(
+        (int(n) for n in np.unique(clusters[clusters != -1], return_counts=True)[1]),
+        reverse=True)
 
     if not reporter.agent:
         reporter.info("INFO", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.")
@@ -810,9 +913,23 @@ def main():
     # dominated by inbound/download volume and structurally demotes the host's own outbound
     # (the documented purpose) — this re-centers on it, independent of clustering and the
     # --include-local flag. Empty when the host wasn't captured (e.g. an imported pcap).
-    local_ips, host_rows = fetch_host_outbound(driver, args.database)
-    host_destinations = score_host_outbound(host_rows)
-    host_flagged = [d for d in host_destinations if d["reasons"]]
+    # ENDPOINT profiles carry the session scope they were computed from; the
+    # host-outbound packet scan is scoped to the same session so both views describe
+    # the same traffic. A concrete scope only exists when every profile agrees on one
+    # real CAPTURE_ID ('all', None, or a mix falls back to scanning everything).
+    profile_sessions = {d.get("capture_id") for d in data}
+    session_scope = profile_sessions.pop() if len(profile_sessions) == 1 else None
+    if session_scope == "all":
+        session_scope = None
+    local_ips, host_rows = fetch_host_outbound(driver, args.database, session_scope)
+    # Multicast/broadcast "destinations" (SSDP/mDNS announcements) never reply, so
+    # their upload_download_ratio is structurally huge — drop them before ranking
+    # rather than let protocol chatter read as exfil-shaped.
+    conversational_rows = [r for r in host_rows
+                           if classify_endpoint(r["ip_address"]) not in NON_CONVERSATIONAL_TYPES]
+    host_excluded_nc = len(host_rows) - len(conversational_rows)
+    host_destinations = score_host_outbound(conversational_rows)
+    host_flagged = [d for d in host_destinations if d["is_flagged"]]
     if not reporter.agent and host_destinations:
         top = host_destinations[0]
         reporter.info("HOST OUTBOUND",
@@ -828,6 +945,11 @@ def main():
     result = {
         "endpoints_clustered": len(data),
         "outliers_flagged": len(flagged),
+        "clusters": len(cluster_sizes),
+        "cluster_sizes": cluster_sizes,
+        # Capture session the ENDPOINT profiles (and the host_outbound scan) describe:
+        # a CAPTURE_ID, or 'all' when profiles span every session / predate sessions.
+        "session": session_scope or "all",
         "excluded_local": excluded_local,
         "eps": round(float(eps_value), 4),
         "eps_source": eps_source,
@@ -839,6 +961,23 @@ def main():
         "pca_variance_total": round(float(explained.sum()), 4),
         "units": FEATURE_UNITS,
         "reason_z_threshold": REASON_Z_THRESHOLD,
+        "scoring": (
+            f"anomaly_score = L2 norm of the {SCORE_TOP_K} largest |robust-z| components. 'Low' "
+            f"deviations (quieter than the pack) are weighted {LOW_DIRECTION_WEIGHT} and capped at "
+            f"{LOW_DIRECTION_CAP} each, so a silent endpoint can never outrank a genuine spike — "
+            "except interval_cv, where low = beacon-regular and keeps full weight. interval_mean "
+            f"is capped at {LOW_DIRECTION_CAP} in BOTH directions: cadence is context, not signal "
+            "(interval_cv carries the beacon indicator). Timing features contribute 0 to the score "
+            f"for endpoints with fewer than {MIN_TIMING_PACKETS} packets (their interval fields "
+            "read null). Reasons cite unweighted robust-z in both directions."
+        ),
+        # Multicast/broadcast/unspecified addresses are one-way by construction (no
+        # replies), so their out/in shape is protocol chatter, not behavior — they are
+        # profiled in the graph (see endpoint_type) but not clustered or ranked.
+        "excluded_non_conversational": {
+            "count": len(excluded_nc),
+            "endpoints": excluded_nc,
+        },
         # Counts are from each endpoint's OWN perspective. With the capture host excluded
         # (the default), endpoints are remote, so a remote IP's bytes_out/packets_out is
         # traffic it sent TO the host (a host download) and bytes_in/packets_in is traffic
@@ -860,12 +999,14 @@ def main():
             "local_ips": local_ips,
             "destinations_ranked": len(host_destinations),
             "flagged": len(host_flagged),
+            "excluded_non_conversational": host_excluded_nc,
             "units": HOST_OUTBOUND_UNITS,
             "note": (
                 "Outbound FROM the capture host, per destination, isolated from raw packets "
                 "(host as source, so upload_bytes is host→peer, not the peer's total inbound). "
                 "`outbound_score` ranks destinations on the host-upload distribution; "
                 "upload_download_ratio high = exfil-shaped (host sent far more than it received). "
+                "Rows with `is_flagged` true are the `flagged` count. "
                 "Use this, not the download-dominated `endpoints` ranking, to judge host exfil/beaconing."
             ),
             "destinations": host_destinations,

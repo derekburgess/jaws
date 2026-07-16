@@ -39,10 +39,15 @@ Anytime:
   - fetch_traffic   — read the per-IP endpoint profiles back from the graph (windowed overview).
   - inspect_endpoint — drill into ONE IP (e.g. an outlier): its profile, who it talked to (peers),
                        and a raw packet sample. The join key from an anomaly back to its detail.
-  - drop_database   — wipe the graph (typically before a fresh capture session).
+  - list_captures   — enumerate the capture sessions accumulated in the graph.
+  - drop_database   — wipe the graph entirely (optional between sessions — see Notes).
 
 Notes:
   - Keep captures short (30-120s); capture again rather than running one long session.
+  - Captures ACCUMULATE as sessions: each capture_packets run is stamped with a capture_id, and
+    compute_embeddings profiles only the LATEST session by default (pass session='all' or a
+    specific capture_id to change that). You do NOT need drop_database between captures; packet
+    history stays queryable via list_captures/inspect_endpoint while profiles track one session.
   - After every capture, run document_organizations and compute_embeddings before anomaly_detection.
   - Use compute_embeddings(api='transformers') on a GPU host; otherwise api='openai'. The local
     transformer model must be downloaded on the host beforehand (`jaws-utils --model ...`); this is
@@ -126,7 +131,10 @@ def list_interfaces() -> dict[str, Any]:
 @mcp.tool(name="capture_packets", description=(
     "Step 2. Capture live packets from an interface into the graph for `duration` seconds. "
     "Use an interface name from list_interfaces. Keep captures short (30-120s) and capture "
-    "again rather than running one long session. The call runs for roughly `duration` seconds."
+    "again rather than running one long session. The call runs for roughly `duration` seconds. "
+    "Each run becomes its own capture SESSION (the result's `capture_id`); sessions accumulate "
+    "in the graph, and compute_embeddings profiles the latest one by default — no need to "
+    "drop_database between captures."
 ))
 def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
     return _script(
@@ -134,6 +142,46 @@ def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
         "--interface", interface,
         "--duration", str(duration),
     )
+
+
+_CAPTURES_QUERY = """
+MATCH (c:CAPTURE)
+RETURN c.CAPTURE_ID AS capture_id, c.SOURCE AS source,
+       c.STARTED AS started, c.PACKETS AS packets
+ORDER BY c.STARTED DESC
+"""
+
+# Which session scope the current ENDPOINT profiles describe (one distinct value in
+# practice — compute_embeddings clears and rebuilds the whole layer per run).
+_PROFILED_QUERY = """
+MATCH (e:ENDPOINT)
+RETURN DISTINCT e.CAPTURE_ID AS session
+"""
+
+
+@mcp.tool(name="list_captures", description=(
+    "List the capture sessions accumulated in the graph, newest first: each with its `capture_id`, "
+    "`source` (interface or imported pcap path), `started` timestamp, and `packets` count. "
+    "`profiled_session` names the session scope the current endpoint profiles (and therefore "
+    "fetch_traffic / anomaly_detection results) describe — 'all', a capture_id, or null when "
+    "compute_embeddings hasn't run. Use a capture_id with compute_embeddings(session=...) to "
+    "re-profile an older session."
+))
+def list_captures() -> dict[str, Any]:
+    try:
+        driver = get_neo4j_driver()
+        with driver.session(database=DATABASE) as session:
+            captures = [record.data() for record in session.run(_CAPTURES_QUERY)]
+            profiled = [record["session"] for record in session.run(_PROFILED_QUERY)]
+    except Exception as e:
+        return {"ok": False, "error": f"could not list captures ({e})"}
+    captures = json.loads(json.dumps(captures, default=str))
+    return {
+        "ok": True,
+        "captures": captures,
+        "count": len(captures),
+        "profiled_session": profiled[0] if len(profiled) == 1 else (profiled or None),
+    }
 
 
 @mcp.tool(name="document_organizations", description=(
@@ -152,21 +200,27 @@ def document_organizations() -> dict[str, Any]:
     "be pre-downloaded on the host). Use api='openai' as a fallback when no GPU is available. "
     f"`model` selects the local transformers model when api='transformers': one of {list(PACKET_MODELS)} "
     f"(default '{DEFAULT_PACKET_MODEL}'); ignored for api='openai'. "
+    "`session` selects which capture session to profile: 'latest' (default), 'all' (every packet in "
+    "the graph — inter-packet timing still never crosses session boundaries), or a capture_id from "
+    "list_captures. Each run REBUILDS the endpoint profile layer for that scope, so downstream "
+    "fetch_traffic/anomaly_detection describe exactly that session. "
     "May run for a while on large captures."
 ))
-def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL) -> dict[str, Any]:
+def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL, session: str = "latest") -> dict[str, Any]:
     if model not in PACKET_MODELS:
         return {"ok": False, "error": f"unknown model '{model}'; available: {list(PACKET_MODELS)}"}
-    return _script("jaws_compute.py", "--api", api, "--model", model)
+    return _script("jaws_compute.py", "--api", api, "--model", model, "--session", session)
 
 
 @mcp.tool(name="anomaly_detection", description=(
     "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and score every IP for anomaly. "
-    "Returns a JSON summary: endpoints_clustered, outliers_flagged, the DBSCAN params "
-    "(eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
+    "Returns a JSON summary: endpoints_clustered, outliers_flagged, `clusters`/`cluster_sizes` (so 0 "
+    "outliers from one tight cluster reads differently than 0 from an over-generous eps), the DBSCAN "
+    "params (eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
     "list of clustered IPs sorted by `anomaly_score` (descending), so there is always a ranking to "
-    "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (L2 norm of its "
-    "per-feature robust-z — overall behavioral distance from the typical host), `is_outlier` (the DBSCAN "
+    "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (behavioral distance "
+    "from the typical host: L2 norm of its top-3 |robust-z| components, 'low' deviations down-weighted "
+    "and capped — see the result's `scoring` field), `is_outlier` (the DBSCAN "
     "verdict), and `reasons` — the features that made it stand out, each with its value, unit, robust_z, "
     "direction (high/low), and a `host_relative` gloss naming the direction relative to the capture host. "
     "Counts are from each endpoint's OWN perspective and scored endpoints are REMOTE (host excluded by "
@@ -179,6 +233,9 @@ def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MO
     "ranked by `outbound_score` on the host-upload distribution, with `upload_download_ratio` high = "
     "exfil-shaped. The host is excluded from clustering (a hub), so its real outbound is demoted in the "
     "`endpoints` ranking; use `host_outbound.destinations` to judge host exfiltration or beaconing. "
+    "Multicast/broadcast addresses (SSDP/mDNS chatter — one-way by construction) are excluded from both "
+    "rankings and listed under `excluded_non_conversational`; each ranked endpoint carries its "
+    "`endpoint_type` (public/private/multicast/…). "
     "`components` is the number of PCA dimensions to retain (minimum 2). `whiten` scales each PCA "
     "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
     "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
@@ -214,6 +271,8 @@ WHERE endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
 OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
 RETURN
     endpoint.IP_ADDRESS AS ip_address,
+    endpoint.ENDPOINT_TYPE AS endpoint_type,
+    endpoint.CAPTURE_ID AS capture_id,
     COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
     COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
     COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,
@@ -238,26 +297,28 @@ LIMIT $limit
 @mcp.tool(name="fetch_traffic", description=(
     "Read processed per-IP endpoint profiles back from the graph. Returns an object with an `endpoints` "
     "list (most recent first) and a `count`; each endpoint is one IP with its org/hostname/location and "
-    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag. "
+    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag and "
+    "`endpoint_type` (public/private/multicast/… — multicast/broadcast rows are protocol chatter, not "
+    "conversation partners, and are excluded from anomaly rankings). "
     "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
     "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
-    "`duration` is how many minutes back to include, measured by when each profile was COMPUTED (the "
-    "compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
+    "`duration_minutes` is how many minutes back to include, measured by when each profile was COMPUTED "
+    "(the compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
     "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
     "and see exactly who it talked to, use inspect_endpoint instead."
 ))
-def fetch_traffic(duration: int = 60, limit: int = 100) -> dict[str, Any]:
+def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
         with driver.session(database=DATABASE) as session:
-            result = session.run(_FETCH_QUERY, duration=duration, limit=limit)
+            result = session.run(_FETCH_QUERY, duration=duration_minutes, limit=limit)
             data = [record.data() for record in result]
     except Exception as e:
         return {"ok": False, "error": f"could not fetch endpoints ({e})"}
     # Round-trip through json with default=str to coerce Neo4j DateTime values into
     # JSON-native strings, so FastMCP can serialize the returned dict cleanly.
     endpoints = json.loads(json.dumps(data, default=str))
-    return {"ok": True, "endpoints": endpoints, "count": len(endpoints), "duration_minutes": duration}
+    return {"ok": True, "endpoints": endpoints, "count": len(endpoints), "duration_minutes": duration_minutes}
 
 
 # The join key back to detail: every PACKET node carries the full 5-tuple as
@@ -275,6 +336,8 @@ MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
 OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip})<-[:OWNERSHIP]-(org:ORGANIZATION)
 RETURN
     endpoint.IP_ADDRESS AS ip_address,
+    endpoint.ENDPOINT_TYPE AS endpoint_type,
+    endpoint.CAPTURE_ID AS capture_id,
     COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
     COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
     COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,

@@ -16,11 +16,16 @@ CONSOLE = Console()
 # so callers never have to opt in.
 AGENT_MODE = not sys.stdout.isatty()
 
-# Graph database configuration.
+# Graph database configuration. The URI and username fall back to the standard
+# local-install values (see README.md) because the process env is not guaranteed to
+# carry them: MCP clients spawn the server as a child process and may strip the
+# environment (the Python MCP SDK whitelists only PATH/HOME/etc., and GUI-launched
+# clients never see shell exports at all). The password has no safe default and must
+# arrive via the environment — jaws_mcp/mcp-local.json shows how to pass it through.
 DATABASE = "captures" # Created using the Neo4j Desktop app. Default is 'captures'.
-NEO4J_URI = os.getenv("NEO4J_URI") # See README.md
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME") # See README.md
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD") # See README.md
+NEO4J_URI = os.getenv("NEO4J_URI") or "bolt://localhost:7687"
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME") or "neo4j"
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 
 # The OpenAI client and Neo4j driver are created lazily so that importing this
@@ -30,6 +35,14 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD") # See README.md
 # each a process-wide singleton, matching the previous module-level behavior.
 @lru_cache(maxsize=1)
 def get_neo4j_driver():
+    # Fail with the actual problem instead of the driver's "URI scheme b''" — this
+    # message is what surfaces in the MCP error envelope when credentials never
+    # reached the server process.
+    if not NEO4J_PASSWORD:
+        raise ValueError(
+            "NEO4J_PASSWORD is not set. Export it in the environment, or pass it "
+            "through your MCP client's env block (see jaws_mcp/mcp-local.json)."
+        )
     return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 

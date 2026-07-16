@@ -16,24 +16,53 @@ from jaws.jaws_utils import (
     dbms_connection,
     Reporter,
     render_info_panel,
-    render_activity_panel
+    render_activity_panel,
+    classify_endpoint,
+    MIN_TIMING_PACKETS
 )
 
 
-def fetch_packets(driver, database):
+def fetch_packets(driver, database, capture_id=None):
     # PACKET nodes carry the 5-tuple + size as properties, so per-IP aggregation
-    # reads straight off them (one scan) — no traversal needed.
+    # reads straight off them (one scan) — no traversal needed. `capture_id` scopes
+    # the scan to one session; None means every packet in the graph (--session all,
+    # or a legacy graph with no CAPTURE nodes).
     query = """
     MATCH (p:PACKET)
+    WHERE $capture_id IS NULL OR p.CAPTURE_ID = $capture_id
     RETURN p.SRC_IP AS src_ip, p.DST_IP AS dst_ip,
            p.SRC_PORT AS src_port, p.DST_PORT AS dst_port,
            p.SIZE AS size, p.PROTOCOL AS protocol,
-           p.TIMESTAMP.epochMillis AS ts_ms
+           p.TIMESTAMP.epochMillis AS ts_ms,
+           p.CAPTURE_ID AS capture_id
     """
     with driver.session(database=database) as session:
-        result = session.run(query)
+        result = session.run(query, capture_id=capture_id)
         df = pd.DataFrame([record.data() for record in result])
     return df
+
+
+def resolve_session(driver, database, session_arg):
+    """Turn --session (latest | all | <capture id>) into a concrete packet scope.
+
+    Returns (capture_id, session_ids): `capture_id` is the concrete session to filter
+    packets on, or None for no filter ('all', or a legacy graph with no CAPTURE
+    nodes); `session_ids` is every session in the graph, oldest first, so callers can
+    report what was available. Raises ValueError for an explicit id that doesn't exist.
+    """
+    query = "MATCH (c:CAPTURE) RETURN c.CAPTURE_ID AS id ORDER BY c.STARTED"
+    with driver.session(database=database) as session:
+        session_ids = [record["id"] for record in session.run(query)]
+    if session_arg == "all":
+        return None, session_ids
+    if session_arg == "latest":
+        # A legacy graph (captured before sessions existed) has packets but no
+        # CAPTURE nodes — treat the whole graph as one implicit session.
+        return (session_ids[-1] if session_ids else None), session_ids
+    if session_arg not in session_ids:
+        raise ValueError(
+            f"session '{session_arg}' not found; available: {session_ids or 'none (no CAPTURE nodes — use latest or all)'}")
+    return session_arg, session_ids
 
 
 def fetch_ip_metadata(driver, database):
@@ -52,26 +81,30 @@ def fetch_ip_metadata(driver, database):
         return {record["ip_address"]: record.data() for record in result}
 
 
-# Minimum packets in an endpoint's stream before its timing is meaningful. Two
-# packets give one interval (no variance); three give two intervals — the floor for
-# a coefficient of variation. Below this, timing is left undefined (None) and the
-# finder imputes it, so sparse endpoints aren't mistaken for perfectly regular beacons.
-MIN_TIMING_PACKETS = 3
-
-
-def endpoint_timing(ts_ms):
+def endpoint_timing(ts_groups):
     """Inter-packet cadence for one endpoint's combined packet stream.
 
-    Returns (interval_mean, interval_cv) in seconds, or (None, None) when there are
-    too few packets to assess. `interval_cv` (std/mean of inter-packet gaps) is the
-    beaconing signal: a low CV means highly regular callbacks (C2-like), a high CV
-    means bursty/human traffic. `interval_mean` is the typical gap, i.e. the period.
+    `ts_groups` is a list of timestamp arrays (ms), ONE PER CAPTURE SESSION: intervals
+    are computed within each group and pooled, never across groups, so the dead gap
+    between two capture runs doesn't register as one giant interval (which would
+    inflate a real beacon's CV — the opposite failure of the tiny-burst false beacon).
+    Returns (interval_mean, interval_cv) in seconds, or (None, None) when the pooled
+    intervals are fewer than MIN_TIMING_PACKETS - 1 (the single-stream equivalent of
+    the packet gate). `interval_cv` (std/mean of inter-packet gaps) is the beaconing
+    signal: a low CV means highly regular callbacks (C2-like), a high CV means
+    bursty/human traffic. `interval_mean` is the typical gap, i.e. the period.
     """
-    ts = np.sort(np.asarray(ts_ms, dtype=float)) / 1000.0
-    ts = ts[~np.isnan(ts)]
-    if len(ts) < MIN_TIMING_PACKETS:
+    diffs = []
+    for ts_ms in ts_groups:
+        ts = np.sort(np.asarray(ts_ms, dtype=float)) / 1000.0
+        ts = ts[~np.isnan(ts)]
+        if len(ts) >= 2:
+            diffs.append(np.diff(ts))
+    if not diffs:
         return None, None
-    diffs = np.diff(ts)
+    diffs = np.concatenate(diffs)
+    if len(diffs) < MIN_TIMING_PACKETS - 1:
+        return None, None
     mean = float(diffs.mean())
     if mean <= 0:
         return None, None
@@ -113,12 +146,18 @@ def build_endpoint_profiles(packets, metadata):
     # Timing is computed over each IP's combined stream (every packet it sends OR
     # receives), so a single-peer endpoint with regular callbacks reads as low-CV
     # while a busy multi-peer server's interleaved conversations read as high-CV.
+    # The stream is split per capture session (legacy packets with no CAPTURE_ID
+    # group together) so intervals never span the gap between two capture runs.
     has_ts = "ts_ms" in packets.columns
     timing = {}
     if has_ts:
+        session_col = packets["capture_id"].fillna("") if "capture_id" in packets.columns \
+            else pd.Series("", index=packets.index)
         for ip in set(packets["src_ip"]) | set(packets["dst_ip"]):
             mask = (packets["src_ip"] == ip) | (packets["dst_ip"] == ip)
-            timing[ip] = endpoint_timing(packets.loc[mask, "ts_ms"])
+            stream = packets.loc[mask, "ts_ms"]
+            groups = [g.values for _, g in stream.groupby(session_col.loc[mask])]
+            timing[ip] = endpoint_timing(groups)
 
     profiles = []
     for ip in sorted(set(outbound) | set(inbound)):
@@ -128,6 +167,10 @@ def build_endpoint_profiles(packets, metadata):
         interval_mean, interval_cv = timing.get(ip, (None, None))
         profiles.append({
             "ip_address": ip,
+            # Address scope (public/private/multicast/…) via stdlib ipaddress. Stored on
+            # the node so readers can tell a real conversation partner from protocol
+            # chatter; the finder keeps non-conversational types out of the rankings.
+            "endpoint_type": classify_endpoint(ip),
             "org": meta.get("org"),
             "hostname": meta.get("hostname"),
             "location": meta.get("location"),
@@ -148,18 +191,31 @@ def build_endpoint_profiles(packets, metadata):
 
 def build_endpoint_description(p):
     return (
-        f"IP: {p['ip_address']} | Organization: {p['org']} | Hostname: {p['hostname']} | Location: {p['location']}\n"
+        f"IP: {p['ip_address']} ({p['endpoint_type']}) | Organization: {p['org']} | Hostname: {p['hostname']} | Location: {p['location']}\n"
         f"Outbound: {p['bytes_out']} bytes, {p['packets_out']} packets to {p['out_peers']} peers | Ports: {p['out_ports']}\n"
         f"Inbound: {p['bytes_in']} bytes, {p['packets_in']} packets from {p['in_peers']} peers | Ports: {p['in_ports']}\n"
         f"Protocols: {p['protocols']}\n"
     )
 
 
-def add_endpoint_to_database(profile, embedding, driver, database):
+# The ENDPOINT layer is the CURRENT ANALYSIS, not history: profiles describe one
+# session scope and are cheap derived data, while PACKET/CAPTURE nodes are the
+# durable record. Clearing before each compute keeps the finder from ranking stale
+# profiles left over from a previous session (an IP seen in session A but not B
+# would otherwise survive a session-B compute with session-A numbers).
+def clear_endpoints(driver, database):
+    with driver.session(database=database) as session:
+        result = session.run("MATCH (e:ENDPOINT) DETACH DELETE e RETURN count(e) AS cleared")
+        return result.single()["cleared"]
+
+
+def add_endpoint_to_database(profile, embedding, session_scope, driver, database):
     query = """
     MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip_address})
     MERGE (ip)-[:PROFILE]->(endpoint:ENDPOINT {IP_ADDRESS: $ip_address})
     SET endpoint.EMBEDDING = $embedding,
+        endpoint.CAPTURE_ID = $session_scope,
+        endpoint.ENDPOINT_TYPE = $endpoint_type,
         endpoint.ORGANIZATION = $org,
         endpoint.HOSTNAME = $hostname,
         endpoint.LOCATION = $location,
@@ -179,6 +235,8 @@ def add_endpoint_to_database(profile, embedding, driver, database):
     with driver.session(database=database) as session:
         session.run(query,
                     ip_address=profile["ip_address"], embedding=embedding,
+                    session_scope=session_scope,
+                    endpoint_type=profile["endpoint_type"],
                     org=profile["org"], hostname=profile["hostname"], location=profile["location"],
                     bytes_out=profile["bytes_out"], packets_out=profile["packets_out"],
                     out_peers=profile["out_peers"], out_ports=profile["out_ports"],
@@ -220,13 +278,25 @@ def main():
     parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai' — for easy demos without a GPU; note the MCP server defaults to 'transformers', the preferred path on a GPU host).")
     parser.add_argument("--model", choices=list(PACKET_MODELS), default=DEFAULT_PACKET_MODEL, help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
+    parser.add_argument("--session", default="latest", help="Which capture session to profile: 'latest' (default), 'all' (every packet in the graph; timing still never crosses session boundaries), or a specific CAPTURE_ID from a capture run.")
     args = parser.parse_args()
     reporter = Reporter()
     driver = dbms_connection(args.database, reporter)
     if driver is None:
         return
 
-    packets = fetch_packets(driver, args.database)
+    try:
+        capture_id, session_ids = resolve_session(driver, args.database, args.session)
+    except ValueError as e:
+        reporter.error("ERROR", str(e))
+        driver.close()
+        return
+    # The scope stamped on each ENDPOINT and reported back: a concrete session id, or
+    # 'all' when unscoped ('all' requested, or a legacy graph with no CAPTURE nodes).
+    session_scope = capture_id if capture_id else "all"
+    reporter.info("CONFIG", f"Profiling session: {session_scope} ({len(session_ids)} session(s) in graph)")
+
+    packets = fetch_packets(driver, args.database, capture_id)
     metadata = fetch_ip_metadata(driver, args.database)
     profiles = build_endpoint_profiles(packets, metadata)
 
@@ -259,9 +329,12 @@ def main():
         else:
             embeddings = compute_openai_embeddings(get_openai_client(), descriptions)
 
+        # Old profiles go before new ones land — the ENDPOINT layer always reflects
+        # exactly one compute run's scope (see clear_endpoints).
+        clear_endpoints(driver, args.database)
         with reporter.activity(render) as update:
             for profile, description, embedding in zip(profiles, descriptions, embeddings):
-                add_endpoint_to_database(profile, embedding, driver, args.database)
+                add_endpoint_to_database(profile, embedding, session_scope, driver, args.database)
                 embedding_strings.append(description)
                 embedding_tensors.append(embedding)
                 update()
@@ -271,10 +344,12 @@ def main():
                 "database": args.database,
                 "api": args.api,
                 "model": model_name,
+                "session": session_scope,
+                "sessions_in_graph": len(session_ids),
                 "endpoints_embedded": len(embedding_strings),
                 "packets": len(packets),
             },
-            summary=f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets via {args.api} in: '{args.database}'",
+            summary=f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets (session: {session_scope}) via {args.api} in: '{args.database}'",
         )
         return
 
