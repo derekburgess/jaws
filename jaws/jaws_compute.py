@@ -209,23 +209,70 @@ def build_endpoint_description(p):
     )
 
 
-# The ENDPOINT layer is the CURRENT ANALYSIS, not history: profiles describe one
-# session scope and are cheap derived data, while PACKET/CAPTURE nodes are the
-# durable record. Clearing before each compute keeps the finder from ranking stale
-# profiles left over from a previous session (an IP seen in session A but not B
-# would otherwise survive a session-B compute with session-A numbers).
-def clear_endpoints(driver, database):
+# An ENDPOINT profile belongs to ONE session scope, and the profile sets ACCUMULATE:
+# each compute run rebuilds only its own scope and leaves every other session's
+# profiles in place, so the same IP has one profile per session it appeared in. That
+# per-IP history is what jaws_finder baselines against (is this endpoint unusual for
+# ITSELF, not just versus its peers right now). Clearing the scope being recomputed
+# still matters — otherwise an IP seen in an earlier run of the SAME session would
+# survive with stale numbers — but it is a scoped delete, never the whole layer.
+def clear_session_profiles(driver, database, session_scope):
+    # Unstamped profiles are also dropped: a graph computed before session stamping has
+    # ENDPOINTs with no CAPTURE_ID, which the scoped MERGE below never matches (so they
+    # are never refreshed) and retention never reaches (`null IN [...]` is never true in
+    # Cypher). Left alone they would shadow the real profile sets forever.
+    query = """
+    MATCH (e:ENDPOINT)
+    WHERE e.CAPTURE_ID = $session_scope OR e.CAPTURE_ID IS NULL
+    DETACH DELETE e
+    RETURN count(e) AS cleared
+    """
     with driver.session(database=database) as session:
-        result = session.run("MATCH (e:ENDPOINT) DETACH DELETE e RETURN count(e) AS cleared")
-        return result.single()["cleared"]
+        return session.run(query, session_scope=session_scope).single()["cleared"]
+
+
+# Profiles are cheap per row but each carries an embedding vector, so an unbounded
+# accumulation of profile sets grows the graph without bound. Retention keeps the N
+# most recently computed scopes (by compute TIMESTAMP) — far more history than the
+# baseline needs — and drops the rest. PACKET/CAPTURE history is never touched: an
+# older session can always be re-profiled with --session <capture_id>.
+def prune_profile_sessions(driver, database, retain):
+    if retain is None or retain <= 0:
+        return 0, []
+    scopes_query = """
+    MATCH (e:ENDPOINT)
+    RETURN e.CAPTURE_ID AS scope, max(e.TIMESTAMP) AS computed
+    ORDER BY computed DESC
+    """
+    delete_query = """
+    MATCH (e:ENDPOINT)
+    WHERE e.CAPTURE_ID IN $scopes
+    DETACH DELETE e
+    RETURN count(e) AS pruned
+    """
+    with driver.session(database=database) as session:
+        scopes = [record["scope"] for record in session.run(scopes_query)]
+        stale = scopes[retain:]
+        if not stale:
+            return 0, []
+        pruned = session.run(delete_query, scopes=stale).single()["pruned"]
+    return pruned, stale
+
+
+def count_profile_sessions(driver, database):
+    query = "MATCH (e:ENDPOINT) RETURN count(DISTINCT e.CAPTURE_ID) AS scopes"
+    with driver.session(database=database) as session:
+        return session.run(query).single()["scopes"]
 
 
 def add_endpoint_to_database(profile, embedding, session_scope, driver, database):
+    # MERGE on the COMPOSITE key (IP, session): merging on IP alone would overwrite the
+    # previous session's profile for that IP and destroy the history the finder
+    # baselines against.
     query = """
     MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip_address})
-    MERGE (ip)-[:PROFILE]->(endpoint:ENDPOINT {IP_ADDRESS: $ip_address})
+    MERGE (ip)-[:PROFILE]->(endpoint:ENDPOINT {IP_ADDRESS: $ip_address, CAPTURE_ID: $session_scope})
     SET endpoint.EMBEDDING = $embedding,
-        endpoint.CAPTURE_ID = $session_scope,
         endpoint.ENDPOINT_TYPE = $endpoint_type,
         endpoint.ORGANIZATION = $org,
         endpoint.HOSTNAME = $hostname,
@@ -273,6 +320,12 @@ def compute_transformer_embeddings(descriptions, embedder):
 # input-count and token limits.
 OPENAI_EMBEDDING_BATCH = 512
 
+
+# Default number of computed profile sets kept in the graph (see prune_profile_sessions).
+# The baseline needs only a handful of prior sessions; 20 leaves generous headroom while
+# bounding the stored embedding vectors.
+PROFILE_RETENTION_SESSIONS = 20
+
 def compute_openai_embeddings(client, descriptions):
     embeddings = []
     for start in range(0, len(descriptions), OPENAI_EMBEDDING_BATCH):
@@ -290,6 +343,7 @@ def main():
     parser.add_argument("--model", choices=list(PACKET_MODELS), default=DEFAULT_PACKET_MODEL, help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.")
     parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
     parser.add_argument("--session", default="latest", help="Which capture session to profile: 'latest' (default), 'all' (every packet in the graph; timing still never crosses session boundaries), or a specific CAPTURE_ID from a capture run.")
+    parser.add_argument("--retain-profiles", type=int, default=PROFILE_RETENTION_SESSIONS, help=f"How many computed profile sets (sessions) to keep in the graph; older ones are pruned after this run (default: {PROFILE_RETENTION_SESSIONS}). Profiles accumulate per session so jaws-finder can baseline an endpoint against its own history. 0 disables pruning. Raw PACKET/CAPTURE history is never pruned.")
     args = parser.parse_args()
     reporter = Reporter()
     driver = dbms_connection(args.database, reporter)
@@ -340,9 +394,9 @@ def main():
         else:
             embeddings = compute_openai_embeddings(get_openai_client(), descriptions)
 
-        # Old profiles go before new ones land — the ENDPOINT layer always reflects
-        # exactly one compute run's scope (see clear_endpoints).
-        clear_endpoints(driver, args.database)
+        # Only THIS scope's previous profiles go — other sessions' profile sets stay as
+        # the per-endpoint history the finder baselines against (see clear_session_profiles).
+        clear_session_profiles(driver, args.database, session_scope)
         with reporter.activity(render) as update:
             for profile, description, embedding in zip(profiles, descriptions, embeddings):
                 add_endpoint_to_database(profile, embedding, session_scope, driver, args.database)
@@ -350,6 +404,14 @@ def main():
                 embedding_tensors.append(embedding)
                 update()
 
+        # Retention runs after the write so this run's own set is always among the kept.
+        pruned, pruned_scopes = prune_profile_sessions(driver, args.database, args.retain_profiles)
+        if pruned:
+            reporter.info("CONFIG", f"Pruned {pruned} profile(s) from {len(pruned_scopes)} session(s) beyond the {args.retain_profiles} most recent: {', '.join(pruned_scopes)}")
+
+        # Profile sets now in the graph — how much per-endpoint history jaws-finder can
+        # baseline against (1 means this run only: no history yet, baseline is a no-op).
+        profiled_scopes = count_profile_sessions(driver, args.database)
         reporter.result(
             {
                 "database": args.database,
@@ -359,6 +421,8 @@ def main():
                 "sessions_in_graph": len(session_ids),
                 "endpoints_embedded": len(embedding_strings),
                 "packets": len(packets),
+                "profiled_sessions": profiled_scopes,
+                "profiles_pruned": pruned,
             },
             summary=f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets (session: {session_scope}) via {args.api} in: '{args.database}'",
         )

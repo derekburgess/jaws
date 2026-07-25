@@ -37,8 +37,9 @@ including unusual outbound traffic from the local host.
 
 Anytime:
   - fetch_traffic   — read the per-IP endpoint profiles back from the graph (windowed overview).
-  - inspect_endpoint — drill into ONE IP (e.g. an outlier): its profile, who it talked to (peers),
-                       and a raw packet sample. The join key from an anomaly back to its detail.
+  - inspect_endpoint — drill into ONE IP (e.g. an outlier): its profile, its per-session history,
+                       who it talked to (peers), and a raw packet sample. The join key from an
+                       anomaly back to its detail.
   - list_captures   — enumerate the capture sessions accumulated in the graph.
   - drop_database   — wipe the graph entirely (optional between sessions — see Notes).
 
@@ -48,6 +49,12 @@ Notes:
     compute_embeddings profiles only the LATEST session by default (pass session='all' or a
     specific capture_id to change that). You do NOT need drop_database between captures; packet
     history stays queryable via list_captures/inspect_endpoint while profiles track one session.
+  - REPEATED RUNS MAKE DETECTION BETTER. Endpoint profiles accumulate one set per session, so
+    anomaly_detection scores an endpoint against its OWN history where it has one instead of only
+    against its current peers — which suppresses the endpoints that are always busy and surfaces
+    the ones that CHANGED, plus endpoints never seen before (`first_seen`). This needs no extra
+    steps: just run capture → document → compute → detect again, and check `baseline.enabled` in
+    the result. Dropping the database throws that history away, so prefer not to.
   - After every capture, run document_organizations and compute_embeddings before anomaly_detection.
   - Use compute_embeddings(api='transformers') on a GPU host; otherwise api='openai'. The local
     transformer model must be downloaded on the host beforehand (`jaws-utils --model ...`); this is
@@ -151,36 +158,47 @@ RETURN c.CAPTURE_ID AS capture_id, c.SOURCE AS source,
 ORDER BY c.STARTED DESC
 """
 
-# Which session scope the current ENDPOINT profiles describe (one distinct value in
-# practice — compute_embeddings clears and rebuilds the whole layer per run).
+# Every profile set stored in the graph, newest-computed first. Profile sets accumulate
+# (one per compute run), so this is the per-endpoint history the anomaly baseline draws
+# on; the first row is the set the read tools and anomaly_detection default to.
 _PROFILED_QUERY = """
 MATCH (e:ENDPOINT)
-RETURN DISTINCT e.CAPTURE_ID AS session
+RETURN e.CAPTURE_ID AS session, count(e) AS endpoints, max(e.TIMESTAMP) AS computed
+ORDER BY computed DESC
 """
 
 
 @mcp.tool(name="list_captures", description=(
     "List the capture sessions accumulated in the graph, newest first: each with its `capture_id`, "
     "`source` (interface or imported pcap path), `started` timestamp, and `packets` count. "
-    "`profiled_session` names the session scope the current endpoint profiles (and therefore "
-    "fetch_traffic / anomaly_detection results) describe — 'all', a capture_id, or null when "
-    "compute_embeddings hasn't run. Use a capture_id with compute_embeddings(session=...) to "
-    "re-profile an older session."
+    "`profiled_sessions` lists the endpoint-profile sets stored in the graph (newest computed first, "
+    "each with its endpoint count) — profiles accumulate one set per compute run, and that accumulated "
+    "history is what anomaly_detection baselines each endpoint against. `profiled_session` names the one "
+    "the read tools and anomaly_detection default to ('all', a capture_id, or null when "
+    "compute_embeddings hasn't run); `baseline_sessions` counts the prior sets available to baseline "
+    "against, so 0 means scores are still purely peer-relative and history is only now accumulating. "
+    "Use a capture_id with compute_embeddings(session=...) to re-profile an older session, or with "
+    "anomaly_detection(session=...) to re-analyze a stored profile set."
 ))
 def list_captures() -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
         with driver.session(database=DATABASE) as session:
             captures = [record.data() for record in session.run(_CAPTURES_QUERY)]
-            profiled = [record["session"] for record in session.run(_PROFILED_QUERY)]
+            profiled = [record.data() for record in session.run(_PROFILED_QUERY)]
     except Exception as e:
         return {"ok": False, "error": f"could not list captures ({e})"}
     captures = json.loads(json.dumps(captures, default=str))
+    profiled = json.loads(json.dumps(profiled, default=str))
+    current = profiled[0]["session"] if profiled else None
     return {
         "ok": True,
         "captures": captures,
         "count": len(captures),
-        "profiled_session": profiled[0] if len(profiled) == 1 else (profiled or None),
+        "profiled_session": current,
+        "profiled_sessions": profiled,
+        "baseline_sessions": len([p for p in profiled
+                                  if p["session"] not in (current, "all", None)]),
     }
 
 
@@ -202,14 +220,19 @@ def document_organizations() -> dict[str, Any]:
     f"(default '{DEFAULT_PACKET_MODEL}'); ignored for api='openai'. "
     "`session` selects which capture session to profile: 'latest' (default), 'all' (every packet in "
     "the graph — inter-packet timing still never crosses session boundaries), or a capture_id from "
-    "list_captures. Each run REBUILDS the endpoint profile layer for that scope, so downstream "
-    "fetch_traffic/anomaly_detection describe exactly that session. "
-    "May run for a while on large captures."
+    "list_captures. Each run rebuilds the profile set for THAT scope only and leaves other sessions' "
+    "profile sets in place, so profiles accumulate one set per session: that is the per-endpoint history "
+    "anomaly_detection baselines against, and it is why repeated capture→compute→detect cycles get more "
+    "discriminating over time. The result's `profiled_sessions` counts the sets now stored (1 = no history "
+    "yet). `retain_profiles` caps how many sets are kept (default 20, 0 = unlimited); raw packet history is "
+    "never pruned. May run for a while on large captures."
 ))
-def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL, session: str = "latest") -> dict[str, Any]:
+def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL, session: str = "latest",
+                       retain_profiles: int = 20) -> dict[str, Any]:
     if model not in PACKET_MODELS:
         return {"ok": False, "error": f"unknown model '{model}'; available: {list(PACKET_MODELS)}"}
-    return _script("jaws_compute.py", "--api", api, "--model", model, "--session", session)
+    return _script("jaws_compute.py", "--api", api, "--model", model, "--session", session,
+                   "--retain-profiles", str(retain_profiles))
 
 
 @mcp.tool(name="anomaly_detection", description=(
@@ -250,16 +273,35 @@ def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MO
     "out) drive clustering vs. the text profile: 0 clusters on text/org/protocol only, higher (default "
     "1.0) surfaces volume/fan-out anomalies like unusual outbound traffic. "
     "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
-    "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it."
+    "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it. "
+    "HISTORICAL BASELINE: when the same IPs have been profiled in earlier capture sessions, an endpoint is "
+    "scored against ITS OWN past rather than only against its current peers — so a server that is always "
+    "the heaviest talker stops topping the ranking for volume it posts every single run, and a change in "
+    "its behavior ranks instead. Every reason states which reference produced it via `compared_to` ('own "
+    "history' or 'peer endpoints') and, for historical ones, the `baseline` value and how many sessions "
+    "back it. Cadence features (interval_mean/interval_cv) are NEVER baselined — a beacon looks identical "
+    "in every session, so its own history would declare it normal — and stay peer-relative; the result's "
+    "`baseline.exempt_features` names them. Each endpoint also carries `baseline_sessions` (prior sessions "
+    "behind its baseline) and `first_seen` (true = never observed in any earlier session, a finding on its "
+    "own that no per-feature score can express; null when there is no history at all), with the full list "
+    "under `baseline.first_seen`. Read `baseline.enabled`: false means only one profile set exists and "
+    "every score is peer-relative — run more capture→compute cycles and detection sharpens. Set "
+    "baseline=false to force purely peer-relative scoring. `session` analyzes a specific stored profile "
+    "set (a capture_id from list_captures) instead of the most recent."
 ))
-def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None, feature_weight: float = 1.0, include_local: bool = False) -> dict[str, Any]:
-    args = ["--components", str(components), "--feature-weight", str(feature_weight)]
+def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None,
+                      feature_weight: float = 1.0, include_local: bool = False,
+                      session: str = "latest", baseline: bool = True) -> dict[str, Any]:
+    args = ["--components", str(components), "--feature-weight", str(feature_weight),
+            "--session", session]
     if whiten:
         args.append("--whiten")
     if eps is not None:
         args += ["--eps", str(eps)]
     if include_local:
         args.append("--include-local")
+    if not baseline:
+        args.append("--no-baseline")
     return _script("jaws_finder.py", *args)
 
 
@@ -270,11 +312,26 @@ def drop_database() -> dict[str, Any]:
     return _script("jaws_utils.py")
 
 
+# Endpoint profiles ACCUMULATE, one set per capture session, so every profile read must
+# pin a session first — an unscoped MATCH returns the same IP once per session it was
+# ever seen in. This resolves the most recently COMPUTED set, which is what the pipeline
+# just produced and what anomaly_detection analyzes by default. The null branch covers a
+# legacy graph whose profiles predate session stamping.
+_LATEST_SCOPE = """
+CALL () {
+    MATCH (e:ENDPOINT)
+    RETURN e.CAPTURE_ID AS scope
+    ORDER BY e.TIMESTAMP DESC
+    LIMIT 1
+}
+"""
+
 # Ranked by total bytes, not recency: every profile in a compute run shares one
 # TIMESTAMP, so a recency sort is degenerate and `limit` would truncate arbitrarily.
-_FETCH_QUERY = """
+_FETCH_QUERY = _LATEST_SCOPE + """
 MATCH (endpoint:ENDPOINT)
-WHERE endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
+WHERE (endpoint.CAPTURE_ID = scope OR (scope IS NULL AND endpoint.CAPTURE_ID IS NULL))
+  AND endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
 OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
 RETURN
     endpoint.IP_ADDRESS AS ip_address,
@@ -311,6 +368,9 @@ LIMIT $limit
     "is a hosting/CDN provider, so the org names the infrastructure provider, not the actual service). "
     "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
     "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
+    "Profiles accumulate one set per capture session; this returns the MOST RECENTLY COMPUTED set (one row "
+    "per IP), so it is a snapshot, not a timeseries — use inspect_endpoint's `history` for one IP across "
+    "sessions, or list_captures for what else is stored. "
     "`duration_minutes` is how many minutes back to include, measured by when each profile was COMPUTED "
     "(the compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
     "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
@@ -341,9 +401,11 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
 # One ENDPOINT (the aggregated profile) for a specific IP — the same fields
 # fetch_traffic returns, scoped to $ip. Empty when the IP was captured but
 # compute_embeddings hasn't run yet (the peers/packets below still resolve from raw
-# PACKET nodes in that case).
+# PACKET nodes in that case). Profiles accumulate per session, so this takes the IP's
+# most recently computed one; _INSPECT_HISTORY_QUERY returns the rest as a series.
 _INSPECT_PROFILE_QUERY = """
 MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
+WITH endpoint ORDER BY endpoint.TIMESTAMP DESC LIMIT 1
 OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip})<-[:OWNERSHIP]-(org:ORGANIZATION)
 RETURN
     endpoint.IP_ADDRESS AS ip_address,
@@ -365,6 +427,29 @@ RETURN
     endpoint.INTERVAL_CV AS interval_cv,
     endpoint.OUTLIER AS outlier,
     endpoint.TIMESTAMP AS timestamp
+"""
+
+# The same IP's profile in every session it was seen in, newest first — the timeseries
+# view that a single profile cannot give. This is what turns "is 2 GB a lot?" into "it
+# moved 40 MB in each of the last five sessions and 2 GB in this one", and what the
+# anomaly baseline is computed from, so an agent can audit a baselined finding rather
+# than take the score on faith. The pooled 'all' scope is excluded: it re-aggregates
+# every session at once, so it is not a point in the series.
+_INSPECT_HISTORY_QUERY = """
+MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
+WHERE endpoint.CAPTURE_ID IS NOT NULL AND endpoint.CAPTURE_ID <> 'all'
+RETURN endpoint.CAPTURE_ID AS capture_id,
+       endpoint.BYTES_OUT AS bytes_out,
+       endpoint.PACKETS_OUT AS packets_out,
+       endpoint.OUT_PEERS AS out_peers,
+       endpoint.BYTES_IN AS bytes_in,
+       endpoint.PACKETS_IN AS packets_in,
+       endpoint.IN_PEERS AS in_peers,
+       endpoint.INTERVAL_MEAN AS interval_mean,
+       endpoint.INTERVAL_CV AS interval_cv,
+       endpoint.OUTLIER AS outlier
+ORDER BY capture_id DESC
+LIMIT $history_limit
 """
 
 # True totals for the IP across EVERY session in the graph (NOT truncated by the
@@ -460,13 +545,19 @@ def _split_ports(service_ports, high_ports) -> tuple[list[int], int]:
     "service-identifying low side of each port pair, e.g. 443 — and `ephemeral_ports`, a count of distinct "
     "high-side client ports: high churn means many short-lived connections rather than one long tunnel), "
     "ranked by total bytes; "
+    "`history` — this IP's profile in EVERY capture session it appeared in, newest first (bytes/packets/"
+    "peers per direction, timing, and that session's outlier verdict), with `sessions_seen` counting them: "
+    "the timeseries behind the profile, and the series anomaly_detection baselines an endpoint against, so "
+    "a 'far above its own history' finding can be audited against the real numbers (`history_limit` caps "
+    "the rows); "
     "and `packets` — a most-recent raw 5-tuple packet sample. Directions are from the inspected IP's OWN "
     "perspective (outbound = this IP is the packet source): for a remote IP, its outbound bytes are what it "
     "sent TO the capture host (a host download), and its inbound bytes are what the host sent to it (outbound "
     "from host). `peer_limit` caps the peer rows, `packet_limit` caps the packet sample. This answers 'now "
     "show me this IP's packets and peers' without pulling and filtering the whole window client-side."
 ))
-def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 20) -> dict[str, Any]:
+def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 20,
+                     history_limit: int = 20) -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
         with driver.session(database=DATABASE) as session:
@@ -474,6 +565,7 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
             totals = session.run(_INSPECT_TOTALS_QUERY, ip=ip_address).single()
             peer_rows = [r.data() for r in session.run(_INSPECT_PEERS_QUERY, ip=ip_address, peer_limit=peer_limit)]
             packet_rows = [r.data() for r in session.run(_INSPECT_PACKETS_QUERY, ip=ip_address, packet_limit=packet_limit)]
+            history_rows = [r.data() for r in session.run(_INSPECT_HISTORY_QUERY, ip=ip_address, history_limit=history_limit)]
     except Exception as e:
         return {"ok": False, "error": f"could not inspect endpoint {ip_address!r} ({e})"}
 
@@ -508,6 +600,11 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
         "found": bool(total_packets > 0 or profile_rows),
         "profile": profile,
         "totals": {"packets": total_packets, "peers": total_peers, "scope": "all_sessions"},
+        # This IP's profile in each session it was seen in, newest first — the series the
+        # anomaly baseline is derived from, so a "far above its own history" finding can
+        # be checked against the actual numbers.
+        "history": history_rows,
+        "sessions_seen": len(history_rows),
         "peers": peers,
         "peers_returned": len(peers),
         "packets": packet_rows,

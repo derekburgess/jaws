@@ -226,6 +226,17 @@ def initialize_schema(driver, database, local_ip, reporter):
             "query": "CREATE INDEX endpoint_ip_index IF NOT EXISTS FOR (e:ENDPOINT) ON (e.IP_ADDRESS)"
         },
         {
+            # An ENDPOINT profile is identified by (IP, session), not by IP alone: profile
+            # sets accumulate one per compute run so an IP's history is queryable across
+            # sessions. Every profile read either scopes to one CAPTURE_ID or groups by IP
+            # within a scope, so the composite index is the one that matters.
+            "type": "index",
+            "name": "endpoint_capture_index",
+            "label": "ENDPOINT",
+            "properties": ["IP_ADDRESS", "CAPTURE_ID"],
+            "query": "CREATE INDEX endpoint_capture_index IF NOT EXISTS FOR (e:ENDPOINT) ON (e.IP_ADDRESS, e.CAPTURE_ID)"
+        },
+        {
             "type": "constraint",
             "name": "capture_id_unique",
             "label": "CAPTURE",

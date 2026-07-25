@@ -108,6 +108,64 @@ LOW_SIGNAL_FEATURES = {"interval_cv"}
 SATURATING_FEATURES = {"interval_mean"}
 
 
+# Historical baselining: compare an endpoint against ITS OWN past sessions rather than
+# only against its current peers. Profile sets accumulate one per capture session (see
+# jaws_compute), so an IP that has been profiled before has a per-feature history. The
+# median of that history becomes the endpoint's expected value, and the robust-z then
+# measures departure from it — so a backup server that always moves 2 GB stops owning the
+# ranking on volume it posts every single session, while the same 2 GB from a host that
+# has never sent more than a megabyte is a genuine spike. Endpoints without enough history
+# fall back to the column median, i.e. exactly the peer-relative behavior.
+#
+# A single prior observation is a noisy "median" over a 30-120s capture, so require two.
+MIN_BASELINE_SESSIONS = 2
+
+# Features NEVER baselined against an endpoint's own history — the trap that historical
+# baselining walks into. Consistency is precisely what makes a beacon a beacon: an
+# implant calling home every 60s looks identical in every session, so its own history
+# would declare it perfectly normal and silence the strongest signal the tool has.
+# Cadence stays peer-relative, permanently. Volume and shape features are the ones where
+# "this endpoint always does this" is genuinely uninteresting.
+BASELINE_EXEMPT_FEATURES = set(TIMING_FEATURES)
+
+
+def build_baseline_centers(data, history, feature_names, raw):
+    """Per-row expected values for the robust-z, from each endpoint's own history.
+
+    `history` maps ip_address -> per-feature median over that IP's PRIOR profile sets
+    (see fetch_endpoint_history), already in raw units. Returns
+    (centers, baseline_sessions) where `centers` is a log1p-scaled matrix shaped like
+    `raw` — the endpoint's historical median where it has at least MIN_BASELINE_SESSIONS
+    prior sessions and the feature is not baseline-exempt, otherwise the column median,
+    which reproduces the un-baselined score for that cell — and `baseline_sessions` is
+    the per-row count of prior sessions backing the endpoint's baseline (0 = none, so
+    that row is purely peer-relative).
+
+    Mixing baselined and un-baselined cells in one column is coherent because log1p is
+    monotonic: median(log1p(x)) == log1p(median(x)), so an un-baselined cell's center IS
+    the value robust_z_scores would have subtracted anyway. Only the center moves.
+    """
+    x = np.log1p(raw)
+    centers = np.tile(np.median(x, axis=0), (len(data), 1))
+    baseline_sessions = np.zeros(len(data), dtype=int)
+    if not history:
+        return centers, baseline_sessions
+
+    exempt = [name in BASELINE_EXEMPT_FEATURES for name in feature_names]
+    for i, item in enumerate(data):
+        entry = history.get(item["ip_address"])
+        if entry is None or entry["sessions"] < MIN_BASELINE_SESSIONS:
+            continue
+        baseline_sessions[i] = entry["sessions"]
+        for j, name in enumerate(feature_names):
+            if exempt[j]:
+                continue
+            value = entry["medians"].get(name)
+            if value is not None and np.isfinite(value):
+                centers[i, j] = np.log1p(max(float(value), 0.0))
+    return centers, baseline_sessions
+
+
 def deviation_score(z, feature_names):
     """One rankable score per row of a robust-z matrix.
 
@@ -198,30 +256,80 @@ def build_numeric_features(data):
     return np.hstack([np.array(base), np.array(ratios), timing])
 
 
+def _robust_center_scale(x):
+    """Per-column (median, scale) for robust z, with the degenerate cases handled.
+
+    median/MAD rather than mean/std so the location and scale aren't dragged toward the
+    very outlier being measured. Where MAD is ~0 (e.g. many identical median-imputed
+    timing values) it falls back to the standard deviation, and to 0 for a genuinely
+    constant column — both avoid the div-by-zero infinities a naive MAD-z produces.
+    """
+    median = np.median(x, axis=0)
+    mad = np.median(np.abs(x - median), axis=0)
+    scale = 1.4826 * mad
+    scale = np.where(scale > 1e-9, scale, x.std(axis=0))
+    return median, scale
+
+
 def robust_z_scores(raw):
     """Per-column robust z-scores: (x - median) / (1.4826 * MAD), on log1p-scaled
     features.
 
     log1p first so multiplicative spread (bytes span orders of magnitude) reads on a
-    single scale and one busy host doesn't swamp every column. median/MAD rather than
-    mean/std so the location and scale aren't dragged toward the very outlier being
-    measured. Where MAD is ~0 (e.g. many identical median-imputed timing values) it
-    falls back to the standard deviation, and to 0 for a genuinely constant column —
-    both avoid the div-by-zero infinities a naive MAD-z produces. Returns an array
-    shaped like `raw`, columns aligned with NUMERIC_FEATURE_NAMES.
+    single scale and one busy host doesn't swamp every column. Returns an array shaped
+    like `raw`, columns aligned with NUMERIC_FEATURE_NAMES.
     """
     x = np.log1p(raw)
-    median = np.median(x, axis=0)
-    mad = np.median(np.abs(x - median), axis=0)
-    scale = 1.4826 * mad
-    scale = np.where(scale > 1e-9, scale, x.std(axis=0))
+    median, scale = _robust_center_scale(x)
     z = np.zeros_like(x)
     usable = scale > 1e-9
     z[:, usable] = (x[:, usable] - median[usable]) / scale[usable]
     return z
 
 
-def score_endpoints(data, clusters):
+# Smallest residual spread treated as meaningful in the HISTORICAL frame, on the log1p
+# scale (~0.1 ≈ a 10% change). Only reached when the baselined endpoints are so stable
+# that the MAD of their residuals collapses toward zero — at which point the scale would
+# be set by the single endpoint that did change, normalizing its own deviation away and
+# making a 20x departure score the same as a 1% one. The floor says "changes below ~10%
+# are noise" and restores magnitude sensitivity. Never applied to the peer frame, whose
+# scaling is tuned and must not shift.
+BASELINE_SCALE_FLOOR = 0.1
+
+
+def baselined_z_scores(raw, centers, baselined, feature_names):
+    """Robust-z where each endpoint is measured in the reference frame it has earned.
+
+    Rows with usable history are scored on their residual from their OWN baseline
+    (log1p(x) - center); every other row keeps the peer-relative score, unchanged. The
+    two frames are standardized SEPARATELY: a residual-from-own-past and a
+    deviation-from-the-pack have genuinely different spreads, and pooling them into one
+    column scale lets either corrupt the other (a population of stable endpoints drives
+    the shared MAD toward zero and inflates every peer-scored row). Columns in
+    `BASELINE_EXEMPT_FEATURES` stay peer-relative for every row.
+
+    Within the historical frame the residuals are re-centered on their own median before
+    scaling, so a shift affecting the whole population — a 120s capture following a 30s
+    one scales every volume feature — cancels instead of flagging everything. What
+    survives is endpoint-specific change.
+    """
+    z = robust_z_scores(raw)
+    if not baselined.any():
+        return z
+    columns = [j for j, name in enumerate(feature_names)
+               if name not in BASELINE_EXEMPT_FEATURES]
+    if not columns:
+        return z
+
+    residual = np.log1p(raw) - centers
+    median, scale = _robust_center_scale(residual[baselined])
+    scale = np.maximum(scale, BASELINE_SCALE_FLOOR)
+    z_history = (residual - median) / scale
+    z[np.ix_(baselined, columns)] = z_history[np.ix_(baselined, columns)]
+    return z
+
+
+def score_endpoints(data, clusters, history=None):
     """Attach a rankable anomaly score and reason codes to every endpoint.
 
     `anomaly_score` is the deviation_score of the endpoint's per-feature robust-z
@@ -233,9 +341,21 @@ def score_endpoints(data, clusters):
     'flagged' into 'flagged because bytes_out is far above the typical host'.
     `is_outlier` carries the DBSCAN verdict so the geometric flag and the
     interpretable score coexist. Returns the full list sorted by score descending.
+
+    `history` (from fetch_endpoint_history) switches each feature's reference point from
+    the current pack to the endpoint's own past where it has one — so a reason reads
+    'far above what THIS endpoint normally does' rather than 'far above its peers'. Each
+    reason names which comparison produced it via `compared_to`, and carries the
+    `baseline` it was measured against when that was the endpoint's history. Passing
+    None (or an empty history) reproduces the purely peer-relative score exactly.
     """
     raw = build_numeric_features(data)
-    z = robust_z_scores(raw)
+    centers, baseline_sessions = build_baseline_centers(
+        data, history or {}, NUMERIC_FEATURE_NAMES, raw)
+    baselined_rows = baseline_sessions >= MIN_BASELINE_SESSIONS
+    baselined = bool(history) and bool(baselined_rows.any())
+    z = (baselined_z_scores(raw, centers, baselined_rows, NUMERIC_FEATURE_NAMES)
+         if baselined else robust_z_scores(raw))
 
     # Timing z-scores are only meaningful with enough intervals behind them: profiles
     # computed under the old MIN_TIMING_PACKETS gate (3) carry an interval_cv from a
@@ -255,17 +375,30 @@ def score_endpoints(data, clusters):
         # The clustered set is remote by default; a remote endpoint's *_out is data it sent
         # TO the host (a download). is_local flips the host-frame gloss for the capture host.
         is_local = item["org"] == LOCAL_ORG
+        # Whether this row's cells were measured against the endpoint's own history or
+        # against its peers — per row, since an endpoint new in this session has no
+        # baseline even when the rest of the set does.
+        row_baselined = baselined and bool(baselined_rows[i])
         reasons = []
         for j, name in enumerate(NUMERIC_FEATURE_NAMES):
             zj = float(z[i, j])
             if abs(zj) >= REASON_Z_THRESHOLD:
+                against_history = row_baselined and name not in BASELINE_EXEMPT_FEATURES
                 reason = {
                     "feature": name,
                     "value": round(float(raw[i, j]), 4),
                     "unit": FEATURE_UNITS[name],
                     "robust_z": round(zj, 2),
                     "direction": "high" if zj > 0 else "low",
+                    # What the deviation is relative to. Without this an agent cannot tell
+                    # "unusual for the network" from "unusual for this endpoint" — two
+                    # findings that warrant different responses.
+                    "compared_to": ("own history" if against_history else "peer endpoints"),
                 }
+                if against_history:
+                    reason["baseline"] = round(
+                        float(history[item["ip_address"]]["medians"][name]), 4)
+                    reason["baseline_sessions"] = int(baseline_sessions[i])
                 # Defender-frame disambiguation so "bytes_out high" on a remote IP reads as
                 # a host download, not exfil (omitted for non-directional features).
                 gloss = host_relative_gloss(name, is_local)
@@ -291,6 +424,14 @@ def score_endpoints(data, clusters):
             "interval_cv": item["interval_cv"],
             "anomaly_score": round(float(scores[i]), 4),
             "is_outlier": bool(clusters[i] == -1),
+            # How many earlier sessions this IP was profiled in, and whether this session
+            # is the first time it has ever been seen. A never-before-seen endpoint is a
+            # finding in its own right that no per-feature z can express — the features
+            # only describe what it did, not that it is new. None when there is no prior
+            # history at all (nothing is "new" against an empty graph).
+            "baseline_sessions": int(baseline_sessions[i]),
+            "first_seen": (None if not history
+                           else item["ip_address"] not in history),
             "reasons": reasons,
         })
     ranked.sort(key=lambda e: e["anomaly_score"], reverse=True)
@@ -410,9 +551,109 @@ def build_feature_matrix(embeddings, data, components, whiten, feature_weight):
     return features, pca
 
 
-def fetch_data_for_dbscan(driver, database, include_local=False):
+# The pooled 'all' scope is not a point in time — it re-aggregates every packet in the
+# graph, so it both overlaps every real session and has no position in the sequence.
+# It can be analyzed, but it can never serve as (or receive) a historical baseline.
+POOLED_SCOPE = "all"
+
+
+def resolve_profile_scope(driver, database, session_arg):
+    """Pick which stored profile set (one per compute run) to analyze.
+
+    Profile sets accumulate — one ENDPOINT per IP per session — so unlike the old
+    single-generation layer the finder must say which one it means. Returns
+    (scope, available) where `scope` is a CAPTURE_ID, 'all', or None on a legacy graph
+    whose profiles predate session stamping; `available` is every profiled scope, most
+    recently computed first. 'latest' picks the most recently COMPUTED set (by profile
+    TIMESTAMP), which is what the pipeline just produced. Raises ValueError for an
+    explicit scope that has no profiles.
+    """
+    query = """
+    MATCH (e:ENDPOINT)
+    RETURN e.CAPTURE_ID AS scope, max(e.TIMESTAMP) AS computed, count(e) AS endpoints
+    ORDER BY computed DESC
+    """
+    with driver.session(database=database) as session:
+        rows = [record.data() for record in session.run(query)]
+    available = [r["scope"] for r in rows]
+    if not available:
+        return None, []
+    if session_arg == "latest":
+        return available[0], available
+    if session_arg not in available:
+        raise ValueError(
+            f"no endpoint profiles for session '{session_arg}'; profiled sessions: {available}. "
+            f"Run jaws-compute --session {session_arg} first.")
+    return session_arg, available
+
+
+# Every numeric input the baseline needs, read from the profile sets that PRECEDE the one
+# being analyzed. Ordering is lexicographic on CAPTURE_ID, which is chronological by
+# construction (compact UTC timestamps), so "prior" stays correct when an older session is
+# re-profiled after a newer one.
+_HISTORY_QUERY = """
+MATCH (e:ENDPOINT)
+WHERE e.CAPTURE_ID IS NOT NULL
+  AND e.CAPTURE_ID <> $scope
+  AND e.CAPTURE_ID <> $pooled
+  AND ($scope = $pooled OR e.CAPTURE_ID < $scope)
+RETURN e.IP_ADDRESS AS ip_address,
+       e.CAPTURE_ID AS capture_id,
+       e.BYTES_OUT AS bytes_out,
+       e.PACKETS_OUT AS packets_out,
+       e.OUT_PEERS AS out_peers,
+       e.BYTES_IN AS bytes_in,
+       e.PACKETS_IN AS packets_in,
+       e.IN_PEERS AS in_peers,
+       e.INTERVAL_MEAN AS interval_mean,
+       e.INTERVAL_CV AS interval_cv
+"""
+
+
+def fetch_endpoint_history(driver, database, scope):
+    """Per-IP feature medians over the profile sets preceding `scope`.
+
+    Returns ip_address -> {"sessions": n, "medians": {feature: value}}, where the
+    features are the same NUMERIC_FEATURE_NAMES the live set is scored on (derived
+    ratios included, computed through build_numeric_features so history and present are
+    assembled identically). An IP absent from the map has never been profiled before —
+    the `first_seen` case.
+    """
+    if scope is None:
+        return {}
+    with driver.session(database=database) as session:
+        rows = [record.data() for record in
+                session.run(_HISTORY_QUERY, scope=scope, pooled=POOLED_SCOPE)]
+    if not rows:
+        return {}
+
+    for row in rows:
+        for key in ("bytes_out", "packets_out", "out_peers", "bytes_in", "packets_in", "in_peers"):
+            row[key] = row[key] or 0
+    features = build_numeric_features(rows)
+
+    by_ip = {}
+    for row, vector in zip(rows, features):
+        by_ip.setdefault(row["ip_address"], []).append(vector)
+    history = {}
+    for ip, vectors in by_ip.items():
+        stacked = np.vstack(vectors)
+        history[ip] = {
+            "sessions": len(vectors),
+            "medians": {name: float(np.median(stacked[:, j]))
+                        for j, name in enumerate(NUMERIC_FEATURE_NAMES)},
+        }
+    return history
+
+
+def fetch_data_for_dbscan(driver, database, include_local=False, scope=None):
+    # Scoped to ONE profile set: profiles accumulate per session, so an unscoped match
+    # would return the same IP once per session it was ever seen in and cluster an
+    # endpoint against its own past selves. scope=None only happens on a legacy graph
+    # whose profiles predate session stamping, where one generation is all there is.
     query = """
     MATCH (endpoint:ENDPOINT)
+    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
     OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
     RETURN endpoint.IP_ADDRESS AS ip_address,
            endpoint.CAPTURE_ID AS capture_id,
@@ -430,7 +671,7 @@ def fetch_data_for_dbscan(driver, database, include_local=False):
            endpoint.EMBEDDING AS embedding
     """
     with driver.session(database=database) as session:
-        result = session.run(query)
+        result = session.run(query, scope=scope)
         embeddings = []
         data = []
         excluded_local = 0
@@ -538,26 +779,30 @@ def fetch_host_outbound(driver, database, capture_id=None):
     return local_ips, rows
 
 
-def add_outlier_to_database(scored_list, flagged_list, driver, database):
+def add_outlier_to_database(scored_list, flagged_list, driver, database, scope=None):
     # Stamp an explicit OUTLIER verdict on every endpoint that was scored this run:
     # false by default, true for the flagged subset. This makes the property
     # three-state for readers (fetch_traffic / inspect_endpoint): true = flagged,
     # false = scored but clean, absent/null = never scored (anomaly_detection
     # hasn't run for it). Resetting to false first also clears stale true flags
     # from a previous run on the same graph.
+    # Scoped to the analyzed profile set: matching on IP alone would overwrite the
+    # verdicts stored on that IP's other sessions, rewriting history from one run.
     reset_query = """
     UNWIND $scored AS ip
     MATCH (endpoint:ENDPOINT {IP_ADDRESS: ip})
+    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
     SET endpoint.OUTLIER = false
     """
     flag_query = """
     UNWIND $outliers AS outlier
     MATCH (endpoint:ENDPOINT {IP_ADDRESS: outlier.ip_address})
+    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
     SET endpoint.OUTLIER = true
     """
     with driver.session(database=database) as session:
-        session.run(reset_query, {'scored': [e['ip_address'] for e in scored_list]})
-        session.run(flag_query, {'outliers': flagged_list})
+        session.run(reset_query, {'scored': [e['ip_address'] for e in scored_list], 'scope': scope})
+        session.run(flag_query, {'outliers': flagged_list, 'scope': scope})
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
@@ -721,6 +966,8 @@ def main():
     parser.add_argument("--eps", type=float, default=None, help="DBSCAN epsilon. When omitted, it is auto-recommended from the k-distance knee. The knee tends to overshoot on small/homogeneous datasets (folding everything into one cluster, 0 outliers) — pass a smaller value to surface more outliers.")
     parser.add_argument("--feature-weight", type=float, default=1.0, help="Influence of the behavioral numeric features (bytes/packets/peers, in & out) on clustering. The numeric block is standardized to unit variance and scaled by this weight; the text embedding keeps its natural scale. 0 = embedding-only (text/org/protocol structure), higher = more volume/fan-out influence to surface behavioral anomalies. Default 1.0.")
     parser.add_argument("--include-local", action="store_true", help="Include the capture host ('YOU ARE HERE') in the clustered set. Off by default — it is a structural hub that dominates clustering. Its outbound traffic still appears as each remote endpoint's inbound, so outbound anomalies are detectable without it.")
+    parser.add_argument("--session", default="latest", help="Which stored profile set to analyze: 'latest' (default — the most recently computed), or a specific CAPTURE_ID that jaws-compute has profiled. Profile sets accumulate one per capture session.")
+    parser.add_argument("--no-baseline", action="store_true", help="Disable historical baselining and score every endpoint purely against its current peers. By default, an endpoint with at least %d prior profiled sessions is measured against its OWN history (volume and shape features only — cadence stays peer-relative so a persistent beacon can't normalize itself), which stops endpoints that are always heavy from dominating the ranking every run." % MIN_BASELINE_SESSIONS)
     parser.add_argument("--ablate", action="store_true", help="Ablation mode: cluster the same endpoints three ways — text-only (embedding alone), numeric-only (behavioral features alone), and blended — and report cluster quality (silhouette) and outlier-set agreement (Jaccard) to quantify how much the embedding contributes. Reuses stored embeddings, writes nothing, generates no plots.")
     args = parser.parse_args()
     reporter = Reporter()
@@ -735,7 +982,19 @@ def main():
     if driver is None:
         return
 
-    embeddings, data, excluded_local, excluded_nc = fetch_data_for_dbscan(driver, args.database, args.include_local)
+    # Which stored profile set this run analyzes. Profiles accumulate per session, so
+    # this has to be pinned before anything reads the ENDPOINT layer.
+    try:
+        scope, profiled_scopes = resolve_profile_scope(driver, args.database, args.session)
+    except ValueError as e:
+        reporter.error("ERROR", str(e))
+        driver.close()
+        return
+    if scope is not None:
+        reporter.info("CONFIG", f"Analyzing profile session: {scope} ({len(profiled_scopes)} profiled session(s) in graph)")
+
+    embeddings, data, excluded_local, excluded_nc = fetch_data_for_dbscan(
+        driver, args.database, args.include_local, scope)
     if excluded_local:
         reporter.info("CONFIG", f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.")
     if excluded_nc:
@@ -910,25 +1169,53 @@ def main():
     # anomalous first; `is_outlier` marks the DBSCAN-flagged ones. Returning the full
     # ranked list (not just the flagged subset) means there is always something to
     # triage — a 0-outlier DBSCAN run still yields a ranking.
-    ranked_endpoints = score_endpoints(data, clusters)
-    flagged = [e for e in ranked_endpoints if e["is_outlier"]]
+    # Per-endpoint history from the profile sets preceding this one, so the score asks
+    # "unusual for THIS endpoint" where it can and falls back to "unusual for the pack"
+    # where it can't. Skipped for the pooled 'all' scope, which overlaps every session
+    # and so has no coherent "before".
+    # Profile sets that PRECEDE the analyzed one — the same set _HISTORY_QUERY draws on,
+    # so the reported depth matches what was actually available to baseline against. The
+    # pooled scope has no position in the sequence, so nothing is prior to it.
+    baselineable = scope is not None and scope != POOLED_SCOPE and not args.no_baseline
+    prior_scopes = ([s for s in profiled_scopes
+                     if s not in (scope, POOLED_SCOPE, None) and s < scope]
+                    if baselineable else [])
+    history = {}
+    if args.no_baseline:
+        skipped_because = "disabled with --no-baseline"
+        reporter.info("CONFIG", "Historical baselining disabled (--no-baseline): scoring against current peers only.")
+    elif scope == POOLED_SCOPE:
+        skipped_because = (f"the pooled '{POOLED_SCOPE}' scope re-aggregates every session at once, so it "
+                           "overlaps all of them and has no prior session to compare against")
+        reporter.info("CONFIG", f"Historical baselining skipped: the pooled '{POOLED_SCOPE}' scope re-aggregates every session, so it has no prior sessions to baseline against.")
+    elif scope is None:
+        skipped_because = "these profiles predate capture-session stamping, so they carry no session to order by"
+    else:
+        skipped_because = None
+        history = fetch_endpoint_history(driver, args.database, scope)
 
-    add_outlier_to_database(ranked_endpoints, flagged, driver, args.database)
+    ranked_endpoints = score_endpoints(data, clusters, history)
+    flagged = [e for e in ranked_endpoints if e["is_outlier"]]
+    baselined_endpoints = [e for e in ranked_endpoints
+                           if e["baseline_sessions"] >= MIN_BASELINE_SESSIONS]
+    new_endpoints = [e for e in ranked_endpoints if e["first_seen"]]
+    if history:
+        reporter.info("BASELINE",
+                      f"{len(baselined_endpoints)} of {len(ranked_endpoints)} endpoint(s) scored against their own history "
+                      f"(>= {MIN_BASELINE_SESSIONS} prior sessions); {len(new_endpoints)} never seen in a prior session.")
+
+    add_outlier_to_database(ranked_endpoints, flagged, driver, args.database, scope)
 
     # First-class host-outbound view: outbound FROM the capture host, per destination,
     # isolated from raw packets (host as source). The remote-endpoint ranking above is
     # dominated by inbound/download volume and structurally demotes the host's own outbound
     # (the documented purpose) — this re-centers on it, independent of clustering and the
     # --include-local flag. Empty when the host wasn't captured (e.g. an imported pcap).
-    # ENDPOINT profiles carry the session scope they were computed from; the
-    # host-outbound packet scan is scoped to the same session so both views describe
-    # the same traffic. A concrete scope only exists when every profile agrees on one
-    # real CAPTURE_ID ('all', None, or a mix falls back to scanning everything).
-    profile_sessions = {d.get("capture_id") for d in data}
-    session_scope = profile_sessions.pop() if len(profile_sessions) == 1 else None
-    if session_scope == "all":
-        session_scope = None
-    local_ips, host_rows = fetch_host_outbound(driver, args.database, session_scope)
+    # The host-outbound packet scan is scoped to the same session the analyzed profile
+    # set describes, so both views cover the same traffic. The pooled 'all' scope (and a
+    # legacy graph's unstamped profiles) means scan everything.
+    packet_scope = None if scope == POOLED_SCOPE else scope
+    local_ips, host_rows = fetch_host_outbound(driver, args.database, packet_scope)
     # Multicast/broadcast "destinations" (SSDP/mDNS announcements) never reply, so
     # their upload_download_ratio is structurally huge — drop them before ranking
     # rather than let protocol chatter read as exfil-shaped.
@@ -956,7 +1243,40 @@ def main():
         "cluster_sizes": cluster_sizes,
         # Capture session the ENDPOINT profiles (and the host_outbound scan) describe:
         # a CAPTURE_ID, or 'all' when profiles span every session / predate sessions.
-        "session": session_scope or "all",
+        "session": scope or POOLED_SCOPE,
+        "profiled_sessions": profiled_scopes,
+        # How much of this ranking is historical vs. purely peer-relative.
+        # `endpoints_baselined` counts endpoints measured against their own past;
+        # `first_seen` names the IPs that have never appeared in a prior session — a
+        # finding on its own, since no per-feature deviation can express "brand new".
+        # `enabled` reports whether baselining actually took EFFECT, not merely whether
+        # history was fetched: prior sessions can exist while no single endpoint appears
+        # in enough of them, and that run is still entirely peer-relative.
+        "baseline": {
+            "enabled": bool(baselined_endpoints),
+            "min_sessions": MIN_BASELINE_SESSIONS,
+            "history_sessions": len(prior_scopes),
+            "endpoints_baselined": len(baselined_endpoints),
+            "first_seen": [e["ip_address"] for e in new_endpoints],
+            "exempt_features": sorted(BASELINE_EXEMPT_FEATURES),
+            "description": (
+                "Endpoints with at least min_sessions prior profiled sessions are scored against "
+                "their OWN historical median instead of the current population median, so an "
+                "endpoint that is always heavy stops ranking on volume it posts every session and "
+                "a change in its behavior ranks instead. Each reason names its reference via "
+                "`compared_to` ('own history' or 'peer endpoints') and carries the `baseline` it "
+                "was measured against. exempt_features are never baselined — a beacon's regularity "
+                "is identical in every session, so its own history would declare it normal; cadence "
+                "stays peer-relative. Population-wide shifts (e.g. a longer capture) cancel out."
+                if baselined_endpoints else
+                f"Not applied — every score here is peer-relative — because {skipped_because}."
+                if skipped_because else
+                f"Not applied — every score here is peer-relative. {len(prior_scopes)} profiled "
+                f"session(s) precede this one, and no endpoint appeared in the {MIN_BASELINE_SESSIONS} "
+                "required to form a baseline. Run more capture -> compute -> detect cycles: once the "
+                "same IPs recur, they are scored against their own history instead."
+            ),
+        },
         "excluded_local": excluded_local,
         "eps": round(float(eps_value), 4),
         "eps_source": eps_source,

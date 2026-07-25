@@ -79,12 +79,17 @@ def main():
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
     [grey85]--model selects a local transformers model when --api transformers (see config.PACKET_MODELS).[/]
     [grey85]--session selects which capture session to profile: 'latest' (default), 'all', or a capture_id.[/]
+    [grey85]Each run stores a profile set for that session and keeps earlier ones, so every IP builds a per-session history for jaws-finder to baseline against.[/]
+    [grey85]--retain-profiles caps how many profile sets are kept (default 20, 0 = unlimited). Raw packets are never pruned.[/]
     [/]""")
-   
+
     print(f"""[gray100]
     [grey85]To cluster embeddings and surface outliers (PCA + DBSCAN, with a scored host-outbound view):[/]
-    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}' --components 2 --whiten --eps 0.5 --feature-weight 1.0 --include-local --ablate
+    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}' --components 2 --whiten --eps 0.5 --feature-weight 1.0 --include-local --session 'latest' --no-baseline --ablate
     [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-finder
+    [grey85]Endpoints profiled in 2+ earlier sessions are scored against their OWN history instead of only their current peers, so what surfaces is change, not the endpoints that are always busy. Cadence (interval_mean/interval_cv) is never baselined — a beacon looks the same every session.[/]
+    [grey85]--session picks which stored profile set to analyze: 'latest' (default) or a capture_id.[/]
+    [grey85]--no-baseline scores every endpoint purely against its current peers.[/]
     [grey85]--components sets the number of PCA dimensions to retain for clustering (min 2, default 2).[/]
     [grey85]--whiten scales each PCA component to unit variance (default: off).[/]
     [grey85]--eps overrides the DBSCAN epsilon; omit it to accept the auto-recommended knee value.[/]
