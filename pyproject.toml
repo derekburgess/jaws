@@ -35,3 +35,13 @@ packages = ["jaws", "jaws_mcp"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# conftest helpers are imported by name from the test modules.
+pythonpath = ["tests"]
+markers = [
+    "neo4j: requires a live Neo4j instance (deselected by default)",
+    "recall: synthetic-injection detection benchmark (deselected by default)",
+]
+addopts = "-m 'not neo4j and not recall'"

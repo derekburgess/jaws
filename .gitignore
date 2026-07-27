@@ -5,3 +5,8 @@ __pycache__/
 /build/
 /logs/
 .claude/
+# Real capture fixtures are downloaded, never committed (see tests/harness/fixtures/README.md)
+tests/harness/fixtures/*.pcap
+tests/harness/fixtures/*.pcapng
+tests/harness/fixtures/*.zip
+.pytest_cache/
