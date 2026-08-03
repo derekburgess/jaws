@@ -86,6 +86,13 @@ pytest -m recall -s
 
 Set `JAWS_PCAP_DIR` to include the supported real-capture scenarios; otherwise those scenarios are skipped.
 
+The versioned [benchmark artifact contract](benchmarks/README.md) defines how JAWS
+retains complete rankings, evidence identity, execution and quality outcomes,
+environment provenance, known failures, generated reports, and checksums. The committed
+`benchmarks/examples/baseline-0/` bundle is a noncanonical validation fixture.
+Canonical Benchmark 0 bundles use the same contract with
+`benchmark.canonical: true`.
+
 ## Evidence, provenance, and non-goals
 
 Research results retain enough information to be reproduced and challenged: capture and session identifiers, observation scope, entity definition, feature and model configuration, reference population, ranking parameters, software version, ranked outputs, labels, metrics, and generated artifacts.

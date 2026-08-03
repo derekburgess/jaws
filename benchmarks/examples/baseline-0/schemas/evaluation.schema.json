@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/derekburgess/jaws/benchmarks/schemas/baseline-0/evaluation.schema.json",
+  "title": "JAWS Benchmark 0 deterministic evaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "evaluator",
+    "cutoff",
+    "per_scenario",
+    "aggregate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "artifact_kind": {
+      "const": "evaluation"
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "deterministic"
+      ],
+      "properties": {
+        "name": {
+          "const": "jaws-baseline-0-evaluator"
+        },
+        "version": {
+          "const": "1.0.0"
+        },
+        "deterministic": {
+          "const": true
+        }
+      }
+    },
+    "cutoff": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "per_scenario": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/scenario_evaluation"
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_count",
+        "completed_count",
+        "skipped_count",
+        "failed_execution_count",
+        "detect",
+        "reject",
+        "metrics",
+        "known_failures_reproduced"
+      ],
+      "properties": {
+        "scenario_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_execution_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "detect": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "completed",
+            "hits_at_cutoff"
+          ],
+          "properties": {
+            "completed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hits_at_cutoff": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "reject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "completed",
+            "false_positives_at_cutoff"
+          ],
+          "properties": {
+            "completed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "false_positives_at_cutoff": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
+        },
+        "known_failures_reproduced": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "preferred_direction"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preferred_direction": {
+          "type": "string",
+          "enum": [
+            "higher",
+            "lower",
+            "informational"
+          ]
+        }
+      }
+    },
+    "scenario_evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "execution_status",
+        "quality_outcome",
+        "expectation",
+        "evaluation_surface",
+        "target_rank",
+        "candidate_count",
+        "passed",
+        "known_failure_id",
+        "metrics",
+        "rationale"
+      ],
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "skipped"
+          ]
+        },
+        "quality_outcome": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed_known",
+            "failed_unexpected",
+            "not_evaluated"
+          ]
+        },
+        "expectation": {
+          "type": "string",
+          "enum": [
+            "detect",
+            "reject"
+          ]
+        },
+        "evaluation_surface": {
+          "type": "string",
+          "enum": [
+            "endpoints",
+            "host_outbound"
+          ]
+        },
+        "target_rank": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "candidate_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "passed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "known_failure_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "execution_status": {
+                "const": "completed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "quality_outcome": {
+                "enum": [
+                  "passed",
+                  "failed_known",
+                  "failed_unexpected"
+                ]
+              },
+              "target_rank": {
+                "type": "integer"
+              },
+              "candidate_count": {
+                "type": "integer"
+              },
+              "passed": {
+                "type": "boolean"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "quality_outcome": {
+                "const": "not_evaluated"
+              },
+              "target_rank": {
+                "type": "null"
+              },
+              "candidate_count": {
+                "type": "null"
+              },
+              "passed": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality_outcome": {
+                "const": "failed_known"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "known_failure_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "known_failure_id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

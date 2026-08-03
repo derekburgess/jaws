@@ -1,0 +1,606 @@
+{
+  "artifact_kind": "scenario_catalog",
+  "scenarios": [
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "endpoints",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 11,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.payload_beacon",
+        "source_sha256": "57729dad43e971585277a239172fa97141a1fdcae8fcc92ea8b76c8a31945639"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "30s period, low jitter, ~820 B/pkt",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 840,
+      "packet_rows_sha256": "f99df372897421b9e5fcfbe633b5f135032390eb50fe267d3bc8cb47be6878eb",
+      "scenario_id": "payload_beacon",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 11
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "198.51.100.7",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "endpoints",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 12,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.jittered_beacon",
+        "source_sha256": "1a709acab345489e1c9bf5abc5d3ba12a31803db18edcd986f7ad2ed17539f78"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "30s +/-20%, ~760 B/pkt",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 840,
+      "packet_rows_sha256": "85a724347483d562f54e3c22e29e382cafe4843d72add7e8e5ef2fae366ed1bc",
+      "scenario_id": "jittered_beacon",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 12
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "198.51.100.23",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "endpoints",
+      "expectation": "reject",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 13,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.tcp_keepalive",
+        "source_sha256": "586e2790e4d3284cfbc012e614b969180877bac94bded4e888e58191ac011e70"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "1.024s bare ACKs - benign, currently a false positive",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 1970,
+      "packet_rows_sha256": "f524b775816864105b8e56f3fe469f9c19e66b16e176e52bffc100f875ec5884",
+      "scenario_id": "tcp_keepalive",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 13
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": ">",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "35.190.46.17",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "host_outbound",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 14,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.slow_exfil",
+        "source_sha256": "fad3d4290a499cbe598f0997ccaf32e37a3f9df0e2e1587ce4061c871079c640"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "sustained upload, ~20:1",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 1276,
+      "packet_rows_sha256": "6fb1f2fd0d7d7a0ef1fca40251ccd3d2a25c7bb8fd3a6cb8a2238b43ce890447",
+      "scenario_id": "slow_exfil",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 14
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "203.0.113.44",
+        "entity_type": "host-destination"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "host_outbound",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 15,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.burst_exfil",
+        "source_sha256": "407d6d4cd41143be229dc0188b14b4ce8ff7e29c83978ab2d98a79b736c04262"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "single large upload",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 1301,
+      "packet_rows_sha256": "a87874ee86910aec51bccf441986b7befcf5ce5b5c85b3c589cbf7fe9869752b",
+      "scenario_id": "burst_exfil",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 15
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "203.0.113.90",
+        "entity_type": "host-destination"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "host_outbound",
+      "expectation": "reject",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 16,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.bulk_download",
+        "source_sha256": "793cf845344fbaacd6f7f4bf3451a307bac7358b1b850084bf0784bcf9e70677"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "large inbound - host is receiving",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 1458,
+      "packet_rows_sha256": "c71eb8c9434712e387f725a3095af68ede6b538ff1871c1abb59e0145a8fa51a",
+      "scenario_id": "bulk_download",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 16
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": ">",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "150.171.109.74",
+        "entity_type": "host-destination"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "endpoints",
+      "expectation": "reject",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 17,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.stable_heavy",
+        "source_sha256": "61de310eb6fc248be2632ffd021128ad0258848a0e6070deb5a6b827f10a6ecd"
+      },
+      "history": {
+        "background_seed_rule": "seed + zero-based prior-session index",
+        "prior_sessions": 3,
+        "scales": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sessions": [
+          {
+            "background_seed": 7,
+            "capture_id": "PRIOR0",
+            "packet_count": 2014,
+            "packet_rows_sha256": "ca912a2c8995c71e7ca3bfa19590547d493158fbafacfcc7d6fddd9760c19752",
+            "scale": 1.0,
+            "start_offset_seconds": -5400.0
+          },
+          {
+            "background_seed": 8,
+            "capture_id": "PRIOR1",
+            "packet_count": 2014,
+            "packet_rows_sha256": "d4b83972005d17afee04d8efa137fc77bbaa130f6c4cab20d9898190252991d3",
+            "scale": 1.0,
+            "start_offset_seconds": -4800.0
+          },
+          {
+            "background_seed": 9,
+            "capture_id": "PRIOR2",
+            "packet_count": 2014,
+            "packet_rows_sha256": "5f4d6d71f3bbbc2a11f5fb439bc544645c40045bc8833bc91046eb3261c210d3",
+            "scale": 1.0,
+            "start_offset_seconds": -4200.0
+          }
+        ]
+      },
+      "note": "heavy every session - own history should demote it",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 2014,
+      "packet_rows_sha256": "bcd4588a02d7846c57d42732804dac9be784004f033e43cea9a8869a7399932e",
+      "scenario_id": "stable_heavy",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 17
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": ">",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "160.79.104.10",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "jaws-synthetic-v0",
+      "evaluation_surface": "endpoints",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "scale": 1.0,
+          "seed": 17,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.scenarios.stable_heavy",
+        "source_sha256": "61de310eb6fc248be2632ffd021128ad0258848a0e6070deb5a6b827f10a6ecd"
+      },
+      "history": {
+        "background_seed_rule": "seed + zero-based prior-session index",
+        "prior_sessions": 3,
+        "scales": [
+          0.03,
+          0.03,
+          0.03
+        ],
+        "sessions": [
+          {
+            "background_seed": 7,
+            "capture_id": "PRIOR0",
+            "packet_count": 2014,
+            "packet_rows_sha256": "d0d9576942e051a1e6dbbcf939fa220dc095404a4c8457b36cc11d02652edf48",
+            "scale": 0.03,
+            "start_offset_seconds": -5400.0
+          },
+          {
+            "background_seed": 8,
+            "capture_id": "PRIOR1",
+            "packet_count": 2014,
+            "packet_rows_sha256": "518a8c00ef400c4e344733592a01c8d21dba2c385e2793393efb69a19d39e3a8",
+            "scale": 0.03,
+            "start_offset_seconds": -4800.0
+          },
+          {
+            "background_seed": 9,
+            "capture_id": "PRIOR2",
+            "packet_count": 2014,
+            "packet_rows_sha256": "999a82bcd70cb0e57751886d16b8ed74e7b2147b826204c66a3be6c4445352cf",
+            "scale": 0.03,
+            "start_offset_seconds": -4200.0
+          }
+        ]
+      },
+      "note": "quiet for 3 sessions, then 30x - only findable with a baseline",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": 2014,
+      "packet_rows_sha256": "bcd4588a02d7846c57d42732804dac9be784004f033e43cea9a8869a7399932e",
+      "scenario_id": "behavioral_change",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": 7,
+        "scenario": 17
+      },
+      "source_type": "synthetic",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "160.79.104.10",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "mta-2026-01-29-njrat",
+      "evaluation_surface": "endpoints",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "filename": "2026-01-29-njRAT-infection-with-MassLogger.pcap",
+          "local_ip": "10.1.29.101",
+          "scale": 1.0,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.pcap._generator.<locals>.gen",
+        "source_sha256": "b94c5717e202c70e1f90bf04a7655f03a6f5f3cd53b9431a2b207457f4105ec8"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "real njRAT C2 on tcp/7492 (MTA 2026-01-29 IOCs)",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": null,
+      "packet_rows_sha256": null,
+      "scenario_id": "njrat_c2",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": null,
+        "scenario": null
+      },
+      "source_type": "pcap",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "104.248.130.195",
+        "entity_type": "endpoint-ip"
+      }
+    },
+    {
+      "dataset_id": "mta-2026-01-29-njrat",
+      "evaluation_surface": "host_outbound",
+      "expectation": "detect",
+      "generator": {
+        "parameters": {
+          "filename": "2026-01-29-njRAT-infection-with-MassLogger.pcap",
+          "local_ip": "10.1.29.101",
+          "scale": 1.0,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.pcap._generator.<locals>.gen",
+        "source_sha256": "b94c5717e202c70e1f90bf04a7655f03a6f5f3cd53b9431a2b207457f4105ec8"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "real MassLogger SMTP exfil to cphost14.qhoster.net:587",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": null,
+      "packet_rows_sha256": null,
+      "scenario_id": "masslogger_exfil",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": null,
+        "scenario": null
+      },
+      "source_type": "pcap",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": "<=",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "78.110.166.82",
+        "entity_type": "host-destination"
+      }
+    },
+    {
+      "dataset_id": "mta-2026-01-29-njrat",
+      "evaluation_surface": "endpoints",
+      "expectation": "reject",
+      "generator": {
+        "parameters": {
+          "filename": "2026-01-29-njRAT-infection-with-MassLogger.pcap",
+          "local_ip": "10.1.29.101",
+          "scale": 1.0,
+          "t0": 0.0
+        },
+        "qualified_name": "harness.pcap._generator.<locals>.gen",
+        "source_sha256": "b94c5717e202c70e1f90bf04a7655f03a6f5f3cd53b9431a2b207457f4105ec8"
+      },
+      "history": {
+        "background_seed_rule": null,
+        "prior_sessions": 0,
+        "scales": [],
+        "sessions": []
+      },
+      "note": "ip-api.com lookup by the infected host - real but not the threat",
+      "observation_window": {
+        "capture_id": "SYNTH",
+        "duration_seconds": 600.0,
+        "host_perspective": {
+          "entity_id": "10.0.1.3",
+          "entity_type": "endpoint-ip"
+        },
+        "start_offset_seconds": 0.0
+      },
+      "packet_count": null,
+      "packet_rows_sha256": null,
+      "scenario_id": "njrat_ipcheck",
+      "scenario_version": "1.0.0",
+      "seeds": {
+        "background": null,
+        "scenario": null
+      },
+      "source_type": "pcap",
+      "success_rule": {
+        "metric": "target_rank",
+        "operator": ">",
+        "rank_base": 1,
+        "threshold": 3
+      },
+      "target": {
+        "entity_id": "208.95.112.1",
+        "entity_type": "endpoint-ip"
+      }
+    }
+  ],
+  "schema_version": "1.0.0"
+}

@@ -107,10 +107,14 @@ def _generator(sample, ips):
     return gen
 
 
-def pcap_scenarios():
-    """Real-traffic counterparts to the synthetic detect scenarios."""
-    if not available(NJRAT.filename):
-        return []
+def documented_pcap_scenarios():
+    """Return the declared real-traffic scenarios without probing local availability.
+
+    Benchmark manifests need to distinguish an unavailable dataset from a benchmark
+    with no real-PCAP scenarios.  The executable recall tier still uses
+    :func:`pcap_scenarios`, which preserves its existing behavior and returns an
+    empty list when the sample is absent.
+    """
     return [
         Scenario("njrat_c2", "104.248.130.195", "detect", "endpoints",
                  _generator(NJRAT, ["104.248.130.195"]),
@@ -125,3 +129,10 @@ def pcap_scenarios():
                  _generator(NJRAT, ["208.95.112.1"]),
                  note="ip-api.com lookup by the infected host - real but not the threat"),
     ]
+
+
+def pcap_scenarios():
+    """Available real-traffic counterparts to the synthetic scenarios."""
+    if not available(NJRAT.filename):
+        return []
+    return documented_pcap_scenarios()

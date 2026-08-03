@@ -14,13 +14,19 @@ Two tiers of ground truth:
 Nothing here emits traffic. A "packet" is a dict.
 """
 import os
+import tempfile
+
+# Importing the legacy finder pulls in Matplotlib even when the harness does not plot.
+os.environ.setdefault(
+    "MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
 
 from .scenarios import HOST, SCENARIOS, Scenario, background_packets
 from .recall import evaluate, report
-from .pcap import pcap_scenarios, NJRAT
+from .pcap import documented_pcap_scenarios, pcap_scenarios, NJRAT
 
 __all__ = ["HOST", "SCENARIOS", "Scenario", "background_packets", "evaluate", "report",
-           "pcap_scenarios", "NJRAT", "all_scenarios", "recall_source"]
+           "documented_pcap_scenarios", "pcap_scenarios", "NJRAT",
+           "all_scenarios", "recall_source"]
 
 RECALL_SOURCES = {"all", "synthetic", "pcap"}
 

@@ -78,7 +78,7 @@ This inventory is the baseline for the plan. It should be updated when a milesto
 | Configuration/schema/admin | `jaws/config.py`, `jaws/jaws_utils.py` | environment loading, clients, output, schema creation, model download, destructive reset |
 | Runtime | `harbor/Dockerfile`, `ocean/Dockerfile` | unpinned images, build-time secrets, source cloned from `main`, idle process |
 
-### Quantitative inventory
+### Quantitative inventory at detector subject `0b68a8c`
 
 - `jaws/jaws_finder.py`: 1,352 lines.
 - `jaws_mcp/server.py`: 636 lines.
@@ -90,6 +90,11 @@ This inventory is the baseline for the plan. It should be updated when a milesto
 - Three optional real-PCAP scenarios derived from one externally acquired and labeled sample.
 - No committed GitHub Actions workflow, lint configuration, type-check job, lock/constraints file, or declared test dependency.
 - `requirements.txt` is one unsegmented runtime dependency set; most versions are unpinned.
+
+Milestone 0 has since added a declared development test dependency group, eight
+Benchmark 0 schemas, a portable noncanonical bundle, and fifteen contract-test functions
+collecting as twenty cases. The detector subject inventory above remains fixed so the
+baseline is not silently redefined by its collector.
 
 ### Strengths to preserve
 
@@ -120,11 +125,15 @@ This inventory is the baseline for the plan. It should be updated when a milesto
 - Imported PCAP perspective is inferred from the machine doing the import rather than declared in dataset/capture metadata.
 - Profile nodes do not record feature-set version, description-template version, embedding model revision, or software provenance.
 - Current profile retention and raw-packet retention are controlled differently but not expressed as a general policy.
-- Experiment specifications, run records, control/treatment relationships, and evaluation artifacts do not yet exist.
-- Current benchmark output is a human table; it is not a versioned, machine-readable comparison bundle.
-- Recall scenarios have useful known failures, but there is no policy for expected failures, regression budgets, or held-out data.
+- General experiment specifications, control/treatment relationships, and append-only
+  experiment runs do not yet exist; Benchmark 0 now has a deliberately narrow run record.
+- The legacy recall command still prints only a human table. The Benchmark 0 collector
+  now retains a versioned machine-readable bundle, but the canonical run is not yet captured.
+- Benchmark 0 now names and guards its three current known failures; general regression
+  budgets and held-out-data governance remain undefined.
 - Heavy dependencies are installed together even for operations that do not need them.
-- Tests cannot be installed from a declared development dependency group.
+- The development dependency group now installs pytest and JSON Schema validation, but
+  runtime dependencies remain unpinned and unsplit across lightweight, CPU, and GPU use.
 - Database, MCP, CLI, capture, and full-pipeline contracts have little automated coverage.
 - Container builds accept credentials as build arguments, use unpinned bases, clone a moving branch, and keep the analyzer alive with `tail -f /dev/null`.
 - Destructive database reset is exposed to agent-mode callers without the interactive confirmation used for humans.
@@ -318,6 +327,17 @@ Create an immutable record of what the existing code does before structural chan
 - [ ] Record actual package versions used for Benchmark 0.
 - [x] Add a test collection command and separate correctness, Neo4j, synthetic-quality, and real-PCAP-quality invocations.
 - [x] Verify a clean checkout can run the correctness tests without API credentials, a live capture interface, Neo4j, or a downloaded embedding model where those are not logically required.
+
+#### Benchmark 0 measurement contract
+
+- [x] Define Draft 2020-12 schemas for the bundle manifest, datasets, scenarios, run, environment, rankings, evaluation, and known failures.
+- [x] Separate the detector subject revision from the collector revision and source digest.
+- [x] Standardize one-based ranks, zero-based emitted positions, descending score order, null semantics, and explicit execution/quality status combinations.
+- [x] Retain complete endpoint and host-outbound rankings with raw attributes, verdicts, full reason objects, and evidence pointers.
+- [x] Represent numeric-only, text-only, and blended analytical modes with explicit `used`, `not_used`, `unavailable`, and `unsupported` states.
+- [x] Add deterministic evaluation, generated-report, cross-record, secret-leak, and checksum validation.
+- [x] Commit a clearly noncanonical contract fixture covering all eight synthetic scenarios, three known failures, and explicit skips for all documented unavailable PCAP scenarios.
+- [x] Document collection, validation, regeneration, evidence, licensing, and secret-handling rules in [`benchmarks/README.md`](benchmarks/README.md).
 
 #### Baseline capture
 
@@ -1166,7 +1186,9 @@ When implementation begins, start with Milestone 0 in this order:
 
 1. Add the development/test dependency declaration and one clean-environment test command.
 2. Create the ADR template and record the fixed research/architecture decisions.
-3. Define the Benchmark 0 artifact schemas before running the benchmark.
+3. Define the Benchmark 0 artifact schemas before running the benchmark. **Complete:**
+   version 1.0.0 schemas, validator, and noncanonical fixture are documented in
+   [`benchmarks/README.md`](benchmarks/README.md).
 4. Run correctness and synthetic quality tiers at `0b68a8c` with full rankings retained.
 5. Add optional real-PCAP results if the documented sample is locally available; otherwise retain an explicit skip.
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here.
@@ -1174,6 +1196,25 @@ When implementation begins, start with Milestone 0 in this order:
 No detector refactoring should begin before those artifacts exist.
 
 ## Change log
+
+### 2026-08-03 — Benchmark 0 measurement contract
+
+- Added version 1.0.0 schemas for all Benchmark 0 records and embedded the exact schema
+  set inside each portable bundle.
+- Defined separate software-execution and detector-quality outcomes so known failures
+  remain failures while still proving baseline fidelity.
+- Added a behavior-preserving collector around the current recall harness that retains
+  every emitted entity, rank, score, verdict, raw attribute, reason, and evidence pointer.
+- Added deterministic reward calculation, report rendering, cross-record validation,
+  secret scanning, and complete SHA-256 inventories.
+- Added a noncanonical validation fixture for all eight synthetic scenarios and explicit
+  unavailable-data records for the three documented real-PCAP scenarios.
+- Verification evidence: 40 correctness cases pass; the contract fixture validates and
+  regenerates from a clean output path; synthetic quality remains 5/5 detections at
+  Recall@3 with the same three named benign failures; one Neo4j case and all three
+  real-PCAP cases skip explicitly when their external dependencies are absent.
+- Preserved the detector subject at `0b68a8c`; no detector, feature, score, threshold,
+  label, or ordering code changed.
 
 ### 2026-08-03 — Milestone 0 research contract and initial ADRs
 

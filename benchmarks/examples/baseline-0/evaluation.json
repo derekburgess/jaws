@@ -1,0 +1,358 @@
+{
+  "aggregate": {
+    "completed_count": 8,
+    "detect": {
+      "completed": 5,
+      "hits_at_cutoff": 5
+    },
+    "failed_execution_count": 0,
+    "known_failures_reproduced": [
+      "BF0-KF-001",
+      "BF0-KF-002",
+      "BF0-KF-003"
+    ],
+    "metrics": [
+      {
+        "name": "recall_at_3",
+        "preferred_direction": "higher",
+        "unit": "ratio",
+        "value": 1.0
+      },
+      {
+        "name": "mean_reciprocal_rank",
+        "preferred_direction": "higher",
+        "unit": "ratio",
+        "value": 0.8
+      },
+      {
+        "name": "benign_top_3_burden",
+        "preferred_direction": "lower",
+        "unit": "scenario-count",
+        "value": 3
+      },
+      {
+        "name": "scenario_coverage",
+        "preferred_direction": "higher",
+        "unit": "ratio",
+        "value": 0.727273
+      },
+      {
+        "name": "total_scenario_runtime_ms",
+        "preferred_direction": "lower",
+        "unit": "milliseconds",
+        "value": 306.664
+      }
+    ],
+    "reject": {
+      "completed": 3,
+      "false_positives_at_cutoff": 3
+    },
+    "scenario_count": 11,
+    "skipped_count": 3
+  },
+  "artifact_kind": "evaluation",
+  "cutoff": 3,
+  "evaluator": {
+    "deterministic": true,
+    "name": "jaws-baseline-0-evaluator",
+    "version": "1.0.0"
+  },
+  "per_scenario": [
+    {
+      "candidate_count": 13,
+      "evaluation_surface": "endpoints",
+      "execution_status": "completed",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "lower",
+          "unit": "one-based-rank",
+          "value": 2
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "higher",
+          "unit": "ratio",
+          "value": 0.5
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 21.128
+        }
+      ],
+      "passed": true,
+      "quality_outcome": "passed",
+      "rationale": "Target rank 2 satisfies <= 3.",
+      "scenario_id": "payload_beacon",
+      "target_rank": 2
+    },
+    {
+      "candidate_count": 13,
+      "evaluation_surface": "endpoints",
+      "execution_status": "completed",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "lower",
+          "unit": "one-based-rank",
+          "value": 2
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "higher",
+          "unit": "ratio",
+          "value": 0.5
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 19.648
+        }
+      ],
+      "passed": true,
+      "quality_outcome": "passed",
+      "rationale": "Target rank 2 satisfies <= 3.",
+      "scenario_id": "jittered_beacon",
+      "target_rank": 2
+    },
+    {
+      "candidate_count": 13,
+      "evaluation_surface": "endpoints",
+      "execution_status": "completed",
+      "expectation": "reject",
+      "known_failure_id": "BF0-KF-001",
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "higher",
+          "unit": "one-based-rank",
+          "value": 1
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "lower",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 22.611
+        }
+      ],
+      "passed": false,
+      "quality_outcome": "failed_known",
+      "rationale": "Target rank 1 violates > 3.",
+      "scenario_id": "tcp_keepalive",
+      "target_rank": 1
+    },
+    {
+      "candidate_count": 12,
+      "evaluation_surface": "host_outbound",
+      "execution_status": "completed",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "lower",
+          "unit": "one-based-rank",
+          "value": 1
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "higher",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 6.7
+        }
+      ],
+      "passed": true,
+      "quality_outcome": "passed",
+      "rationale": "Target rank 1 satisfies <= 3.",
+      "scenario_id": "slow_exfil",
+      "target_rank": 1
+    },
+    {
+      "candidate_count": 12,
+      "evaluation_surface": "host_outbound",
+      "execution_status": "completed",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "lower",
+          "unit": "one-based-rank",
+          "value": 1
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "higher",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 5.788
+        }
+      ],
+      "passed": true,
+      "quality_outcome": "passed",
+      "rationale": "Target rank 1 satisfies <= 3.",
+      "scenario_id": "burst_exfil",
+      "target_rank": 1
+    },
+    {
+      "candidate_count": 12,
+      "evaluation_surface": "host_outbound",
+      "execution_status": "completed",
+      "expectation": "reject",
+      "known_failure_id": "BF0-KF-002",
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "higher",
+          "unit": "one-based-rank",
+          "value": 2
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "lower",
+          "unit": "ratio",
+          "value": 0.5
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 5.931
+        }
+      ],
+      "passed": false,
+      "quality_outcome": "failed_known",
+      "rationale": "Target rank 2 violates > 3.",
+      "scenario_id": "bulk_download",
+      "target_rank": 2
+    },
+    {
+      "candidate_count": 13,
+      "evaluation_surface": "endpoints",
+      "execution_status": "completed",
+      "expectation": "reject",
+      "known_failure_id": "BF0-KF-003",
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "higher",
+          "unit": "one-based-rank",
+          "value": 3
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "lower",
+          "unit": "ratio",
+          "value": 0.333333
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 113.607
+        }
+      ],
+      "passed": false,
+      "quality_outcome": "failed_known",
+      "rationale": "Target rank 3 violates > 3.",
+      "scenario_id": "stable_heavy",
+      "target_rank": 3
+    },
+    {
+      "candidate_count": 13,
+      "evaluation_surface": "endpoints",
+      "execution_status": "completed",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [
+        {
+          "name": "target_rank",
+          "preferred_direction": "lower",
+          "unit": "one-based-rank",
+          "value": 1
+        },
+        {
+          "name": "reciprocal_rank",
+          "preferred_direction": "higher",
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "name": "runtime_ms",
+          "preferred_direction": "lower",
+          "unit": "milliseconds",
+          "value": 111.251
+        }
+      ],
+      "passed": true,
+      "quality_outcome": "passed",
+      "rationale": "Target rank 1 satisfies <= 3.",
+      "scenario_id": "behavioral_change",
+      "target_rank": 1
+    },
+    {
+      "candidate_count": null,
+      "evaluation_surface": "endpoints",
+      "execution_status": "skipped",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [],
+      "passed": null,
+      "quality_outcome": "not_evaluated",
+      "rationale": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap",
+      "scenario_id": "njrat_c2",
+      "target_rank": null
+    },
+    {
+      "candidate_count": null,
+      "evaluation_surface": "host_outbound",
+      "execution_status": "skipped",
+      "expectation": "detect",
+      "known_failure_id": null,
+      "metrics": [],
+      "passed": null,
+      "quality_outcome": "not_evaluated",
+      "rationale": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap",
+      "scenario_id": "masslogger_exfil",
+      "target_rank": null
+    },
+    {
+      "candidate_count": null,
+      "evaluation_surface": "endpoints",
+      "execution_status": "skipped",
+      "expectation": "reject",
+      "known_failure_id": null,
+      "metrics": [],
+      "passed": null,
+      "quality_outcome": "not_evaluated",
+      "rationale": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap",
+      "scenario_id": "njrat_ipcheck",
+      "target_rank": null
+    }
+  ],
+  "schema_version": "1.0.0"
+}

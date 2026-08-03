@@ -1,0 +1,822 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/derekburgess/jaws/benchmarks/schemas/baseline-0/ranking.schema.json",
+  "title": "One complete JAWS Benchmark 0 scenario ranking",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "scenario_id",
+    "scenario_version",
+    "dataset_id",
+    "evaluation_surface",
+    "analytical_mode",
+    "execution_status",
+    "duration_ms",
+    "quality_outcome",
+    "expected_behavior",
+    "target",
+    "evidence",
+    "score_semantics",
+    "detector_parameters",
+    "ranking_complete",
+    "findings",
+    "error",
+    "skip_reason"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "artifact_kind": {
+      "const": "ranking"
+    },
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scenario_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "dataset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evaluation_surface": {
+      "type": "string",
+      "enum": [
+        "endpoints",
+        "host_outbound"
+      ]
+    },
+    "analytical_mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "state"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "text-only",
+            "numeric-only",
+            "blended"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "used",
+            "not_used",
+            "unavailable",
+            "unsupported"
+          ]
+        }
+      }
+    },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "failed",
+        "skipped"
+      ]
+    },
+    "duration_ms": {
+      "type": "number",
+      "minimum": 0
+    },
+    "quality_outcome": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed_known",
+        "failed_unexpected",
+        "not_evaluated"
+      ]
+    },
+    "expected_behavior": {
+      "type": "string",
+      "enum": [
+        "detect",
+        "reject"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity",
+        "rank",
+        "score"
+      ],
+      "properties": {
+        "entity": {
+          "$ref": "#/$defs/entity"
+        },
+        "rank": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "score": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/score"
+            }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capture_id",
+        "packet_rows_sha256",
+        "packet_count"
+      ],
+      "properties": {
+        "capture_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packet_rows_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "packet_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "score_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "order",
+        "tie_behavior"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "anomaly_score",
+            "outbound_score"
+          ]
+        },
+        "order": {
+          "const": "descending"
+        },
+        "tie_behavior": {
+          "const": "preserve-detector-emission-order"
+        }
+      }
+    },
+    "detector_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cluster_labels",
+        "historical_baseline",
+        "reason_z_threshold",
+        "score_top_k"
+      ],
+      "properties": {
+        "cluster_labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "value"],
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": ["provided", "not_applicable"]
+            },
+            "value": {
+              "type": ["integer", "null"]
+            }
+          }
+        },
+        "historical_baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "minimum_sessions", "prior_sessions"],
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": ["used", "not_used", "not_applicable"]
+            },
+            "minimum_sessions": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "prior_sessions": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "reason_z_threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "score_top_k": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "ranking_complete": {
+      "type": "boolean"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "skip_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "execution_status": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "quality_outcome": {
+            "enum": [
+              "passed",
+              "failed_known",
+              "failed_unexpected"
+            ]
+          },
+          "ranking_complete": {
+            "const": true
+          },
+          "findings": {
+            "minItems": 1
+          },
+          "error": {
+            "type": "null"
+          },
+          "skip_reason": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "quality_outcome": {
+            "const": "not_evaluated"
+          },
+          "ranking_complete": {
+            "const": false
+          },
+          "findings": {
+            "maxItems": 0
+          },
+          "target": {
+            "properties": {
+              "rank": {
+                "type": "null"
+              },
+              "score": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evaluation_surface": {
+            "const": "endpoints"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "score_semantics": {
+            "properties": {
+              "field": {
+                "const": "anomaly_score"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "score_semantics": {
+            "properties": {
+              "field": {
+                "const": "outbound_score"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_status": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "minLength": 1
+          },
+          "skip_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_status": {
+            "const": "skipped"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "null"
+          },
+          "skip_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_type",
+        "entity_id"
+      ],
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "endpoint-ip",
+            "host-destination"
+          ]
+        },
+        "entity_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "anomaly_score",
+            "outbound_score"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature",
+        "value",
+        "unit",
+        "robust_z",
+        "direction",
+        "compared_to",
+        "baseline",
+        "baseline_sessions",
+        "host_relative"
+      ],
+      "properties": {
+        "feature": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "robust_z": {
+          "type": "number"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "high",
+            "low"
+          ]
+        },
+        "compared_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "own history",
+            "peer endpoints",
+            null
+          ]
+        },
+        "baseline": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "baseline_sessions": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "host_relative": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "evidence_pointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id",
+        "scenario_id",
+        "capture_id",
+        "packet_rows_sha256"
+      ],
+      "properties": {
+        "dataset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packet_rows_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "endpoint_attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint_type",
+        "org",
+        "cloud_hosted",
+        "hostname",
+        "location",
+        "bytes_out",
+        "packets_out",
+        "bytes_in",
+        "packets_in",
+        "out_peers",
+        "in_peers",
+        "out_ports",
+        "in_ports",
+        "protocols",
+        "interval_mean",
+        "interval_cv",
+        "baseline_sessions",
+        "first_seen",
+        "numeric_features"
+      ],
+      "properties": {
+        "endpoint_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "org": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cloud_hosted": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bytes_out": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "packets_out": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes_in": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "packets_in": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "out_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "in_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "out_ports": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "in_ports": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "interval_mean": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "interval_cv": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "baseline_sessions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "first_seen": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "numeric_features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bytes_out",
+            "bytes_in",
+            "packets_out",
+            "packets_in",
+            "out_peers",
+            "in_peers",
+            "bytes_out_in_ratio",
+            "packets_out_in_ratio",
+            "bytes_per_packet",
+            "bytes_per_peer",
+            "interval_mean",
+            "interval_cv"
+          ],
+          "properties": {
+            "bytes_out": {"type": "number"},
+            "bytes_in": {"type": "number"},
+            "packets_out": {"type": "number"},
+            "packets_in": {"type": "number"},
+            "out_peers": {"type": "number"},
+            "in_peers": {"type": "number"},
+            "bytes_out_in_ratio": {"type": "number"},
+            "packets_out_in_ratio": {"type": "number"},
+            "bytes_per_packet": {"type": "number"},
+            "bytes_per_peer": {"type": "number"},
+            "interval_mean": {"type": "number"},
+            "interval_cv": {"type": "number"}
+          }
+        }
+      }
+    },
+    "host_attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org",
+        "cloud_hosted",
+        "hostname",
+        "location",
+        "upload_bytes",
+        "upload_packets",
+        "download_bytes",
+        "download_packets",
+        "upload_download_ratio"
+      ],
+      "properties": {
+        "org": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cloud_hosted": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "upload_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "upload_packets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "download_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "download_packets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "upload_download_ratio": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rank",
+        "emitted_position",
+        "entity",
+        "score",
+        "verdict",
+        "attributes",
+        "reasons",
+        "evidence"
+      ],
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "emitted_position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entity": {
+          "$ref": "#/$defs/entity"
+        },
+        "score": {
+          "$ref": "#/$defs/score"
+        },
+        "verdict": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "value"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "is_outlier",
+                "is_flagged"
+              ]
+            },
+            "value": {
+              "type": "boolean"
+            }
+          }
+        },
+        "attributes": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/endpoint_attributes"
+            },
+            {
+              "$ref": "#/$defs/host_attributes"
+            }
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reason"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence_pointer"
+        }
+      }
+    }
+  }
+}
