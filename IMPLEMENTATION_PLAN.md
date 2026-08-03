@@ -1,0 +1,1189 @@
+# JAWS Research Workbench Implementation Plan
+
+| Plan field | Value |
+| --- | --- |
+| Status | Active |
+| Last reviewed | 2026-08-03 |
+| Integration branch | `codex/readme-research-workbench` |
+| Starting documentation revision | `497f15a` |
+| Starting code revision | `0b68a8c` (the two later commits change only `README.md`) |
+
+## Purpose
+
+This file is the execution anchor for turning JAWS into the research workbench defined in `README.md`.
+
+The README describes what JAWS is. This file records how the implementation will reach that architecture, what must remain true along the way, how each milestone will be verified, and what evidence is required before a milestone can be called complete.
+
+This is a research-program plan rather than a feature backlog. Its ordering protects experimental validity: current detector behavior is recorded before it is refactored; deterministic services exist before experiments depend on them; experiment provenance exists before benchmark claims are expanded; and an optional agent is introduced only after experiments and rewards can be evaluated without an agent.
+
+## How to use this plan
+
+1. Treat the milestone status table below as the source of truth for implementation progress.
+2. Work on one primary milestone at a time. A later milestone may be explored, but it must not silently introduce a dependency into an earlier one.
+3. Mark a task complete only when its implementation and verification evidence are both present.
+4. Attach each completed milestone to its benchmark artifact, test run, architecture decision records, and migration notes.
+5. Record intentional changes to detector behavior as experiment results. Do not disguise them as refactor parity.
+6. If a completion gate changes, record why in an ADR and in this file's change log.
+7. Keep `main` stable. Build the complete rollout on the integration branch, using short-lived milestone branches when useful, and merge the rollout only after Milestone 10 passes.
+8. Preserve the current CLI entry points until the replacement adapters have parity tests and a documented migration path.
+9. Keep implementation status in this file. Do not turn the README back into a current-versus-future roadmap.
+
+## Milestone status
+
+| Milestone | Outcome | Status | Depends on |
+| --- | --- | --- | --- |
+| 0 | Research contract and Benchmark 0 | Next | — |
+| 1 | Project foundation and typed contracts | Not started | 0 |
+| 2 | Versioned evidence storage and migrations | Not started | 1 |
+| 3 | Ingest, enrichment, and profiling services | Not started | 2 |
+| 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
+| 5 | Experiment, run, provenance, and artifact system | Not started | 4 |
+| 6 | Benchmark v1 and ranker research platform | Not started | 5 |
+| 7 | Reproducible runtime and container profiles | Not started | 6 |
+| 8 | MCP v2 research interface | Not started | 5, 7 |
+| 9 | Optional agent laboratory | Not started | 6, 8 |
+| 10 | Integrated rollout and release qualification | Not started | 0–8; 9 only if included in the release |
+
+Milestone 9 is architecturally optional: the core research workbench can ship without an agent. If it is excluded from the first rollout, Milestone 10 must explicitly record that decision rather than leaving the status ambiguous.
+
+## Delivery principles
+
+The following are project constraints, not suggestions:
+
+- JAWS serves security researchers, blue teams, and technically capable white/gray-hat researchers. It is not being optimized as a consumer or turnkey SOC product.
+- JAWS ranks observations for investigation. It does not convert anomaly scores into autonomous malicious/benign verdicts.
+- The experiment is the primary unit of reproducibility; packet evidence remains the authority behind every finding.
+- Ranking quality is evaluated separately from software correctness.
+- Rewards are deterministic metric vectors. An LLM may interpret them but does not calculate or replace them.
+- The deterministic Python core does not depend on an agent framework, MCP, a CLI, or a particular database driver.
+- CLI, MCP, benchmarks, notebooks, and agents invoke the same application services.
+- Neo4j is the evidence and relationship store. Portable experiment bundles are the canonical record of specifications, results, metrics, and artifact checksums.
+- Agent execution, analysis execution, and live packet-capture privileges remain separate.
+- Raw captures and malware traffic are never committed merely to make a benchmark convenient. Dataset manifests record acquisition, labels, licenses, and checksums.
+- IP address remains a supported entity type, but the architecture must not equate an IP permanently with a physical device or human identity.
+
+## Current codebase assessment
+
+This inventory is the baseline for the plan. It should be updated when a milestone materially changes the architecture.
+
+### Current pipeline
+
+| Operation | Current implementation | Primary coupling |
+| --- | --- | --- |
+| Capture/import | `jaws/jaws_capture.py` | PyShark, local host discovery, Neo4j writes, CLI rendering |
+| Enrichment | `jaws/jaws_ipinfo.py` | IPinfo client, endpoint classification, Neo4j writes |
+| Profile/embed | `jaws/jaws_compute.py` | Neo4j reads/writes, pandas, feature aggregation, local/OpenAI embeddings, retention |
+| Compare/rank/explain | `jaws/jaws_finder.py` | Neo4j queries, feature engineering, historical reference logic, PCA/DBSCAN, scoring, explanations, plots, CLI |
+| Inspect/orchestrate | `jaws_mcp/server.py` | FastMCP, CLI subprocesses, direct Cypher, duplicated interface documentation |
+| Configuration/schema/admin | `jaws/config.py`, `jaws/jaws_utils.py` | environment loading, clients, output, schema creation, model download, destructive reset |
+| Runtime | `harbor/Dockerfile`, `ocean/Dockerfile` | unpinned images, build-time secrets, source cloned from `main`, idle process |
+
+### Quantitative inventory
+
+- `jaws/jaws_finder.py`: 1,352 lines.
+- `jaws_mcp/server.py`: 636 lines.
+- `jaws/jaws_compute.py`: 442 lines.
+- Core Python and MCP modules: 3,389 lines total.
+- Tests and harness: 837 lines total.
+- Twenty-three `test_*` functions, including parametrized quality tests.
+- Eight built-in synthetic scenarios.
+- Three optional real-PCAP scenarios derived from one externally acquired and labeled sample.
+- No committed GitHub Actions workflow, lint configuration, type-check job, lock/constraints file, or declared test dependency.
+- `requirements.txt` is one unsegmented runtime dependency set; most versions are unpinned.
+
+### Strengths to preserve
+
+- One behavioral profile per endpoint per capture session.
+- Accumulating capture and profile history rather than destructive replacement.
+- Separate peer-relative and own-history reference frames.
+- Cadence features remain peer-relative so a persistent beacon cannot normalize itself.
+- Population-wide volume changes cancel in the historical frame.
+- First-seen status is represented independently from feature deviation.
+- Endpoint-relative directions are translated into the capture host's perspective.
+- The capture host has a separate host-outbound ranking surface.
+- Non-conversational multicast/broadcast traffic is retained as evidence but excluded from behavioral ranking.
+- Ranked results exist even when DBSCAN flags no noise points.
+- Reasons expose raw values, units, direction, robust-z, reference frame, and host-relative meaning.
+- `inspect_endpoint` joins a finding back to profile history, peers, and packet samples.
+- CLI subprocess output already uses a structured `{ "ok": boolean, ... }` envelope.
+- Correctness tests pin subtle historical-baseline invariants.
+- The recall harness treats detector quality as an observable research result rather than an ordinary pass/fail unit test.
+
+### Liabilities this plan addresses
+
+- Domain logic is concentrated in CLI modules rather than callable services.
+- `jaws_finder.py` combines representations, references, ranking, clustering, explanations, storage, plotting, and interaction.
+- The MCP server shells out to CLIs and also owns significant query logic.
+- Current CLI and MCP descriptions duplicate behavior and can drift.
+- The graph schema is initialized opportunistically during capture and has no explicit version or migration history.
+- Capture IDs have second-level resolution and use `MERGE`, so simultaneous starts can collapse into one session.
+- Imported PCAP perspective is inferred from the machine doing the import rather than declared in dataset/capture metadata.
+- Profile nodes do not record feature-set version, description-template version, embedding model revision, or software provenance.
+- Current profile retention and raw-packet retention are controlled differently but not expressed as a general policy.
+- Experiment specifications, run records, control/treatment relationships, and evaluation artifacts do not yet exist.
+- Current benchmark output is a human table; it is not a versioned, machine-readable comparison bundle.
+- Recall scenarios have useful known failures, but there is no policy for expected failures, regression budgets, or held-out data.
+- Heavy dependencies are installed together even for operations that do not need them.
+- Tests cannot be installed from a declared development dependency group.
+- Database, MCP, CLI, capture, and full-pipeline contracts have little automated coverage.
+- Container builds accept credentials as build arguments, use unpinned bases, clone a moving branch, and keep the analyzer alive with `tail -f /dev/null`.
+- Destructive database reset is exposed to agent-mode callers without the interactive confirmation used for humans.
+
+## Research object model
+
+The implementation must use explicit, versioned records for the concepts below. Names may be refined through an ADR, but their responsibilities must not be recombined into an opaque pipeline configuration.
+
+| Object | Responsibility | Identity/provenance requirement |
+| --- | --- | --- |
+| `DatasetManifest` | Declares capture sources, acquisition, licensing, labels, splits, and checksums | Stable dataset ID plus manifest schema version and content digest |
+| `CaptureRecord` | One live capture or imported evidence source | Collision-resistant capture ID, source digest, start/end, status, host perspective, tool versions |
+| `ObservationWindow` | Declares the temporal and capture scope under study | Exact capture IDs, bounds, filters, timezone, and perspective |
+| `EntityDefinition` | Declares what is being represented and ranked | Type and version, such as endpoint-IP, host-destination, flow, service, or subnet |
+| `RepresentationSpec` | Declares feature families and transformations | Feature-set ID/version, missing-value policy, text-template version, embedding backend/model/revision |
+| `ReferenceSpec` | Declares the comparison population | Peer, historical, hybrid, or researcher-defined strategy plus eligibility rules |
+| `RankerSpec` | Declares how observations receive scores and ranks | Ranker ID/version, parameters, random seed, score direction, deterministic tie-break |
+| `HypothesisSpec` | States a falsifiable claim and its planned test | Control, treatment, target scenarios, success metric, regression budget, required evidence |
+| `ExperimentSpec` | Immutable declaration of a study | Canonical serialization and digest-derived experiment ID |
+| `ExperimentRun` | One execution of an experiment specification | Run ID, experiment digest, code revision, environment, lifecycle state, timestamps |
+| `RankedFinding` | One ranked entity and its explanation | Stable entity reference, rank, scores, flags, feature contributions, evidence pointers |
+| `EvidencePointer` | Joins a finding to supporting data | Capture/window/entity identity plus query/filter or immutable artifact reference |
+| `EvaluationResult` | Deterministic reward vector and per-scenario metrics | Evaluator/version, labels, metrics, uncertainty, cost, artifact digests |
+| `ObservationReport` | Compares control, treatment, and prior runs | Rank movements, regressions, support/refutation status, unresolved interpretation |
+
+### Experiment identity and reruns
+
+An experiment specification and an experiment execution are different objects:
+
+- `experiment_id` is derived from the canonical, secret-free `ExperimentSpec` content. Semantically identical specs have the same identity.
+- `run_id` identifies one execution of that spec. Multiple runs can expose nondeterminism, platform variance, or stochastic sensitivity without pretending they were different hypotheses.
+- Seeds, dataset versions, model revisions, and ranking parameters belong in the specification when they can change analytical output.
+- Hardware, operating system, installed package versions, container digests, start/end times, and runtime measurements belong in the run environment record.
+- A rerun never overwrites an earlier run. A superseding run points to what it supersedes and why.
+
+### Canonical experiment bundle
+
+The initial artifact store is a local filesystem implementation behind an `ArtifactStore` protocol. Other stores may be added later without changing experiment semantics.
+
+```text
+experiments/
+  <experiment_id>/
+    spec.json
+    hypothesis.json
+    <run_id>/
+      run.json
+      environment.json
+      rankings.jsonl
+      metrics.json
+      observation.json
+      logs/
+      artifacts/
+      checksums.sha256
+```
+
+Rules:
+
+- JSON schemas are versioned and committed.
+- Canonical JSON is used for identity; human formatting does not affect the digest.
+- Ranking rows use deterministic ordering and a stable tie-break.
+- Large tabular outputs may additionally use Parquet, but JSON/JSONL metadata remains sufficient to locate and verify them.
+- Raw PCAPs are referenced by dataset/capture ID and checksum, not copied automatically into every experiment bundle.
+- Environment variable names may be recorded; secret values must never be written.
+- Model names are insufficient by themselves: record provider, exact revision/digest when available, dimensions, normalization, and text-template version.
+- Every generated plot or report is derived from retained machine-readable data and included in the checksum manifest.
+
+## Target architecture
+
+### Operation flow
+
+```mermaid
+flowchart TD
+    A["Evidence sources"] --> B["Ingest"]
+    B --> C["Enrich and profile"]
+    C --> D["Build reference"]
+    D --> E["Rank and explain"]
+    E --> F["Inspect evidence"]
+    E --> G["Evaluate rankings"]
+    G --> H["Experiment bundle"]
+```
+
+### Package boundaries
+
+The exact file names may change, but dependencies must flow inward toward domain and application contracts.
+
+```text
+jaws/
+  domain/              # immutable records, IDs, enums, validation rules
+  services/            # ingest, enrich, profile, compare, rank, inspect, evaluate use cases
+  representations/     # numeric, timing, text, embedding, feature registries
+  references/          # peer, history, hybrid, custom reference strategies
+  rankers/              # simple baselines and research rankers
+  explanations/        # contributions, reason codes, perspective translation
+  evaluation/          # metrics, dataset/scenario runners, comparison reports
+  storage/              # repository protocols and Neo4j implementations/migrations
+  artifacts/            # experiment bundle schemas and stores
+  adapters/
+    cli/                # argparse/Typer/Rich adapter; no analytical logic
+    providers/          # PyShark/tshark, IPinfo, OpenAI, sentence-transformers
+jaws_mcp/               # thin MCP adapter over services
+jaws_lab/               # optional agent laboratory; never imported by jaws core
+benchmarks/             # manifests, scenario definitions, policies, baseline results
+docs/adr/               # architecture decision records
+tests/
+  unit/
+  contract/
+  integration/
+  benchmark/
+  e2e/
+```
+
+### Layering rules
+
+- `jaws.domain` imports no database driver, model SDK, CLI library, plotting library, or MCP package.
+- Services depend on domain models and protocols, not concrete Neo4j or provider clients.
+- Storage and provider adapters implement protocols defined inward of them.
+- Rankers consume declared representations and references; they do not query Neo4j.
+- Explanations consume scored contributions; they do not reverse-engineer a ranker's internal state after the fact.
+- Evaluators consume rankings and labels; they do not special-case a particular ranker.
+- CLI and MCP validate external input, call a service, and serialize the returned domain result.
+- Plotting and report rendering consume retained result artifacts and cannot change scores.
+- Importing lightweight domain or experiment modules must not import Torch, sentence-transformers, Neo4j, matplotlib, or MCP.
+- Tests can replace storage, embedding, enrichment, clock, and ID generation with deterministic fakes.
+
+## Compatibility ledger
+
+These are current behaviors that must either survive refactoring or be changed intentionally through a recorded experiment/ADR.
+
+| Behavior | Required verification |
+| --- | --- |
+| Packet timestamps come from capture evidence, not import processing time | Unit fixture plus PCAP import integration test |
+| Timing intervals never cross capture-session gaps | Existing invariant retained and a multi-session contract test added |
+| Timing uses the more regular qualifying direction rather than interleaved request/response traffic | Unit scenarios for one-way and bidirectional cadence |
+| Sparse timing remains undefined/neutral below the declared packet gate | Boundary tests around `MIN_TIMING_PACKETS` |
+| Endpoint profiles are unique per entity, representation version, and observation scope | Storage constraint and repository contract test |
+| `latest`, explicit session, pooled `all`, and legacy scope semantics remain distinguishable | Service and migration tests |
+| A pooled scope cannot use or become a historical baseline | Reference-strategy unit test |
+| Historical comparison requires the configured minimum prior sessions | Boundary test |
+| Peer-relative and own-history residuals are scaled in separate frames | Existing baseline regression test |
+| Population-wide capture-duration shifts do not flag every endpoint | Existing and benchmark scenario tests |
+| Cadence remains excluded from own-history normalization | Existing invariant test |
+| First-seen is `null` with no history, `true` for a novel entity, and `false` for a returning entity | Existing test plus serialized contract snapshot |
+| Low deviations are weighted/capped, with low `interval_cv` treated as signal and `interval_mean` saturated | Ranker unit tests and Benchmark 0 comparison |
+| Full rankings exist independently of DBSCAN's outlier labels | Ranker contract test |
+| Endpoint direction and host direction cannot be confused | Explanation snapshots for local and remote entities |
+| Host-outbound ranking remains a first-class perspective | Dedicated representation/ranker scenario set |
+| Non-conversational addresses remain inspectable but are excluded from conversational ranking | Classification and end-to-end test |
+| Hosting/CDN organization labels are presented as infrastructure hints, not reputation verdicts | Explanation contract test |
+| Every finding can be traced to profile, peers, history, and packet evidence | Inspection service integration test |
+| Machine-facing success/failure responses have one typed envelope | CLI and MCP contract tests |
+| An outlier verdict is distinct from a continuous ranking score | Domain schema and serialization tests |
+
+## Milestone dependency graph
+
+```mermaid
+flowchart TD
+    M0["M0: Freeze baseline"] --> M1["M1: Contracts"]
+    M1 --> M2["M2: Storage"]
+    M2 --> M3["M3: Evidence services"]
+    M3 --> M4["M4: Ranking services"]
+    M4 --> M5["M5: Experiments"]
+    M5 --> M6["M6: Benchmark v1"]
+    M6 --> M7["M7: Runtime"]
+    M7 --> M8["M8: MCP v2"]
+    M8 --> M9["M9: Agent lab"]
+    M8 --> M10["M10: Rollout"]
+    M9 -.-> M10
+```
+
+## Milestone 0 — Research contract and Benchmark 0
+
+### Outcome
+
+Create an immutable record of what the existing code does before structural changes begin. Benchmark 0 is a measurement, not a claim that the current detector is correct.
+
+### Scope
+
+#### Research contract
+
+- [ ] Confirm the README statement, research question, intended users, and non-goals as the project charter.
+- [ ] Confirm the four analytical axes: representation, reference, ranking, and evaluation.
+- [ ] Confirm the seven operations: ingest, enrich, profile, compare, rank, inspect, and evaluate.
+- [ ] Adopt terminology for dataset, capture, observation window, entity, hypothesis, experiment, run, finding, evidence pointer, metric, and observation.
+- [ ] Add an ADR template with sections for context, decision, alternatives, consequences, benchmark impact, migration, and reversal conditions.
+- [ ] Record the initial ADRs listed under “Decision queue” below.
+
+#### Reproducible development entry point
+
+- [ ] Declare development/test dependencies, including pytest, without changing analytical runtime behavior.
+- [ ] Add one documented command that creates a supported Python 3.12 development environment.
+- [ ] Record actual package versions used for Benchmark 0.
+- [ ] Add a test collection command and separate correctness, Neo4j, synthetic-quality, and real-PCAP-quality invocations.
+- [ ] Verify a clean checkout can run the correctness tests without API credentials, a live capture interface, Neo4j, or a downloaded embedding model where those are not logically required.
+
+#### Baseline capture
+
+- [ ] Tag the code-under-test revision (`0b68a8c`) in the Benchmark 0 manifest.
+- [ ] Preserve the current 23 test functions and their parametrized cases as the starting correctness/quality inventory.
+- [ ] Run and record the default correctness suite.
+- [ ] Run each synthetic scenario with declared seeds and retain every ranking, not only pass/fail.
+- [ ] Record expected known quality failures rather than weakening assertions until they pass.
+- [ ] Run optional real-PCAP scenarios when the externally acquired sample is available.
+- [ ] Record absence of optional datasets as an explicit skip with reason, never as a pass.
+- [ ] Capture both endpoint and host-outbound ranking surfaces.
+- [ ] Capture the current text-only, numeric-only, and blended ablation outputs.
+- [ ] Record current CLI JSON envelopes for capture-listing, compute, rank, and failure paths using fixtures/fakes where needed.
+- [ ] Record current Neo4j labels, relationships, properties, indexes, and constraints.
+- [ ] Record the current dependency graph and container definitions.
+- [ ] Store stdout, stderr, exit status, timing, environment, seed, scenario, rank, score, reasons, DBSCAN label, and parameters as machine-readable data.
+
+#### Benchmark 0 artifact
+
+- [ ] Create `benchmarks/baseline-0/manifest.json` with schema version, code revision, dataset digests, scenario versions, commands, and environment reference.
+- [ ] Create `benchmarks/baseline-0/results.json` or JSONL with per-scenario ranked outputs.
+- [ ] Create `benchmarks/baseline-0/environment.json` with Python, packages, OS, CPU/GPU, tshark, Neo4j, embedding model, and container versions when applicable.
+- [ ] Create a concise Markdown report generated from the machine-readable results.
+- [ ] Checksum every baseline artifact.
+- [ ] Document how to regenerate the baseline without committing restricted PCAPs or secrets.
+
+### Completion gate
+
+- A fresh supported environment can collect and run the declared test tiers.
+- Benchmark 0 artifacts identify exact code, configuration, data, models, environment, and commands.
+- Every built-in scenario has a retained full ranking and an explicit outcome.
+- Known failures are visible and explained; the gate does **not** require the detector to pass every quality scenario.
+- No detector, feature, score, threshold, or rank behavior changes are included in this milestone.
+
+### Deliverables
+
+- Research terminology/ADR records.
+- Development/test dependency declaration.
+- Benchmark 0 manifest, results, environment record, generated report, and checksum file.
+- Current graph schema inventory.
+
+## Milestone 1 — Project foundation and typed contracts
+
+### Outcome
+
+Introduce lightweight, versioned domain contracts and a maintainable project foundation without changing analytical behavior.
+
+### Scope
+
+#### Package and dependency design
+
+- [ ] Split dependencies into the smallest practical groups: core, Neo4j, capture, enrichment, OpenAI embeddings, local embeddings, plotting, MCP, agent lab, and development.
+- [ ] Pin direct dependencies through a reviewed constraints/lock strategy while preserving supported platform flexibility.
+- [ ] Ensure a numeric-only benchmark does not install or import Torch/sentence-transformers.
+- [ ] Ensure an OpenAI-only installation does not require CUDA/local-model packages.
+- [ ] Keep Python 3.12 as the declared baseline and document the policy for adding later versions.
+- [ ] Add package metadata for research/security audiences and the unified project description.
+
+#### Quality automation
+
+- [ ] Add formatting/lint rules and run them in CI.
+- [ ] Add static type checking with an explicit initial coverage boundary and ratchet policy.
+- [ ] Add correctness-test CI for every change.
+- [ ] Add optional/integration jobs for Neo4j and external tooling.
+- [ ] Add benchmark smoke reporting without treating every metric change as an automatic failure.
+- [ ] Cache dependencies/models only where the cache key includes the relevant lock and model revision.
+
+#### Domain contracts
+
+- [ ] Implement versioned types for IDs, capture state, observation windows, entity definitions, representations, references, rankers, findings, evidence pointers, and result envelopes.
+- [ ] Make experiment-facing specifications immutable after validation.
+- [ ] Define canonical UTC timestamp serialization and duration units.
+- [ ] Define consistent byte, packet, interval, ratio, rank, and score types/units.
+- [ ] Define a stable error taxonomy: validation, configuration, unavailable dependency, storage, provider, capture, experiment, and internal errors.
+- [ ] Define typed success/failure envelopes used by both CLI and MCP serializers.
+- [ ] Define deterministic clocks and ID generators as injectable protocols.
+- [ ] Define stable ordering and tie-breaking rules for every ranking.
+
+#### Settings
+
+- [ ] Replace module-level mixed configuration with a validated settings object.
+- [ ] Separate database, capture, provider, model, artifact-store, runtime, and interface settings.
+- [ ] Validate required credentials only when the corresponding provider is invoked.
+- [ ] Record safe settings in run provenance while redacting secret values.
+- [ ] Preserve environment-variable compatibility for existing installations during the rollout.
+
+#### Initial service ports
+
+- [ ] Define protocols for evidence storage, artifact storage, packet sources, enrichment providers, embedding providers, rankers, reference builders, evaluators, clocks, and ID generation.
+- [ ] Add deterministic in-memory/fake implementations needed by unit tests.
+- [ ] Document allowed import directions and enforce them with a lightweight architecture test.
+
+### Completion gate
+
+- Domain/spec modules import successfully without Neo4j, Torch, sentence-transformers, matplotlib, PyShark, IPinfo, OpenAI, or MCP installed.
+- CI runs formatting/lint, type checks for the declared boundary, and correctness tests.
+- Existing CLI behavior and Benchmark 0 rankings are unchanged.
+- External integrations can be replaced by deterministic fakes in unit tests.
+- Settings serialization proves secrets are redacted.
+
+### Deliverables
+
+- Domain and protocol packages.
+- Dependency groups and reproducible development setup.
+- CI and quality configuration.
+- Settings and error/result contracts.
+- Architecture import-boundary tests.
+
+## Milestone 2 — Versioned evidence storage and migrations
+
+### Outcome
+
+Make Neo4j a versioned implementation of explicit repository contracts rather than an implicit schema distributed across command modules.
+
+### Scope
+
+#### Schema ownership
+
+- [ ] Move schema definitions out of `jaws_utils.initialize_schema` into a versioned migration package.
+- [ ] Assign a schema version and store applied migration metadata.
+- [ ] Document current and target node, relationship, property, constraint, and index contracts.
+- [ ] Add schema status, validate, migrate, and dry-run operations.
+- [ ] Make migrations idempotent and transactional where Neo4j permits.
+- [ ] Back up/export metadata before destructive or irreversible migrations.
+- [ ] Test upgrade from a graph created by the starting code revision.
+- [ ] Test a fresh empty database migration.
+- [ ] Define downgrade/rollback behavior per migration; explicitly mark non-reversible migrations.
+
+#### Evidence identities and lifecycle
+
+- [ ] Replace second-resolution capture identity with a collision-resistant ID while retaining a human-readable timestamp.
+- [ ] Record capture/import states: registered, running/importing, complete, partial, failed, and cancelled.
+- [ ] Record source kind, source name, content checksum when available, start/end, packet count, capture host perspective, filter, and tool versions.
+- [ ] Represent observation scope explicitly instead of relying only on a `CAPTURE_ID` property convention.
+- [ ] Define uniqueness for endpoint profiles using entity, scope, representation version, and model/revision as applicable.
+- [ ] Preserve legacy `CAPTURE_ID` lookup through migration aliases or compatibility fields.
+
+#### Repository implementations
+
+- [ ] Implement `CaptureRepository` for lifecycle and catalog operations.
+- [ ] Implement `PacketRepository` for batched evidence writes and scoped reads.
+- [ ] Implement `EnrichmentRepository` for metadata and annotations.
+- [ ] Implement `ProfileRepository` for versioned profile sets and histories.
+- [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
+- [ ] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph.
+- [ ] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher.
+- [ ] Add repository contract tests that run against both fakes and a pinned Neo4j test instance.
+
+#### Retention, export, and administration
+
+- [ ] Define independent policies for raw packets, capture metadata, profiles/embeddings, experiment indexes, and external artifact bundles.
+- [ ] Make retention a declared policy with dry-run output, not an incidental post-compute side effect.
+- [ ] Add export/import procedures that preserve schema version, provenance, IDs, and checksums.
+- [ ] Replace unguarded agent-mode database deletion with an explicit administrative operation requiring exact target and confirmation semantics.
+- [ ] Record deletions/retention actions in an audit log without recording secrets or packet payloads unnecessarily.
+
+#### Legacy migration cases
+
+- [ ] Migrate or explicitly quarantine profiles with no session stamp.
+- [ ] Preserve pooled `all` scope semantics without treating it as a chronological session.
+- [ ] Preserve old endpoint history order even if an older capture is re-profiled later.
+- [ ] Remove or migrate legacy `Unknown` ownership relationships for non-public IPs.
+- [ ] Preserve tri-state outlier meaning: true, false, and never scored.
+
+### Completion gate
+
+- A fresh database and a copy of a starting-revision database both reach the target schema through tested migrations.
+- Repository contract tests cover success, empty data, duplicate/idempotent writes, partial failures, and transaction rollback.
+- No Cypher remains in CLI, MCP, ranker, representation, reference, explanation, or evaluation modules.
+- Export followed by import preserves record counts, IDs, schema version, and sampled checksums.
+- Destructive administration cannot run from a generic analysis call without explicit confirmation inputs.
+
+### Deliverables
+
+- Versioned migrations and schema documentation.
+- Neo4j repository implementations and fakes.
+- Migration/rollback tests and legacy fixtures.
+- Retention, export/import, and administration services.
+
+## Milestone 3 — Ingest, enrichment, and profiling services
+
+### Outcome
+
+Extract evidence acquisition and representation building into deterministic services callable identically from tests, CLI, MCP, benchmarks, and future agents.
+
+### Scope
+
+#### Ingest service
+
+- [ ] Split live capture and PCAP import into separate packet-source adapters sharing one ingest service.
+- [ ] Make the local/capture-host identity explicit in `CaptureSpec`; do not infer imported-PCAP perspective solely from the importer machine.
+- [ ] Support an explicit local IP/entity for imported captures and dataset manifests.
+- [ ] Preserve original packet timestamps and capture-session boundaries.
+- [ ] Define handling for non-IP, IPv4, IPv6, VLAN/tunnel, TCP, UDP, ICMP, and malformed/partial packets.
+- [ ] Record capture/display filters and tshark/PyShark versions.
+- [ ] Hash imported files and record size/path/source metadata without assuming paths are portable.
+- [ ] Batch writes with bounded memory and clear partial-failure semantics.
+- [ ] Finalize capture state in `finally` paths so interrupted work is distinguishable from a clean zero-packet capture.
+- [ ] Add cancellation support that safely flushes or marks a partial batch.
+- [ ] Keep live capture privileges inside the capture adapter/process boundary.
+
+#### Enrichment service
+
+- [ ] Define provider-neutral enrichment records for ASN, organization, hostname, location, and confidence/source.
+- [ ] Keep public/private/non-conversational classification deterministic and provider-independent.
+- [ ] Add provider result caching with acquisition timestamp and provider/version metadata.
+- [ ] Distinguish not-applicable, not-found, transient failure, permanent failure, and successfully enriched.
+- [ ] Support researcher annotations and ground-truth labels separately from third-party enrichment.
+- [ ] Avoid merging unrelated unknown values into one misleading organization identity.
+- [ ] Add rate-limit/retry policy with deterministic test doubles.
+
+#### Profile service
+
+- [ ] Extract packet-to-entity aggregation from `jaws_compute.build_endpoint_profiles` into a pure profiler.
+- [ ] Make entity definition and observation window inputs explicit.
+- [ ] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0.
+- [ ] Version numeric feature definitions, transformations, missing-value policy, and units.
+- [ ] Version the endpoint text-description template separately from embedding models.
+- [ ] Make timing direction and minimum-evidence requirements visible in representation metadata.
+- [ ] Ensure profile generation is deterministic for identical evidence and spec.
+- [ ] Support endpoint-IP and host-destination profiles as first-class entity definitions rather than unrelated code paths.
+
+#### Embedding providers
+
+- [ ] Define a common embedding-provider protocol for local and remote providers.
+- [ ] Record provider, model, exact revision/digest when available, dimensions, normalization, batching, and device.
+- [ ] Validate returned count, dimension, order, and finite values before replacing a profile scope.
+- [ ] Retain the mapping from profile ID and input-text digest to embedding.
+- [ ] Make remote API cost/token metadata available to experiment provenance.
+- [ ] Permit numeric-only representations with no embedding provider installed.
+- [ ] Test provider failures without leaving a half-replaced profile set.
+
+#### CLI compatibility adapter
+
+- [ ] Make `jaws-capture`, `jaws-ipinfo`, and `jaws-compute` thin adapters over the services.
+- [ ] Preserve existing flags or emit specific deprecation guidance.
+- [ ] Preserve structured agent-mode envelopes and human-readable Rich output.
+- [ ] Remove analytical/storage logic from these entry-point modules.
+
+### Completion gate
+
+- Pure ingest/profile tests run without Neo4j using fixture packet streams.
+- PCAP import preserves timestamps and declared host perspective.
+- Starting-revision fixtures produce parity profiles within exact or documented numeric tolerances.
+- Model/provider provenance is stored with every embedding-backed profile.
+- Numeric-only profiling works without local-model dependencies.
+- Existing capture, enrichment, and compute commands pass compatibility contract tests.
+
+### Deliverables
+
+- Ingest, enrichment, profile, and embedding services.
+- Live-capture, PCAP, IPinfo, OpenAI, and local-transformer adapters.
+- Versioned representation specifications.
+- CLI compatibility adapters and profile parity artifacts.
+
+## Milestone 4 — Comparison, ranking, explanation, and inspection services
+
+### Outcome
+
+Decompose `jaws_finder.py` and MCP read queries into independently testable research components while preserving Benchmark 0 behavior in a named legacy ranker.
+
+### Scope
+
+#### Reference strategies
+
+- [ ] Define a `ReferenceBuilder` protocol that returns the comparison population and eligibility metadata.
+- [ ] Implement peer-relative reference behavior.
+- [ ] Implement own-history reference behavior with minimum-session rules.
+- [ ] Implement the current hybrid per-feature behavior where cadence remains peer-relative.
+- [ ] Preserve separate scaling frames for peer and historical residuals.
+- [ ] Represent first-seen and insufficient-history states explicitly.
+- [ ] Make pooled-scope exclusion an enforced rule rather than a comment convention.
+- [ ] Add a researcher-defined reference strategy using declared capture/entity filters.
+
+#### Representations and feature registry
+
+- [ ] Extract base counts, derived ratios, timing, and missing-value behavior into versioned feature families.
+- [ ] Expose feature name, unit, direction, transformation, required evidence, and interpretation metadata.
+- [ ] Preserve host-relative flow mappings as typed metadata.
+- [ ] Make scale floor, saturation, low-direction weights, caps, and reason threshold explicit ranker parameters/versioned defaults.
+- [ ] Detect non-finite values and representation mismatches before ranking.
+
+#### Ranker interface and current behavior
+
+- [ ] Define a ranker contract that consumes entities, representations, a reference result, and a ranker spec.
+- [ ] Return continuous scores, deterministic ranks, optional model labels, and structured contributions separately.
+- [ ] Implement `legacy_2_0` behavior matching current robust scoring plus PCA/DBSCAN labeling.
+- [ ] Separate DBSCAN clustering/labeling from the continuous behavioral ranking contract.
+- [ ] Extract epsilon recommendation into a declared, testable strategy.
+- [ ] Record PCA components, whitening, explained variance, feature weights, epsilon source, and cluster diagnostics.
+- [ ] Require deterministic tie-breaking by stable entity identity.
+- [ ] Make random seeds explicit for every stochastic ranker or transformation.
+
+#### Explanation service
+
+- [ ] Generate reason codes from retained score contributions rather than recomputing features independently.
+- [ ] Preserve raw value, unit, direction, standardized deviation, comparison frame, baseline, and baseline depth.
+- [ ] Preserve host-relative direction text for local and remote perspectives.
+- [ ] Preserve cloud-hosted/provider caveats without treating infrastructure ownership as reputation.
+- [ ] Define explanation schema versions and snapshots.
+- [ ] Add explanation-fidelity hooks that can ablate a cited feature and measure the score/rank effect.
+
+#### Host-outbound and inspection
+
+- [ ] Represent host-destination as an entity/perspective usable by the same service pipeline.
+- [ ] Port upload bytes, upload packets, download values, and upload/download ratio into declared features.
+- [ ] Preserve exclusion of multicast/broadcast/unspecified peers from conversational ranking.
+- [ ] Extract endpoint/profile/history/peer/packet retrieval from `jaws_mcp.server` into an inspection service.
+- [ ] Scope inspection explicitly: latest profile vs a requested session, while retaining all-session totals/history when requested.
+- [ ] Return evidence pointers from findings so inspection does not rely on an unscoped IP string alone.
+- [ ] Preserve service-port vs ephemeral-port interpretation and document its heuristic limitations.
+
+#### Visualization adapter
+
+- [ ] Move port-size, k-distance, PCA/DBSCAN, and comparison rendering out of ranking code.
+- [ ] Render only from retained result artifacts.
+- [ ] Make headless execution the default behavior for services.
+- [ ] Record plot input digest and renderer version in artifact metadata.
+
+#### CLI compatibility adapter
+
+- [ ] Reimplement `jaws-finder` as a thin service adapter.
+- [ ] Preserve `--components`, `--whiten`, `--eps`, `--feature-weight`, `--include-local`, `--session`, `--no-baseline`, and `--ablate` compatibility until migration is documented.
+- [ ] Preserve full ranking output even when zero DBSCAN outliers are labeled.
+- [ ] Preserve result fields or provide an explicit versioned response migration.
+
+### Completion gate
+
+- `legacy_2_0` reproduces Benchmark 0 ranks, scores, reasons, and labels within declared tolerances.
+- Every compatibility-ledger invariant has a direct unit, contract, or benchmark test.
+- Rankers, references, explanations, and inspection services contain no Neo4j, CLI, MCP, or plotting logic.
+- The same service call powers endpoint and host-destination research surfaces.
+- Every finding contains an evidence pointer sufficient for scoped inspection.
+- `jaws_finder.py` no longer owns domain/storage/plotting behavior; it is removed or reduced to a compatibility adapter.
+
+### Deliverables
+
+- Reference, representation, ranker, explanation, inspection, and rendering packages.
+- Named `legacy_2_0` ranker.
+- Compatibility tests and parity report against Benchmark 0.
+- Thin finder CLI adapter.
+
+## Milestone 5 — Experiment, run, provenance, and artifact system
+
+### Outcome
+
+Make a complete ranking study reproducible from an immutable specification and portable result bundle.
+
+### Scope
+
+#### Schemas and identity
+
+- [ ] Implement versioned schemas for `HypothesisSpec`, `ExperimentSpec`, `ExperimentRun`, `RankedFinding`, `EvaluationResult`, and `ObservationReport`.
+- [ ] Define canonical, secret-free serialization.
+- [ ] Derive and verify experiment content digests.
+- [ ] Generate unique run IDs without changing experiment identity.
+- [ ] Validate that referenced datasets, captures, representations, rankers, and evaluators exist and are compatible before execution.
+- [ ] Include an explicit experiment-schema version and component version for every pluggable strategy.
+
+#### Run lifecycle
+
+- [ ] Implement planned, queued, running, completed, failed, cancelled, and superseded states.
+- [ ] Make state transitions atomic and auditable.
+- [ ] Store failure category, message, completed stages, and resumability without leaking secrets.
+- [ ] Add cooperative cancellation between expensive stages.
+- [ ] Define retry semantics: a retry creates a new run and points to the failed run.
+- [ ] Distinguish cached/reused artifacts from newly computed ones.
+
+#### Provenance
+
+- [ ] Record code commit, dirty-tree status, package version, schema versions, Python, OS, architecture, CPU/GPU, memory, container digests, and installed dependency set.
+- [ ] Record dataset/capture digests and label-source versions.
+- [ ] Record representation, reference, ranker, evaluator, renderer, model, prompt/template, and provider versions.
+- [ ] Record seed and deterministic-library settings.
+- [ ] Record runtime, peak memory, GPU memory, and external API usage/cost when available.
+- [ ] Redact tokens, passwords, credential contents, and unrelated environment values.
+
+#### Artifact store
+
+- [ ] Implement the canonical local filesystem bundle layout.
+- [ ] Write files atomically through a staging directory and finalize only after checksums succeed.
+- [ ] Verify bundles on load and report missing/mismatched artifacts.
+- [ ] Support read-only bundle inspection independent of Neo4j.
+- [ ] Index experiment/run summaries and artifact URIs in Neo4j through the repository protocol.
+- [ ] Add export/import for a bundle without raw PCAP redistribution.
+- [ ] Define garbage-collection behavior that never deletes evidence or runs still referenced by a comparison/report.
+
+#### OHEO services
+
+- [ ] Implement Orient: list datasets, captures, labels, representations, rankers, prior experiments, and benchmark summaries.
+- [ ] Implement Hypothesize: validate falsifiable claims, control/treatment, metrics, and regression budgets.
+- [ ] Implement Experiment: execute a bounded control/treatment matrix through the deterministic services.
+- [ ] Implement Observe: calculate metric deltas, rank movement, regressions, costs, and support/refutation status.
+- [ ] Keep human interpretation separate from deterministic observation fields.
+- [ ] Link follow-up hypotheses to the observation that motivated them.
+
+#### Research CLI
+
+- [ ] Add commands to validate a spec, run an experiment, show status, cancel a run, inspect a run, compare runs, verify a bundle, and list available components.
+- [ ] Support JSON input/output as the stable automation interface.
+- [ ] Provide human-readable summaries derived from the same domain results.
+- [ ] Keep individual operation commands available for exploratory use outside a formal experiment.
+
+### Completion gate
+
+- An experiment bundle can be validated and inspected without a live database.
+- Re-running the same spec against the same evidence and deterministic environment produces identical ranked ordering and analytical fields; runtime-only fields may differ.
+- A control/treatment experiment produces a deterministic observation report with traceable metric deltas.
+- Interrupted and failed runs remain inspectable and never masquerade as complete.
+- Provenance contains all output-affecting configuration while automated secret-leak tests pass.
+- Bundle checksum verification detects intentional corruption in a test fixture.
+
+### Deliverables
+
+- Experiment schemas, runner, lifecycle, provenance collector, artifact store, and verifier.
+- Orient/Hypothesize/Experiment/Observe application services.
+- Research CLI and sample specs.
+- Replay, cancellation, corruption, and secret-redaction tests.
+
+## Milestone 6 — Benchmark v1 and ranker research platform
+
+### Outcome
+
+Provide comparable, reproducible evidence about which representations, references, and rankers most successfully allocate investigator attention.
+
+### Scope
+
+#### Dataset and scenario governance
+
+- [ ] Version dataset manifests independently from code.
+- [ ] Record source URL/location, acquisition date, license/redistribution terms, checksum, capture host, time bounds, labels, label provenance, and known limitations.
+- [ ] Separate development, validation, and held-out scenario sets.
+- [ ] Prevent routine tuning reports from exposing held-out labels where practical.
+- [ ] Preserve synthetic scenarios as controlled tests while labeling them as model-authored traffic.
+- [ ] Expand benign counterexamples: updates, backups, streaming, DNS, NTP/keepalive, monitoring, CDN bursts, scans from approved tools, and infrastructure churn.
+- [ ] Expand anomaly scenarios: periodic and jittered beaconing, burst/slow exfiltration, fan-out/scan changes, first-seen infrastructure, protocol/port shifts, and behavioral change against history.
+- [ ] Add varied real captures from documented primary sources, subject to licensing and safe-handling review.
+- [ ] Keep malware binaries out of scope; acquire only the traffic evidence and labels required for the study.
+
+#### Baseline rankers
+
+- [ ] Seeded random ranking as a floor.
+- [ ] Total bytes and directional bytes sorts.
+- [ ] First-seen ranking.
+- [ ] Upload/download ratio ranking.
+- [ ] Peer-relative robust deviation.
+- [ ] Own-history change score.
+- [ ] Numeric-only current score.
+- [ ] Embedding-only PCA/DBSCAN behavior.
+- [ ] Current blended `legacy_2_0` behavior.
+- [ ] Isolation Forest over the same declared numeric representation.
+- [ ] Require each ranker to document score direction, supported entity/reference types, deterministic behavior, and explanation capability.
+
+#### Reward vector
+
+- [ ] Recall@1, @3, @5, and @10 where labels permit.
+- [ ] Mean reciprocal rank.
+- [ ] nDCG@k for graded relevance.
+- [ ] Benign burden: benign observations above the first relevant finding and in top-k.
+- [ ] Rank percentile for each labeled target.
+- [ ] Top-k overlap and rank correlation across seeds/windows.
+- [ ] Sensitivity to parameter perturbations.
+- [ ] False-positive movement by benign scenario family.
+- [ ] Explanation fidelity via feature/reason ablation.
+- [ ] Runtime, peak memory, GPU memory, external API calls/tokens, and estimated cost.
+- [ ] Failure/abstention coverage, including unavailable representations and insufficient populations.
+- [ ] Preserve components individually; any scalar objective must declare its weights and cannot replace the vector in retained artifacts.
+
+#### Runner and comparisons
+
+- [ ] Execute matrices across datasets, entity definitions, representations, references, rankers, parameters, seeds, and windows from an `ExperimentSpec`.
+- [ ] Reuse compatible cached profiles/embeddings by content digest.
+- [ ] Prevent cache reuse when template, feature, model, normalization, or source evidence changes.
+- [ ] Produce per-scenario rankings before aggregates.
+- [ ] Compare control/treatment with paired deltas and uncertainty where repeated samples permit.
+- [ ] Generate JSON, Markdown, and optional HTML reports from the same retained metrics.
+- [ ] Report missing/skipped/failed scenarios separately from successful runs.
+- [ ] Link every aggregate number to the contributing scenario/run IDs.
+
+#### Benchmark policy
+
+- [ ] Declare expected failures separately from accepted regressions.
+- [ ] Define regression budgets per scenario family and metric before evaluating a proposed change.
+- [ ] Require simple baselines in every comparative report.
+- [ ] Prohibit claims based only on aggregate recall when benign burden or scenario coverage worsens.
+- [ ] Define the procedure for promoting a held-out set, retiring a compromised set, and adding a replacement.
+- [ ] Define how many seeds/windows are required for each benchmark tier.
+- [ ] Keep the fast correctness suite blocking, the smoke benchmark visible, and the full quality benchmark scheduled/manual until policy thresholds are stable.
+
+#### Extensibility
+
+- [ ] Add registries for representations, references, rankers, evaluators, and renderers.
+- [ ] Validate plugin metadata and schema compatibility before a run.
+- [ ] Provide a minimal example ranker and scenario extension.
+- [ ] Ensure third-party rankers receive bounded typed data, not database credentials or unrestricted shell access.
+
+### Completion gate
+
+- Every included ranker runs through the same experiment/evaluation path.
+- Every benchmark report includes simple baselines and the full reward vector.
+- Full rankings, skips, failures, environment, and artifact checksums are retained.
+- Repeated deterministic runs reproduce rankings; stochastic runs declare seeds and report stability.
+- Held-out governance and dataset licensing/safety records are documented.
+- `legacy_2_0` is compared honestly against simpler sorts; no complexity is justified solely by intuition.
+
+### Deliverables
+
+- Dataset/scenario manifests and governance policy.
+- Baseline ranker suite and registries.
+- Benchmark runner, reward metrics, comparison reports, and CI/scheduled profiles.
+- Benchmark v1 reference artifact.
+
+## Milestone 7 — Reproducible runtime and container profiles
+
+### Outcome
+
+Replace the legacy `harbor/` and `ocean/` images with versioned, testable runtime boundaries that preserve least privilege and experiment provenance.
+
+### Scope
+
+#### Images
+
+- [ ] Build from the checked-out source context; never clone a moving branch inside an image.
+- [ ] Pin base-image versions/digests and record them in provenance.
+- [ ] Use multi-stage builds and dependency groups for database tools, CPU analysis, GPU analysis, sensor, and MCP roles.
+- [ ] Pass credentials at runtime through supported secrets/environment mechanisms, never build arguments or image layers.
+- [ ] Run as non-root wherever capture requirements do not prevent it.
+- [ ] Use explicit entry points that perform useful work or serve a health-checked process; remove `tail -f /dev/null`.
+- [ ] Add OCI labels for source revision, package version, and build date.
+- [ ] Generate dependency/image inventories suitable for auditing.
+
+#### Compose profiles
+
+- [ ] `compose.dev.yml`: pinned Neo4j, CPU analyzer, artifact volume, and MCP service.
+- [ ] `compose.gpu.yml`: dev profile plus a GPU-capable analyzer with explicit device requirements.
+- [ ] `compose.edge.yml`: privileged sensor/importer boundary plus remote/local evidence and analysis configuration suitable for constrained capture hosts.
+- [ ] Keep analyzer and MCP services free of raw packet-capture capabilities.
+- [ ] Grant sensor only the specific interface/capabilities required for capture.
+- [ ] Add named volumes for Neo4j data, artifacts, and optional model cache with separate retention/export procedures.
+- [ ] Add health checks and startup dependencies based on health, not timing assumptions.
+- [ ] Run schema migration as an explicit one-shot job before services accept work.
+
+#### Operations
+
+- [ ] Document backup, restore, export, import, benchmark reset, and model-cache management.
+- [ ] Provide a no-live-capture smoke test using a tiny safe fixture PCAP.
+- [ ] Test clean CPU startup with no CUDA dependencies.
+- [ ] Test GPU capability/model loading separately from correctness.
+- [ ] Test database restart and artifact-volume persistence.
+- [ ] Test service behavior when Neo4j, provider APIs, or model files are unavailable.
+- [ ] Record container/image and model digests in every experiment run.
+
+#### Security boundaries
+
+- [ ] No credential values in images, build logs, committed compose files, or experiment bundles.
+- [ ] No Docker socket exposed to analyzer, MCP, or agent containers.
+- [ ] No host networking for analyzer/MCP unless a documented platform limitation makes it unavoidable.
+- [ ] Default filesystem permissions prevent agent/MCP processes from changing raw evidence or completed bundles.
+- [ ] Define egress policy separately for enrichment, remote embeddings, model download, and agent execution.
+
+### Completion gate
+
+- Dev, CPU, and applicable GPU/edge profiles pass documented smoke tests from a clean checkout.
+- Images are built from the intended commit with pinned bases and no embedded credentials.
+- Only the sensor boundary has capture privileges.
+- A compose-run experiment records image/model/schema versions and writes a verifiable bundle.
+- Backup/restore and persistent-volume tests preserve evidence and experiment indexes.
+
+### Deliverables
+
+- Versioned Dockerfiles and compose profiles.
+- Migration, health-check, and smoke-test jobs.
+- Runtime operations and security-boundary documentation.
+- Container provenance in experiment runs.
+
+## Milestone 8 — MCP v2 research interface
+
+### Outcome
+
+Expose typed research operations over the deterministic services with no detector logic, direct Cypher, or CLI subprocess orchestration in the MCP adapter.
+
+### Scope
+
+#### Tool model
+
+- [ ] Derive input/output schemas from the same versioned contracts used by services and CLI.
+- [ ] Expose orientation/catalog tools for datasets, captures, components, experiments, runs, and benchmark summaries.
+- [ ] Expose bounded ingest/import, enrichment, profiling, ranking, inspection, evaluation, and experiment operations.
+- [ ] Prefer experiment start/status/result/cancel operations for long-running work rather than relying on one unbounded request.
+- [ ] Return run/experiment IDs immediately where work is asynchronous.
+- [ ] Preserve a direct exploratory path for small synchronous operations.
+- [ ] Include schema/capability versions so clients can detect compatibility.
+
+#### Thin adapter
+
+- [ ] Remove `subprocess` orchestration from `jaws_mcp/server.py`.
+- [ ] Remove direct Cypher from MCP modules.
+- [ ] Remove duplicated detector explanations that can drift from ranker metadata.
+- [ ] Translate validated MCP input to service calls and serialize typed service results.
+- [ ] Use one error envelope and stable error codes.
+- [ ] Test stdio and the selected supported HTTP transport independently.
+
+#### Safety and policy
+
+- [ ] Separate read-only research tools from capture, mutation, and administration capabilities.
+- [ ] Disable destructive database operations by default in the research server.
+- [ ] Require explicit server policy and exact confirmation inputs for enabled administration tools.
+- [ ] Bound capture duration, result size, concurrent runs, artifact access, cost, and cancellation behavior.
+- [ ] Treat file paths and dataset IDs as scoped resources, not arbitrary host filesystem access.
+- [ ] Prevent MCP clients from selecting secret values or unrestricted commands through spec fields.
+
+#### Contract and parity testing
+
+- [ ] Snapshot tool names, descriptions, JSON schemas, result versions, and error codes.
+- [ ] Run the same service fixtures through CLI and MCP and compare analytical payloads.
+- [ ] Test empty database, missing model, unavailable provider, invalid session, insufficient endpoints, cancelled run, and corrupt artifact behavior.
+- [ ] Test paginated/bounded retrieval for large rankings and packet samples.
+- [ ] Verify every returned finding can be passed to inspection through a structured evidence pointer.
+
+### Completion gate
+
+- MCP contains no subprocess calls, Cypher, scoring, feature engineering, or plotting logic.
+- CLI and MCP parity tests return the same analytical results for the same service call.
+- Long-running experiments can be started, monitored, cancelled, and retrieved without an arbitrary hidden server timeout.
+- Destructive administration is absent by default and cannot be reached through a generic experiment spec.
+- Tool schemas and capability versions are retained as contract artifacts.
+
+### Deliverables
+
+- MCP v2 adapter and versioned tool schemas.
+- Asynchronous run/status/cancel interface where needed.
+- CLI/MCP parity and safety tests.
+- Client configuration and migration documentation.
+
+## Milestone 9 — Optional agent laboratory
+
+### Outcome
+
+Evaluate an agent as a bounded research collaborator implementing Orient → Hypothesize → Experiment → Observe, without making it part of detection or ground truth.
+
+### Preconditions
+
+Milestones 5, 6, and 8 must be complete. The agent cannot compensate for missing experiment specifications, deterministic rewards, benchmark governance, or interface safety.
+
+### Scope
+
+#### Framework decision
+
+- [ ] Write an ADR comparing a small in-house orchestrator, NOOA, and any other serious candidate against typed-state support, tracing, isolation, maintenance, reproducibility, dependency weight, and model portability.
+- [ ] Treat NOOA as a candidate, not a core dependency, until the ADR and a sandboxed spike pass.
+- [ ] Keep framework-specific code inside `jaws_lab` behind an orchestration protocol.
+- [ ] Ensure uninstalling agent extras leaves core, CLI, MCP, and benchmarks fully functional.
+
+#### Agent capabilities
+
+- [ ] Orient to dataset/capture catalogs, prior hypotheses, experiment summaries, component metadata, and benchmark results.
+- [ ] Propose a structured, falsifiable `HypothesisSpec`.
+- [ ] Produce a bounded control/treatment `ExperimentSpec` using registered components only.
+- [ ] Submit, monitor, and cancel runs through MCP/application services.
+- [ ] Read deterministic observation reports and summarize evidence, limitations, and follow-up questions.
+- [ ] Link a proposed follow-up hypothesis to the run/observation that motivated it.
+
+#### Restrictions
+
+- [ ] No unrestricted shell or generated-Python execution in the analysis/MCP process.
+- [ ] No direct Neo4j credentials, Cypher, database deletion, raw host filesystem access, Docker socket, or packet-capture privileges.
+- [ ] No self-modification of ranker/evaluator code during a scored experiment.
+- [ ] No access to held-out labels during hypothesis generation/tuning.
+- [ ] No authority to convert deterministic metrics into ground truth.
+- [ ] Live capture, external cost above policy, new dataset acquisition, and mutation require explicit human approval.
+- [ ] Run the agent in a separate sandboxed container with resource, time, network, and cost budgets.
+
+#### Trace and evaluation
+
+- [ ] Record agent framework/version, model/provider, prompt/instruction versions, tool calls, approvals, token/cost totals, and produced specs.
+- [ ] Redact secrets and sensitive packet content from traces by policy.
+- [ ] Evaluate spec validity, hypothesis falsifiability, experiment completion rate, evidence citation, budget adherence, repeated-run consistency, and human-rated research usefulness.
+- [ ] Compare agent-proposed studies with fixed/human-authored study sets; do not judge success only by whether it finds a positive metric delta.
+- [ ] Test prompt injection and malicious dataset metadata against the capability boundary.
+
+### Completion gate
+
+- The agent completes a bounded OHEO cycle using only registered research operations.
+- Deterministic code calculates every score and reward.
+- Every claim in the agent's observation points to experiment/run IDs and retained metrics/evidence.
+- Capability tests demonstrate no direct shell, database, capture, destructive, or held-out-label access.
+- Budget, trace, redaction, cancellation, and approval controls pass adversarial tests.
+- The framework can be removed without changing core behavior or experiment schemas.
+
+### Deliverables
+
+- Agent-framework ADR and sandboxed spike.
+- Optional `jaws_lab` package/container.
+- OHEO policies, prompts, traces, evaluation suite, and safety tests.
+
+## Milestone 10 — Integrated rollout and release qualification
+
+### Outcome
+
+Qualify the complete research-workbench redesign as one coherent rollout while preserving reproducibility, evidence migration, and the user-facing research promise.
+
+### Scope
+
+#### Integration
+
+- [ ] Rebase/merge all completed milestone work into the integration branch in dependency order.
+- [ ] Resolve temporary compatibility layers and remove only those with tested replacements and migration notes.
+- [ ] Ensure no interface bypasses service contracts to reach Neo4j or analytical internals.
+- [ ] Run a clean architecture/import dependency audit.
+- [ ] Verify version/schema compatibility across CLI, MCP, artifact bundles, database, and containers.
+
+#### Full verification
+
+- [ ] Run formatting, lint, types, correctness, contract, integration, migration, CLI, MCP, container, security, and end-to-end suites.
+- [ ] Run Benchmark 0 parity comparison for the `legacy_2_0` configuration.
+- [ ] Run Benchmark v1 for all required rankers/datasets and retain the release artifact.
+- [ ] Execute repeated-run determinism and declared stochastic-stability checks.
+- [ ] Run CPU and applicable GPU/edge smoke tests from clean environments.
+- [ ] Test starting-revision database upgrade, bundle verification, export/import, backup/restore, and failure recovery.
+- [ ] Inspect artifacts and logs for secrets, absolute private paths, or restricted capture content.
+
+#### Documentation
+
+- [ ] Revalidate the README against shipped behavior without adding roadmap/status prose.
+- [ ] Replace legacy setup commands with supported native and compose workflows.
+- [ ] Document the OHEO workflow, experiment-spec examples, benchmark interpretation, and evidence drill-down.
+- [ ] Document migration from the 2.0 CLI/MCP/database/artifact behavior.
+- [ ] Document limitations: anomaly vs threat, IP identity, dataset bias, enrichment ambiguity, ranker uncertainty, and agent boundaries.
+- [ ] Generate CLI/MCP reference material from versioned schemas where possible.
+- [ ] Update the history section and release notes with evidence-backed changes.
+
+#### Release decision
+
+- [ ] Decide release version through an ADR based on compatibility and schema changes.
+- [ ] Decide whether Milestone 9 ships in the initial rollout or remains an experimental extra.
+- [ ] Publish the release benchmark bundle and checksums alongside the code revision.
+- [ ] Record all known quality failures, accepted regressions, unavailable datasets, and deferred risks.
+- [ ] Merge to `main` only after the complete rollout gate is reviewed.
+- [ ] Tag the exact release commit and retain container/image digests.
+
+### Completion gate
+
+- All required test tiers pass; quality exceptions are explicit benchmark decisions, not hidden test skips.
+- `legacy_2_0` behavior is reproducible, and every intentional analytical change has a control/treatment artifact.
+- A new researcher can import a safe PCAP, run an experiment, compare rankers, inspect a finding, and verify the bundle using documented commands.
+- A starting-revision user can migrate a copied database and retain capture/profile history.
+- The release's code, database schema, component specs, models, containers, datasets, metrics, and artifacts are mutually traceable.
+- README claims match what ships.
+
+### Deliverables
+
+- Release candidate, full verification record, migration guide, release benchmark bundle, documentation, and final rollout decision.
+
+## Verification matrix
+
+| Test tier | Purpose | External requirements | Blocking policy |
+| --- | --- | --- | --- |
+| Unit | Pure feature, reference, ranking, domain, serialization, metric, and policy logic | None | Blocking |
+| Property/invariant | Numeric bounds, determinism, identity, canonicalization, ordering, migration invariants | None | Blocking |
+| Contract | Repository/provider/ranker/artifact/CLI/MCP interface behavior | Fakes by default | Blocking |
+| Neo4j integration | Cypher, migrations, indexes, transaction behavior, export/import | Pinned Neo4j | Blocking for storage changes |
+| Provider integration | Optional real IPinfo/OpenAI/local-model compatibility | Credentials/model/device as applicable | Scheduled/manual; failure visible |
+| Capture integration | Safe fixture PCAP and optional live-interface smoke | tshark; live privileges only for live smoke | PCAP path blocking; live path environment-specific |
+| CLI snapshot | Stable flags, envelopes, exit codes, serialization | Depends on command fixture | Blocking for CLI changes |
+| MCP schema/parity | Tool schemas, error contracts, same service results | MCP runtime | Blocking for MCP changes |
+| Benchmark smoke | Fast representative scenarios and baseline rankers | No restricted PCAPs | Results visible; policy-defined regressions block |
+| Benchmark full | Synthetic, real, held-out, seeds/windows, cost/stability | External datasets/models as declared | Required for milestone/release gates |
+| Container/e2e | Clean deployment, migration, safe import-to-inspection path | Docker/GPU where applicable | Blocking for runtime/release |
+| Security/safety | Secret redaction, path bounds, destructive controls, capabilities, agent isolation | Runtime-specific | Blocking for affected boundary |
+
+## File-level migration map
+
+| Current file | Destination/responsibility | Removal condition |
+| --- | --- | --- |
+| `jaws/config.py` | Validated settings plus provider/storage factories in adapters | All existing environment variables have compatibility tests |
+| `jaws/jaws_capture.py` | Ingest service, packet-source adapters, thin capture/import CLI | Capture/import parity and partial-failure tests pass |
+| `jaws/jaws_ipinfo.py` | Enrichment service, IPinfo adapter, thin CLI | Enrichment provenance/cache and compatibility tests pass |
+| `jaws/jaws_compute.py` | Profile service, representation builders, embedding adapters, thin CLI | Profile/embedding parity and atomic-write tests pass |
+| `jaws/jaws_finder.py` | Representations, references, rankers, explanations, inspection, renderers, thin CLI | Benchmark 0 `legacy_2_0` parity passes |
+| `jaws/jaws_utils.py` | Reporting adapter, schema migrations, admin service, model-management adapter | Schema/admin/output callers use dedicated contracts |
+| `jaws/jaws_guide.py` | Generated/static research CLI guidance | Supported CLI docs and `--help` cover the workflow |
+| `jaws_mcp/server.py` | Thin typed MCP adapter | MCP parity, schema, async lifecycle, and safety tests pass |
+| `harbor/Dockerfile` | Pinned Neo4j compose service/migration job | Backup/restore and migration smoke tests pass |
+| `ocean/Dockerfile` | Versioned CPU/GPU analyzer images | CPU/GPU smoke and provenance tests pass |
+| `tests/test_baseline.py` | Focused unit/invariant suites by reference/ranker concern | No invariant is weakened or lost in the move |
+| `tests/harness/*` | Versioned benchmark package/manifests/runner | Benchmark 0 comparison proves scenario equivalence |
+
+## Milestone definition of done
+
+A milestone is complete only when all applicable items below are true:
+
+- The stated completion gate passes.
+- Scope tasks are complete or explicitly moved through an ADR/plan update.
+- Correctness tests pass for the affected code.
+- Benchmark comparison exists for any change capable of altering rankings, reasons, labels, or evidence scope.
+- New external contracts have versioned schemas and contract tests.
+- New database behavior has migration, rollback, and integration tests.
+- New dependencies are assigned to the correct optional group and recorded reproducibly.
+- Secrets and sensitive evidence are absent from committed files and generated artifacts.
+- User-facing and migration documentation is updated where behavior changed.
+- The milestone leaves the integration branch runnable.
+- The status table and change log are updated with evidence references.
+
+## Risk register
+
+| Risk | Failure mode | Mitigation and trigger |
+| --- | --- | --- |
+| Benchmark overfitting | Rankers learn synthetic assumptions or repeatedly viewed held-out labels | Separate splits, simple baselines, real traffic, held-out rotation, scenario-level reporting |
+| False scientific confidence | Aggregate recall improves while benign burden, stability, or coverage worsens | Retain reward vectors and per-scenario rankings; require regression budgets |
+| Refactor semantic drift | Valuable direction, cadence, baseline, or novelty behavior changes accidentally | Benchmark 0, compatibility ledger, named legacy ranker, parity artifacts |
+| Historical data loss | Migration or retention removes capture/profile history | Copy-based migration tests, exports, dry runs, schema versions, explicit retention policies |
+| Identity ambiguity | DHCP/NAT/IPv6 rotation makes IP history misleading | Version entity definitions, retain capture context, do not claim permanent device identity |
+| Perspective inversion | Remote `bytes_out` is misread as host exfiltration | Typed perspective/entity metadata, host-relative explanations, dedicated host-destination entities |
+| Dependency/GPU drift | Model or numerical library changes ranks | Lock/constraints, model revisions/digests, environment provenance, tolerance policy |
+| External provider drift | IPinfo/OpenAI behavior changes or becomes unavailable | Provider version/provenance, caches, fakes, explicit unavailable states, local/numeric alternatives |
+| Neo4j scale/cost | Raw packets, profiles, and embeddings grow without policy | Independent retention, query/index tests, export, performance benchmarks |
+| Sensitive evidence leakage | PCAP content, paths, hostnames, or credentials enter git/artifacts/logs | Manifests/checksums, redaction, scoped artifact policy, secret scans, safe fixtures |
+| Dataset licensing | Malware traffic is redistributed without permission | Store acquisition/license metadata; do not commit restricted PCAPs/binaries |
+| Long-running work | MCP/client timeouts leave ambiguous partial runs | Run lifecycle, async status, cancellation, atomic artifacts, explicit partial/failed states |
+| Agent privilege expansion | Research agent gains shell, capture, DB deletion, or label access | Separate container/capabilities, registered operations, approval policy, adversarial tests |
+| Single scalar reward gaming | A method improves one number while degrading usefulness | Preserve component metrics; require declared scalar weights and regression budgets |
+
+## Decision queue
+
+These decisions require ADRs at the named milestone. An ADR may refine the implementation, but it cannot violate the delivery principles without an explicit project-plan revision.
+
+| Decision | Due | Default pending ADR |
+| --- | --- | --- |
+| Canonical schema/validation library for external specs | M1 | Validated, versioned models with canonical JSON support |
+| Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Direct constraints plus reproducible environment files per runtime profile |
+| Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
+| Neo4j migration mechanism and schema-version storage | M2 | Ordered idempotent migrations with an applied-version record |
+| Experiment artifact formats | M5 | Canonical JSON/JSONL; optional Parquet for large tables |
+| Artifact-store location/configuration | M5 | Local filesystem store behind a protocol |
+| Registry mechanism for research components | M6 | Built-in registry first; package entry points only after contract stabilization |
+| Held-out dataset access/governance | M6 | Manifested restricted track separated from development reports |
+| Container base images and support matrix | M7 | Pinned CPU default plus explicit GPU/edge variants |
+| MCP long-running job protocol and transport | M8 | Start/status/result/cancel operations plus stdio and one supported HTTP transport |
+| Agent framework, including whether to use NOOA | M9 | No core dependency; sandboxed comparison spike before adoption |
+| First entity type beyond endpoint-IP and host-destination | M6 or later | No expansion until benchmarks identify a research need |
+| Release version and compatibility promise | M10 | Decide from actual interface/schema breaks, not aspirational naming |
+
+## Immediate next actions
+
+When implementation begins, start with Milestone 0 in this order:
+
+1. Add the development/test dependency declaration and one clean-environment test command.
+2. Create the ADR template and record the fixed research/architecture decisions.
+3. Define the Benchmark 0 artifact schemas before running the benchmark.
+4. Run correctness and synthetic quality tiers at `0b68a8c` with full rankings retained.
+5. Add optional real-PCAP results if the documented sample is locally available; otherwise retain an explicit skip.
+6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here.
+
+No detector refactoring should begin before those artifacts exist.
+
+## Change log
+
+### 2026-08-03 — Initial detailed plan
+
+- Expanded the original phase roadmap after a second review of the branch and codebase.
+- Preserved experiments as the primary reproducibility unit while separating immutable experiment identity from individual run identity.
+- Added a canonical portable artifact bundle alongside Neo4j.
+- Added a project-foundation milestone before decomposition because tests, dependency groups, typing, CI, and reproducible environments are currently absent.
+- Split core extraction into storage, evidence/profile services, and comparison/ranking services to create smaller parity gates.
+- Added a compatibility ledger for the detector's current hard-won invariants.
+- Made Benchmark 0 an observational freeze that retains known failures rather than demanding artificial green tests.
+- Put the experiment/provenance system before Benchmark v1.
+- Put deterministic benchmark rewards and MCP safety before the optional agent laboratory.
+- Added a final integrated rollout gate so the complete research-workbench redesign can ship together.
