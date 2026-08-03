@@ -89,9 +89,9 @@ Set `JAWS_PCAP_DIR` to include the supported real-capture scenarios; otherwise t
 The versioned [benchmark artifact contract](benchmarks/README.md) defines how JAWS
 retains complete rankings, evidence identity, execution and quality outcomes,
 environment provenance, known failures, generated reports, and checksums. The committed
-`benchmarks/examples/baseline-0/` bundle is a noncanonical validation fixture.
-Canonical Benchmark 0 bundles use the same contract with
-`benchmark.canonical: true`.
+[`benchmarks/baseline-0/`](benchmarks/baseline-0/) bundle is the canonical observational
+freeze of the pre-refactor detector. The separate `benchmarks/examples/baseline-0/`
+bundle remains a noncanonical contract-validation fixture.
 
 ## Evidence, provenance, and non-goals
 

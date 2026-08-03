@@ -4,6 +4,11 @@ JAWS benchmark bundles are versioned laboratory records. They preserve the evide
 configuration, complete rankings, deterministic evaluation, environment, logs, and
 integrity information needed to compare detector behavior across revisions.
 
+The committed `baseline-0/` directory is the **canonical Benchmark 0 bundle**. It is
+the observational freeze of detector revision
+`0b68a8c1ed615c96355989702126de623c78a714`, collected by committed collector revision
+`7cc27297a68512fcae825a1182ca06dd2ff0d892` from a clean working tree.
+
 The committed `examples/baseline-0/` directory is a **noncanonical contract fixture**.
 It proves that the format can represent every current synthetic scenario, both ranking
 surfaces, known detector-quality failures, and unavailable PCAP data. It must not be
@@ -56,11 +61,14 @@ Evidence/source digests use UTF-8 JSON with keys sorted lexicographically, compa
 separators, preserved array order, finite JSON numbers, and no ASCII coercion. Human
 indentation is never part of a packet-row or source-tree identity.
 
-## Validate the committed fixture
+## Validate the committed bundles
 
 From the repository root:
 
 ```bash
+PYTHONPATH=tests .venv/bin/python -m harness.benchmark_contract \
+  validate benchmarks/baseline-0
+
 PYTHONPATH=tests .venv/bin/python -m harness.benchmark_contract \
   validate benchmarks/examples/baseline-0
 ```
@@ -96,6 +104,30 @@ The collector verifies that `jaws/jaws_compute.py` and `jaws/jaws_finder.py` sti
 match the declared detector subject before it runs. The manifest records the detector
 revision separately from the collector revision and source digest.
 
+## Reproduce canonical Benchmark 0
+
+Canonical collection requires a clean working tree, a committed collector revision,
+and the exact detector subject. It refuses to overwrite an existing bundle. Reproduce
+the retained run from the collector commit in a separate worktree:
+
+```bash
+git worktree add /tmp/jaws-benchmark-0-reproduction \
+  7cc27297a68512fcae825a1182ca06dd2ff0d892
+cd /tmp/jaws-benchmark-0-reproduction
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install --editable ".[dev]"
+PYTHONPATH=tests .venv/bin/python -m harness.benchmark_contract \
+  collect-baseline \
+  --subject-revision 0b68a8c \
+  --collector-revision 7cc27297a68512fcae825a1182ca06dd2ff0d892
+```
+
+Runtime timestamps and durations may differ. Dataset manifests, scenario definitions,
+complete ranking payloads, scores, reasons, evidence digests, quality outcomes, and
+known-failure identities must remain equal. The committed environment record contains
+the exact package versions used for the retained run.
+
 ## Evidence and secret policy
 
 - Never commit restricted PCAPs, extracted malware, credentials, or provider tokens.
@@ -105,4 +137,8 @@ revision separately from the collector revision and source digest.
 - Synthetic packet rows are represented by canonical digests. The example retains full
   detector rankings, not duplicate raw row files.
 
-The next Milestone 0 task uses this contract to execute and freeze canonical Benchmark 0.
+The canonical run completed all eight controlled scenarios. All five detection
+scenarios ranked within the top three; the three benign counterexamples remain named
+quality failures. The three documented real-PCAP scenarios are explicit
+`dataset_unavailable` skips because no redistributable fixture was present during the
+capture.

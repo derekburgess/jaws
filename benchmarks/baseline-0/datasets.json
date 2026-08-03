@@ -1,0 +1,55 @@
+{
+  "artifact_kind": "dataset_catalog",
+  "datasets": [
+    {
+      "availability": "available",
+      "dataset_id": "jaws-synthetic-v0",
+      "dataset_version": "1.0.0",
+      "evidence": {
+        "expected_filename": null,
+        "format": "packet-row-json",
+        "generator": {
+          "qualified_name": "harness.scenarios.SCENARIOS",
+          "source_sha256": "97f6dd92c446e44e609ccdf7f1f8b5e199195fd2f9cd9aed0992077076cbdfd7"
+        },
+        "sha256": "a664812d3eb532b392ec77f0efc951cdf986d8a8d60d16bcf6fb481ac278026d"
+      },
+      "kind": "synthetic-packet-rows",
+      "labels": {
+        "method": "generator-declared",
+        "provenance": "Each generator plants one declared endpoint with a detect or reject expectation."
+      },
+      "source": {
+        "license": "GPL-2.0-only",
+        "name": "JAWS controlled scenario generators",
+        "redistribution": "allowed",
+        "uri": null
+      },
+      "unavailable_reason": null
+    },
+    {
+      "availability": "unavailable",
+      "dataset_id": "mta-2026-01-29-njrat",
+      "dataset_version": "1.0.0",
+      "evidence": {
+        "expected_filename": "2026-01-29-njRAT-infection-with-MassLogger.pcap",
+        "format": "pcap",
+        "generator": null,
+        "sha256": null
+      },
+      "kind": "pcap",
+      "labels": {
+        "method": "published-ioc",
+        "provenance": "Scenario IP labels are transcribed from the sample's published IOC documentation; they are not inferred by JAWS."
+      },
+      "source": {
+        "license": null,
+        "name": "Malware-Traffic-Analysis.net 2026-01-29 njRAT infection",
+        "redistribution": "restricted",
+        "uri": "https://www.malware-traffic-analysis.net/2026/01/29/index.html"
+      },
+      "unavailable_reason": "dataset_unavailable: JAWS_PCAP_DIR does not contain the documented file"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

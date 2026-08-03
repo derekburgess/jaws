@@ -1,0 +1,48 @@
+{
+  "artifact_kind": "known_failures",
+  "failures": [
+    {
+      "evaluation_surface": "endpoints",
+      "expected_rule": "A benign bare-ACK keepalive ranks below position 3.",
+      "failure_id": "BF0-KF-001",
+      "first_observed_revision": "0b68a8c",
+      "observed_behavior": "The metronomic low-payload exchange ranks in the top three.",
+      "rationale": "Cadence alone is structurally beacon-like; Benchmark 0 preserves the false positive until payload-aware research is evaluated.",
+      "regression_guard": "A later fix must demote tcp_keepalive without reducing payload_beacon or jittered_beacon recall at the declared cutoff.",
+      "scenario_ids": [
+        "tcp_keepalive"
+      ],
+      "status": "open",
+      "title": "Bare TCP keepalive cadence crowds the endpoint ranking"
+    },
+    {
+      "evaluation_surface": "host_outbound",
+      "expected_rule": "A predominantly inbound transfer ranks below position 3.",
+      "failure_id": "BF0-KF-002",
+      "first_observed_revision": "0b68a8c",
+      "observed_behavior": "The small request side of a large download ranks in the top three.",
+      "rationale": "The current host-outbound score is population-relative and still overweights the upload magnitude associated with a large inbound transfer.",
+      "regression_guard": "A later fix must demote bulk_download without reducing slow_exfil or burst_exfil recall at the declared cutoff.",
+      "scenario_ids": [
+        "bulk_download"
+      ],
+      "status": "open",
+      "title": "Bulk download crowds the host-outbound ranking"
+    },
+    {
+      "evaluation_surface": "endpoints",
+      "expected_rule": "A consistently heavy endpoint ranks below position 3.",
+      "failure_id": "BF0-KF-003",
+      "first_observed_revision": "0b68a8c",
+      "observed_behavior": "The endpoint remains in the top three despite three prior sessions.",
+      "rationale": "Historical normalization reduces persistent-volume dominance but does not yet remove every peer-relative or cadence contribution.",
+      "regression_guard": "A later fix must demote stable_heavy while behavioral_change remains detectable.",
+      "scenario_ids": [
+        "stable_heavy"
+      ],
+      "status": "open",
+      "title": "Historically stable heavy traffic remains highly ranked"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

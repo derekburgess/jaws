@@ -324,7 +324,7 @@ Create an immutable record of what the existing code does before structural chan
 
 - [x] Declare development/test dependencies, including pytest, without changing analytical runtime behavior.
 - [x] Add one documented command that creates a supported Python 3.12 development environment.
-- [ ] Record actual package versions used for Benchmark 0.
+- [x] Record actual package versions used for Benchmark 0 in the canonical environment artifact.
 - [x] Add a test collection command and separate correctness, Neo4j, synthetic-quality, and real-PCAP-quality invocations.
 - [x] Verify a clean checkout can run the correctness tests without API credentials, a live capture interface, Neo4j, or a downloaded embedding model where those are not logically required.
 
@@ -341,28 +341,28 @@ Create an immutable record of what the existing code does before structural chan
 
 #### Baseline capture
 
-- [ ] Tag the code-under-test revision (`0b68a8c`) in the Benchmark 0 manifest.
-- [ ] Preserve the current 23 test functions and their parametrized cases as the starting correctness/quality inventory.
-- [ ] Run and record the default correctness suite.
-- [ ] Run each synthetic scenario with declared seeds and retain every ranking, not only pass/fail.
-- [ ] Record expected known quality failures rather than weakening assertions until they pass.
-- [ ] Run optional real-PCAP scenarios when the externally acquired sample is available.
-- [ ] Record absence of optional datasets as an explicit skip with reason, never as a pass.
-- [ ] Capture both endpoint and host-outbound ranking surfaces.
-- [ ] Capture the current text-only, numeric-only, and blended ablation outputs.
+- [x] Tag the full code-under-test revision (`0b68a8c1ed615c96355989702126de623c78a714`) in the Benchmark 0 manifest.
+- [x] Preserve the subject revision's 23 test functions and their parametrized cases as the starting correctness/quality inventory.
+- [x] Run and record the default correctness suite: 42 cases passed and 10 quality/integration cases were deselected in the collector environment.
+- [x] Run each synthetic scenario with declared seeds and retain every ranking, not only pass/fail.
+- [x] Record expected known quality failures rather than weakening assertions until they pass.
+- [x] Evaluate optional real-PCAP availability and run scenarios when their externally acquired sample is present.
+- [x] Record absence of optional datasets as an explicit skip with reason, never as a pass.
+- [x] Capture both endpoint and host-outbound ranking surfaces.
+- [x] Capture numeric-only output and explicitly record text-only and blended modes as unavailable for this harness.
 - [ ] Record current CLI JSON envelopes for capture-listing, compute, rank, and failure paths using fixtures/fakes where needed.
 - [ ] Record current Neo4j labels, relationships, properties, indexes, and constraints.
-- [ ] Record the current dependency graph and container definitions.
-- [ ] Store stdout, stderr, exit status, timing, environment, seed, scenario, rank, score, reasons, DBSCAN label, and parameters as machine-readable data.
+- [x] Record the resolved package inventory and current container-definition digests and base images.
+- [x] Store stdout, stderr, exit status, timing, environment, seed, scenario, rank, score, reasons, DBSCAN label, and parameters as machine-readable data.
 
 #### Benchmark 0 artifact
 
-- [ ] Create `benchmarks/baseline-0/manifest.json` with schema version, code revision, dataset digests, scenario versions, commands, and environment reference.
-- [ ] Create `benchmarks/baseline-0/results.json` or JSONL with per-scenario ranked outputs.
-- [ ] Create `benchmarks/baseline-0/environment.json` with Python, packages, OS, CPU/GPU, tshark, Neo4j, embedding model, and container versions when applicable.
-- [ ] Create a concise Markdown report generated from the machine-readable results.
-- [ ] Checksum every baseline artifact.
-- [ ] Document how to regenerate the baseline without committing restricted PCAPs or secrets.
+- [x] Create `benchmarks/baseline-0/manifest.json` with schema version, code revision, dataset digests, scenario versions, commands, and environment reference.
+- [x] Create `benchmarks/baseline-0/rankings.jsonl` with complete per-scenario ranked outputs.
+- [x] Create `benchmarks/baseline-0/environment.json` with Python, packages, OS, CPU/GPU, tshark, Neo4j, embedding model, and container versions when applicable.
+- [x] Create a concise Markdown report generated from the machine-readable results.
+- [x] Checksum every baseline artifact.
+- [x] Document how to regenerate the baseline without committing restricted PCAPs or secrets.
 
 ### Completion gate
 
@@ -1189,13 +1189,41 @@ When implementation begins, start with Milestone 0 in this order:
 3. Define the Benchmark 0 artifact schemas before running the benchmark. **Complete:**
    version 1.0.0 schemas, validator, and noncanonical fixture are documented in
    [`benchmarks/README.md`](benchmarks/README.md).
-4. Run correctness and synthetic quality tiers at `0b68a8c` with full rankings retained.
-5. Add optional real-PCAP results if the documented sample is locally available; otherwise retain an explicit skip.
-6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here.
+4. Run correctness and synthetic quality tiers at `0b68a8c` with full rankings retained. **Complete:**
+   the canonical bundle retains all eight controlled rankings and the correctness run
+   passed 42 cases in the collector environment.
+5. Add optional real-PCAP results if the documented sample is locally available; otherwise retain an explicit skip. **Complete:**
+   all three documented PCAP scenarios are explicit `dataset_unavailable` skips.
+6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
+   the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-No detector refactoring should begin before those artifacts exist.
+The canonical ranking freeze now exists. The remaining Milestone 0 compatibility
+inventories—CLI JSON envelopes and the current Neo4j graph schema—must be recorded
+before detector refactoring begins.
 
 ## Change log
+
+### 2026-08-03 — Canonical Benchmark 0 freeze
+
+- Added a canonical collector that requires a clean working tree, resolves full subject
+  and collector commit SHAs, verifies detector files against the subject, and verifies
+  collector source against its named commit.
+- Froze detector subject `0b68a8c1ed615c96355989702126de623c78a714` using
+  collector `7cc27297a68512fcae825a1182ca06dd2ff0d892`.
+- Retained complete rankings for all eight controlled scenarios across endpoint and
+  host-outbound surfaces. All five detection scenarios satisfy Recall@3; the three
+  benign counterexamples remain the named failures `BF0-KF-001` through `BF0-KF-003`.
+- Recorded all three documented real-PCAP scenarios as `dataset_unavailable` skips;
+  they are not counted as passes.
+- Recorded Python 3.12.13, all resolved package versions, platform/hardware state,
+  Dockerfile digests and base images, model/service availability, commands, logs,
+  timings, parameters, evidence identities, and complete checksums.
+- Verified 42 correctness cases at the committed collector revision and 44 after adding
+  canonical-bundle regression guards, plus canonical/noncanonical bundle validation and
+  analytical equality with the contract fixture after excluding runtime-only fields.
+- Preserved the subject revision's starting inventory of 20 correctness functions and
+  three quality functions. No detector, feature, score, threshold, label, or ordering
+  code changed.
 
 ### 2026-08-03 — Benchmark 0 measurement contract
 

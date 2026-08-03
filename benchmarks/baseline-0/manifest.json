@@ -1,0 +1,241 @@
+{
+  "artifact_kind": "manifest",
+  "artifacts": [
+    {
+      "media_type": "application/json",
+      "path": "manifest.json",
+      "required": true,
+      "role": "manifest"
+    },
+    {
+      "media_type": "application/json",
+      "path": "datasets.json",
+      "required": true,
+      "role": "dataset_catalog"
+    },
+    {
+      "media_type": "application/json",
+      "path": "scenarios.json",
+      "required": true,
+      "role": "scenario_catalog"
+    },
+    {
+      "media_type": "application/json",
+      "path": "run.json",
+      "required": true,
+      "role": "run"
+    },
+    {
+      "media_type": "application/json",
+      "path": "environment.json",
+      "required": true,
+      "role": "environment"
+    },
+    {
+      "media_type": "application/x-ndjson",
+      "path": "rankings.jsonl",
+      "required": true,
+      "role": "rankings"
+    },
+    {
+      "media_type": "application/json",
+      "path": "evaluation.json",
+      "required": true,
+      "role": "evaluation"
+    },
+    {
+      "media_type": "application/json",
+      "path": "known-failures.json",
+      "required": true,
+      "role": "known_failures"
+    },
+    {
+      "media_type": "text/plain",
+      "path": "logs/collector.stdout.log",
+      "required": true,
+      "role": "stdout"
+    },
+    {
+      "media_type": "text/plain",
+      "path": "logs/collector.stderr.log",
+      "required": true,
+      "role": "stderr"
+    },
+    {
+      "media_type": "text/markdown",
+      "path": "report.md",
+      "required": true,
+      "role": "report"
+    },
+    {
+      "media_type": "text/plain",
+      "path": "checksums.sha256",
+      "required": true,
+      "role": "checksums"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/manifest.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/dataset.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/scenario.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/run.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/environment.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/ranking.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/evaluation.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/known-failures.schema.json",
+      "required": true,
+      "role": "schema"
+    }
+  ],
+  "benchmark": {
+    "benchmark_id": "baseline-0",
+    "canonical": true,
+    "created_at": "2026-08-03T22:24:53.400Z",
+    "description": "Canonical observational freeze of JAWS detector behavior, complete rankings, known quality failures, unavailable evidence, and execution provenance.",
+    "title": "JAWS Benchmark 0"
+  },
+  "collector": {
+    "revision": "7cc27297a68512fcae825a1182ca06dd2ff0d892",
+    "source_sha256": "b507ff627a0f8e3ebb19cdb4b6448bc5eae27f4f6aebea3d0deec5ea32f463f3",
+    "working_tree_dirty": false
+  },
+  "commands": [
+    {
+      "argv": [
+        "python",
+        "-m",
+        "harness.benchmark_contract",
+        "collect-baseline",
+        "--subject-revision",
+        "0b68a8c1ed615c96355989702126de623c78a714",
+        "--collector-revision",
+        "7cc27297a68512fcae825a1182ca06dd2ff0d892"
+      ],
+      "command_id": "collect-baseline",
+      "cwd": ".",
+      "environment": [
+        {
+          "name": "OPENAI_API_KEY",
+          "state": "unset"
+        },
+        {
+          "name": "NEO4J_PASSWORD",
+          "state": "unset"
+        },
+        {
+          "name": "IPINFO_TOKEN",
+          "state": "unset"
+        },
+        {
+          "name": "HF_TOKEN",
+          "state": "unset"
+        },
+        {
+          "name": "JAWS_PCAP_DIR",
+          "state": "unset"
+        }
+      ]
+    }
+  ],
+  "conventions": {
+    "checksum_algorithm": "sha256",
+    "emitted_position_base": 0,
+    "null_policy": "Null means a field is inapplicable or was not observed; absence is not silently treated as zero, false, success, or availability.",
+    "rank_base": 1,
+    "score_order": "descending",
+    "secret_policy": "Environment-variable names and redacted presence may be recorded; credential values are prohibited.",
+    "timestamp_format": "RFC3339-UTC"
+  },
+  "schema_catalog": [
+    {
+      "artifact_kind": "manifest",
+      "path": "schemas/manifest.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "dataset_catalog",
+      "path": "schemas/dataset.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "scenario_catalog",
+      "path": "schemas/scenario.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "run",
+      "path": "schemas/run.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "environment",
+      "path": "schemas/environment.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "ranking",
+      "path": "schemas/ranking.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "evaluation",
+      "path": "schemas/evaluation.schema.json",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_kind": "known_failures",
+      "path": "schemas/known-failures.schema.json",
+      "schema_version": "1.0.0"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "subject": {
+    "detector_files": [
+      {
+        "path": "jaws/jaws_compute.py",
+        "sha256": "7a17a431dbd9eb27c9687375306b9784c83d29b1b9f1839c5e850701bb4d48fe"
+      },
+      {
+        "path": "jaws/jaws_finder.py",
+        "sha256": "fd46d4b6c7cc6513e76cc4b8b0c126468930f3fa6a027fabe74471fc39d8cb72"
+      }
+    ],
+    "repository": "https://github.com/derekburgess/jaws",
+    "revision": "0b68a8c1ed615c96355989702126de623c78a714"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "analytical_modes": [
+    {
+      "name": "numeric-only",
+      "reason": "The current recall harness ranks deterministic numeric profiles.",
+      "state": "used"
+    },
+    {
+      "name": "text-only",
+      "reason": "No stored embeddings or embedding model are used by this fixture.",
+      "state": "unavailable"
+    },
+    {
+      "name": "blended",
+      "reason": "No stored embeddings or PCA/DBSCAN ablation is used by this fixture.",
+      "state": "unavailable"
+    }
+  ],
+  "artifact_kind": "run",
+  "benchmark_id": "baseline-0",
+  "dependencies": [
+    {
+      "detail": "Synthetic profiles are built directly from packet rows.",
+      "name": "neo4j",
+      "state": "not_used"
+    },
+    {
+      "detail": "No embedding provider is invoked.",
+      "name": "openai-api",
+      "state": "not_used"
+    },
+    {
+      "detail": "JAWS_PCAP_DIR sample is absent; scenarios are explicit skips",
+      "name": "pcap-fixture",
+      "state": "unavailable"
+    }
+  ],
+  "invocation": {
+    "argv": [
+      "python",
+      "-m",
+      "harness.benchmark_contract",
+      "collect-baseline",
+      "--subject-revision",
+      "0b68a8c1ed615c96355989702126de623c78a714",
+      "--collector-revision",
+      "7cc27297a68512fcae825a1182ca06dd2ff0d892"
+    ],
+    "cwd": ".",
+    "exit_code": 0,
+    "stderr_artifact": "logs/collector.stderr.log",
+    "stdout_artifact": "logs/collector.stdout.log"
+  },
+  "lifecycle": {
+    "duration_ms": 429.331,
+    "ended_at": "2026-08-03T22:24:53.829Z",
+    "started_at": "2026-08-03T22:24:53.400Z",
+    "status": "completed"
+  },
+  "run_id": "baseline-0-canonical",
+  "scenario_statuses": [
+    {
+      "duration_ms": 23.579,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "passed",
+      "scenario_id": "payload_beacon",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 21.146,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "passed",
+      "scenario_id": "jittered_beacon",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 27.641,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "failed_known",
+      "scenario_id": "tcp_keepalive",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 8.521,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "passed",
+      "scenario_id": "slow_exfil",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 6.302,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "passed",
+      "scenario_id": "burst_exfil",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 6.377,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "failed_known",
+      "scenario_id": "bulk_download",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 120.599,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "failed_known",
+      "scenario_id": "stable_heavy",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 111.393,
+      "error": null,
+      "execution_status": "completed",
+      "quality_outcome": "passed",
+      "scenario_id": "behavioral_change",
+      "skip_reason": null
+    },
+    {
+      "duration_ms": 0.0,
+      "error": null,
+      "execution_status": "skipped",
+      "quality_outcome": "not_evaluated",
+      "scenario_id": "njrat_c2",
+      "skip_reason": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap"
+    },
+    {
+      "duration_ms": 0.0,
+      "error": null,
+      "execution_status": "skipped",
+      "quality_outcome": "not_evaluated",
+      "scenario_id": "masslogger_exfil",
+      "skip_reason": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap"
+    },
+    {
+      "duration_ms": 0.0,
+      "error": null,
+      "execution_status": "skipped",
+      "quality_outcome": "not_evaluated",
+      "scenario_id": "njrat_ipcheck",
+      "skip_reason": "dataset_unavailable: JAWS_PCAP_DIR does not contain 2026-01-29-njRAT-infection-with-MassLogger.pcap"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

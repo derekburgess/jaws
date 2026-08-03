@@ -1,0 +1,12 @@
+scenario             expect  surface          rank    score  reasons
+--------------------------------------------------------------------------------------------
+ok  behavioral_change detect  endpoints        1/13    62.49  bytes_out,bytes_per_peer,bytes_in,bytes_per_packet,interval_mean
+ok  burst_exfil      detect  host_outbound    1/12   171.65  upload_download_ratio,upload_bytes,upload_packets
+ok  jittered_beacon  detect  endpoints        2/13     7.46  interval_mean,interval_cv,bytes_out_in_ratio
+ok  payload_beacon   detect  endpoints        2/13     9.30  interval_mean,interval_cv,bytes_out_in_ratio
+ok  slow_exfil       detect  host_outbound    1/12   121.58  upload_download_ratio,upload_bytes,upload_packets
+FAIL bulk_download    reject  host_outbound    2/12     3.42  upload_download_ratio
+FAIL stable_heavy     reject  endpoints        3/13     3.24  interval_mean
+FAIL tcp_keepalive    reject  endpoints        1/13    12.89  interval_cv,interval_mean,bytes_per_packet,packets_out,packets_in,bytes_out_in_ratio,bytes_in
+--------------------------------------------------------------------------------------------
+recall@3 5/5    false positives 3/3

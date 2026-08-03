@@ -24,6 +24,7 @@ from harness.benchmark_contract import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = REPO_ROOT / "benchmarks" / "examples" / "baseline-0"
+BASELINE = REPO_ROOT / "benchmarks" / "baseline-0"
 SYNTHETIC_SCENARIOS = {
     "payload_beacon",
     "jittered_beacon",
@@ -74,6 +75,23 @@ def test_all_schema_documents_are_valid_draft_2020_12():
 
 def test_committed_contract_example_validates():
     validate_bundle(EXAMPLE)
+
+
+def test_committed_canonical_baseline_validates():
+    validate_bundle(BASELINE)
+    manifest = _read(BASELINE / "manifest.json")
+    assert manifest["benchmark"]["canonical"] is True
+    assert manifest["subject"]["revision"] == _resolve_commit("0b68a8c")
+    assert len(manifest["collector"]["revision"]) == 40
+    assert manifest["collector"]["working_tree_dirty"] is False
+
+
+def test_canonical_baseline_matches_contract_fixture_analytical_payload():
+    example = _read_jsonl(EXAMPLE / "rankings.jsonl")
+    baseline = _read_jsonl(BASELINE / "rankings.jsonl")
+    for row in example + baseline:
+        row.pop("duration_ms")
+    assert baseline == example
 
 
 def test_subject_revision_resolves_to_full_commit_sha():

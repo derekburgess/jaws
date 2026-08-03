@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/derekburgess/jaws/benchmarks/schemas/baseline-0/dataset.schema.json",
+  "title": "JAWS Benchmark 0 dataset catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "datasets"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "artifact_kind": {
+      "const": "dataset_catalog"
+    },
+    "datasets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/dataset"
+      }
+    }
+  },
+  "$defs": {
+    "sha256_or_null": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id",
+        "dataset_version",
+        "kind",
+        "availability",
+        "source",
+        "evidence",
+        "labels",
+        "unavailable_reason"
+      ],
+      "properties": {
+        "dataset_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "dataset_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "synthetic-packet-rows",
+            "pcap"
+          ]
+        },
+        "availability": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable",
+            "restricted"
+          ]
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "uri",
+            "license",
+            "redistribution"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uri": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            },
+            "license": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "redistribution": {
+              "type": "string",
+              "enum": [
+                "allowed",
+                "restricted",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "sha256",
+            "expected_filename",
+            "generator"
+          ],
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "packet-row-json",
+                "pcap"
+              ]
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256_or_null"
+            },
+            "expected_filename": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "generator": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "qualified_name",
+                    "source_sha256"
+                  ],
+                  "properties": {
+                    "qualified_name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "provenance"
+          ],
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "generator-declared",
+                "published-ioc",
+                "human-reviewed"
+              ]
+            },
+            "provenance": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "unavailable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "const": "available"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unavailable_reason": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "unavailable_reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
