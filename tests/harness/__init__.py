@@ -13,14 +13,41 @@ Two tiers of ground truth:
 
 Nothing here emits traffic. A "packet" is a dict.
 """
+import os
+
 from .scenarios import HOST, SCENARIOS, Scenario, background_packets
 from .recall import evaluate, report
 from .pcap import pcap_scenarios, NJRAT
 
 __all__ = ["HOST", "SCENARIOS", "Scenario", "background_packets", "evaluate", "report",
-           "pcap_scenarios", "NJRAT", "all_scenarios"]
+           "pcap_scenarios", "NJRAT", "all_scenarios", "recall_source"]
+
+RECALL_SOURCES = {"all", "synthetic", "pcap"}
 
 
-def all_scenarios():
-    """Synthetic scenarios, plus real-capture ones when JAWS_PCAP_DIR is populated."""
-    return SCENARIOS + pcap_scenarios()
+def recall_source():
+    """Return the requested benchmark source, rejecting silent misspellings."""
+    source = os.environ.get("JAWS_RECALL_SOURCE", "all").strip().lower()
+    if source not in RECALL_SOURCES:
+        choices = ", ".join(sorted(RECALL_SOURCES))
+        raise ValueError(
+            f"JAWS_RECALL_SOURCE must be one of {choices}; received {source!r}")
+    return source
+
+
+def all_scenarios(source=None):
+    """Return scenarios from the requested source.
+
+    ``all`` preserves the original harness behavior. Explicit ``synthetic`` and
+    ``pcap`` modes let the two quality tiers run independently even when a local
+    PCAP directory is configured.
+    """
+    source = recall_source() if source is None else source.strip().lower()
+    if source not in RECALL_SOURCES:
+        choices = ", ".join(sorted(RECALL_SOURCES))
+        raise ValueError(f"source must be one of {choices}; received {source!r}")
+    if source == "synthetic":
+        return list(SCENARIOS)
+    if source == "pcap":
+        return pcap_scenarios()
+    return list(SCENARIOS) + pcap_scenarios()

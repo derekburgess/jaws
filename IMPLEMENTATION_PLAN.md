@@ -32,7 +32,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 
 | Milestone | Outcome | Status | Depends on |
 | --- | --- | --- | --- |
-| 0 | Research contract and Benchmark 0 | Next | — |
+| 0 | Research contract and Benchmark 0 | In progress | — |
 | 1 | Project foundation and typed contracts | Not started | 0 |
 | 2 | Versioned evidence storage and migrations | Not started | 1 |
 | 3 | Ingest, enrichment, and profiling services | Not started | 2 |
@@ -313,11 +313,11 @@ Create an immutable record of what the existing code does before structural chan
 
 #### Reproducible development entry point
 
-- [ ] Declare development/test dependencies, including pytest, without changing analytical runtime behavior.
-- [ ] Add one documented command that creates a supported Python 3.12 development environment.
+- [x] Declare development/test dependencies, including pytest, without changing analytical runtime behavior.
+- [x] Add one documented command that creates a supported Python 3.12 development environment.
 - [ ] Record actual package versions used for Benchmark 0.
-- [ ] Add a test collection command and separate correctness, Neo4j, synthetic-quality, and real-PCAP-quality invocations.
-- [ ] Verify a clean checkout can run the correctness tests without API credentials, a live capture interface, Neo4j, or a downloaded embedding model where those are not logically required.
+- [x] Add a test collection command and separate correctness, Neo4j, synthetic-quality, and real-PCAP-quality invocations.
+- [x] Verify a clean checkout can run the correctness tests without API credentials, a live capture interface, Neo4j, or a downloaded embedding model where those are not logically required.
 
 #### Baseline capture
 
@@ -1174,6 +1174,14 @@ When implementation begins, start with Milestone 0 in this order:
 No detector refactoring should begin before those artifacts exist.
 
 ## Change log
+
+### 2026-08-03 — Milestone 0 development entry point
+
+- Declared Python 3.12 and the pytest development dependency group.
+- Added explicit collection, correctness, Neo4j, synthetic-quality, and real-PCAP-quality commands.
+- Added source selection for recall scenarios and explicit skips for unavailable PCAP fixtures.
+- Verified the correctness tier without credentials, Neo4j, capture access, or model downloads.
+- Observed that the unsplit runtime dependency set installs CUDA libraries through `torch` on Linux; CPU/GPU dependency separation remains an evidence-backed Milestone 1 decision. This validation run is not the canonical Benchmark 0 artifact.
 
 ### 2026-08-03 — Initial detailed plan
 

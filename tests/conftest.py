@@ -3,6 +3,14 @@
 Everything here constructs the plain dicts/arrays the scoring path already consumes,
 so the detection tests need no Neo4j, no capture, and no embedding model.
 """
+import os
+import tempfile
+
+# Matplotlib is imported by the legacy finder module even when tests do not render
+# plots. Give containerized/read-only home directories a deterministic writable cache.
+os.environ.setdefault(
+    "MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
+
 import numpy as np
 import pytest
 

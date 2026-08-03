@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "JAWS"
 version = "2.0.0"
 description = "Packet capture and anomaly detection system with MCP server"
+requires-python = ">=3.12,<3.13"
 readme = "README.md"
 license = "GPL-2.0-only"
 keywords = ["networking", "analysis", "visualization", "mcp"]
@@ -17,6 +18,11 @@ classifiers = [
 # Dependencies stay in requirements.txt (the single source of truth); see
 # [tool.setuptools.dynamic] below.
 dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+]
 
 [project.urls]
 Repository = "https://github.com/derekburgess/jaws"
@@ -42,6 +48,6 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 markers = [
     "neo4j: requires a live Neo4j instance (deselected by default)",
-    "recall: synthetic-injection detection benchmark (deselected by default)",
+    "recall: detector-quality benchmark (deselected by default)",
 ]
 addopts = "-m 'not neo4j and not recall'"

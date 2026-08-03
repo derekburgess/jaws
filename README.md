@@ -148,6 +148,8 @@ Install Neo4j locally, use Neo4j Desktop, or run the database container describe
 
 ### 2. Install JAWS
 
+For ordinary use:
+
 ```bash
 git clone https://github.com/derekburgess/jaws.git
 cd jaws
@@ -156,6 +158,16 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install .
 ```
+
+For development, this single command creates the supported Python 3.12 environment
+and installs JAWS with its declared test dependencies:
+
+```bash
+python3.12 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install --editable ".[dev]"
+```
+
+The commands below use `.venv/bin/python` directly, so activating the environment is
+optional.
 
 ### 3. Configure the environment
 
@@ -249,15 +261,27 @@ The MCP tools follow the same sequence: `list_interfaces` → `capture_packets` 
 ### 7. Run tests
 
 ```bash
-# Software correctness; Neo4j and recall tests are excluded by default.
-pytest
+# Collect every test item available in the current environment without running it.
+.venv/bin/python -m pytest --collect-only -q -o addopts=""
 
-# Detector-quality scenarios.
-pytest -m recall -s
+# Software correctness; this is also the default pytest selection.
+.venv/bin/python -m pytest -m "not neo4j and not recall"
 
-# Tests requiring a configured Neo4j instance.
-pytest -m neo4j
+# Neo4j integration. This tier skips explicitly when NEO4J_PASSWORD is absent.
+.venv/bin/python -m pytest -m neo4j -rs
+
+# Synthetic detector-quality scenarios only.
+JAWS_RECALL_SOURCE=synthetic .venv/bin/python -m pytest -m recall -s
+
+# Real-PCAP detector-quality scenarios only.
+JAWS_RECALL_SOURCE=pcap JAWS_PCAP_DIR=/path/to/pcaps \
+  .venv/bin/python -m pytest -m recall -s -rs
 ```
+
+Correctness, integration, and detector quality are separate signals. The quality tiers
+may expose known ranking failures; those outcomes are research observations rather
+than reasons to weaken the scenarios. Restricted or licensed PCAPs are never committed.
+When a requested real-PCAP fixture is absent, that tier reports an explicit skip.
 
 ## History
 
