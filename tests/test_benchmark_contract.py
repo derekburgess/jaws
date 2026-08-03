@@ -14,6 +14,8 @@ from harness.benchmark_contract import (
     SCHEMA_FILES,
     SCHEMA_SOURCE,
     _read_jsonl,
+    _resolve_commit,
+    collect_baseline_bundle,
     render_report,
     validate_bundle,
     write_checksums,
@@ -72,6 +74,23 @@ def test_all_schema_documents_are_valid_draft_2020_12():
 
 def test_committed_contract_example_validates():
     validate_bundle(EXAMPLE)
+
+
+def test_subject_revision_resolves_to_full_commit_sha():
+    resolved = _resolve_commit("0b68a8c")
+    assert len(resolved) == 40
+    assert resolved.startswith("0b68a8c")
+
+
+def test_canonical_collection_rejects_worktree_collector(tmp_path):
+    with pytest.raises(
+        ContractViolation,
+        match="requires --collector-revision naming a commit",
+    ):
+        collect_baseline_bundle(
+            tmp_path / "baseline-0",
+            collector_revision="worktree",
+        )
 
 
 def test_example_retains_every_synthetic_ranking_and_explicit_pcap_skips():

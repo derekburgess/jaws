@@ -7,6 +7,7 @@ features, thresholds, labels, or ordering.
 Run from the repository root with PYTHONPATH=tests:
 
     python -m harness.benchmark_contract collect-example
+    python -m harness.benchmark_contract collect-baseline --collector-revision <sha>
     python -m harness.benchmark_contract validate benchmarks/examples/baseline-0
 """
 
@@ -61,6 +62,7 @@ CUTOFF = 3
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_SOURCE = REPO_ROOT / "benchmarks" / "schemas" / BENCHMARK_ID
 DEFAULT_EXAMPLE = REPO_ROOT / "benchmarks" / "examples" / BENCHMARK_ID
+DEFAULT_BASELINE = REPO_ROOT / "benchmarks" / BENCHMARK_ID
 
 SCHEMA_FILES = {
     "manifest": "manifest.schema.json",
@@ -196,6 +198,63 @@ def _tree_digest(paths: Iterable[Path]) -> str:
             "sha256": sha256_file(path),
         })
     return sha256_bytes(canonical_json_bytes(entries))
+
+
+def _git_file(revision: str, relative: str) -> bytes:
+    try:
+        result = subprocess.run(
+            ["git", "show", f"{revision}:{relative}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ContractViolation(
+            f"cannot read {relative} at revision {revision}") from exc
+    return result.stdout
+
+
+def _resolve_commit(revision: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", f"{revision}^{{commit}}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ContractViolation(f"cannot resolve git revision {revision!r}") from exc
+    resolved = result.stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", resolved):
+        raise ContractViolation(
+            f"git revision {revision!r} did not resolve to a full commit SHA")
+    return resolved
+
+
+def _tree_digest_at_revision(revision: str, paths: Iterable[Path]) -> str:
+    entries = []
+    for path in sorted({Path(p).resolve() for p in paths}):
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        entries.append({
+            "path": relative,
+            "sha256": sha256_bytes(_git_file(revision, relative)),
+        })
+    return sha256_bytes(canonical_json_bytes(entries))
+
+
+def _worktree_changes() -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ContractViolation("cannot inspect the collector working tree") from exc
+    return [line for line in result.stdout.splitlines() if line]
 
 
 def _collector_source_paths() -> list[Path]:
@@ -532,6 +591,49 @@ def build_evaluation(
     }
 
 
+def _validate_provenance(
+    manifest: dict[str, Any],
+    run: dict[str, Any],
+) -> None:
+    canonical = manifest["benchmark"]["canonical"]
+    if not canonical:
+        return
+    subject_revision = manifest["subject"]["revision"]
+    collector_revision = manifest["collector"]["revision"]
+    if not re.fullmatch(r"[0-9a-f]{40}", subject_revision):
+        raise ContractViolation(
+            "canonical subject revision must be a full commit SHA")
+    if not re.fullmatch(r"[0-9a-f]{40}", collector_revision):
+        raise ContractViolation(
+            "canonical collector revision must be a full commit SHA")
+    if manifest["collector"]["working_tree_dirty"]:
+        raise ContractViolation(
+            "canonical collector cannot have a dirty working tree")
+    expected_subject = _resolve_commit(DEFAULT_SUBJECT_REVISION)
+    if subject_revision != expected_subject:
+        raise ContractViolation(
+            "canonical Benchmark 0 identifies the wrong detector subject")
+    for record in manifest["subject"]["detector_files"]:
+        expected = sha256_bytes(_git_file(subject_revision, record["path"]))
+        if record["sha256"] != expected:
+            raise ContractViolation(
+                f"canonical subject digest differs for {record['path']}")
+    expected_collector = _tree_digest_at_revision(
+        collector_revision, _collector_source_paths())
+    if manifest["collector"]["source_sha256"] != expected_collector:
+        raise ContractViolation(
+            "canonical collector digest differs from its revision")
+    command_ids = [row["command_id"] for row in manifest["commands"]]
+    if command_ids != ["collect-baseline"]:
+        raise ContractViolation(
+            "canonical manifest must record the collect-baseline command")
+    if run["run_id"] != "baseline-0-canonical":
+        raise ContractViolation("canonical run has the wrong run_id")
+    if "collect-baseline" not in run["invocation"]["argv"]:
+        raise ContractViolation(
+            "canonical run invocation does not name collect-baseline")
+
+
 def _validate_cross_records(
     manifest: dict[str, Any],
     datasets: dict[str, Any],
@@ -542,6 +644,7 @@ def _validate_cross_records(
     known_failures: dict[str, Any],
     bundle: Path,
 ) -> None:
+    _validate_provenance(manifest, run)
     dataset_ids = [row["dataset_id"] for row in datasets["datasets"]]
     scenario_ids = [row["scenario_id"] for row in scenarios["scenarios"]]
     ranking_ids = [row["scenario_id"] for row in rankings]
@@ -729,11 +832,6 @@ def _validate_cross_records(
     for kind, filename in SCHEMA_FILES.items():
         if schema_catalog[kind]["path"] != f"schemas/{filename}":
             raise ContractViolation(f"manifest schema path is wrong for {kind}")
-    if manifest["collector"]["revision"] == "worktree":
-        expected_collector_digest = _tree_digest(_collector_source_paths())
-        if manifest["collector"]["source_sha256"] != expected_collector_digest:
-            raise ContractViolation(
-                "worktree collector source digest differs from the retained manifest")
 
 
 def validate_bundle(bundle: Path | str) -> None:
@@ -1269,24 +1367,15 @@ def _environment_record() -> dict[str, Any]:
 
 
 def _git_subject_file(revision: str, relative: str) -> dict[str, str]:
-    try:
-        result = subprocess.run(
-            ["git", "show", f"{revision}:{relative}"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            check=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise ContractViolation(
-            f"cannot read {relative} at subject revision {revision}") from exc
+    subject = _git_file(revision, relative)
     current = (REPO_ROOT / relative).read_bytes()
-    if current != result.stdout:
+    if current != subject:
         raise ContractViolation(
             f"{relative} differs from subject revision {revision}; "
             "Benchmark 0 collection would measure changed detector code")
     return {
         "path": relative,
-        "sha256": sha256_bytes(result.stdout),
+        "sha256": sha256_bytes(subject),
     }
 
 
@@ -1320,19 +1409,26 @@ def _manifest(
     subject_revision: str,
     collector_revision: str,
     collector_dirty: bool,
+    canonical: bool,
 ) -> dict[str, Any]:
+    command = "collect-baseline" if canonical else "collect-example"
+    title = "JAWS Benchmark 0" if canonical else "JAWS Benchmark 0 contract example"
+    description = (
+        "Canonical observational freeze of JAWS detector behavior, complete rankings, "
+        "known quality failures, unavailable evidence, and execution provenance."
+        if canonical else
+        "Noncanonical validation fixture proving that the Benchmark 0 contract can "
+        "retain complete current rankings and explicit unavailable-data states."
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "manifest",
         "benchmark": {
             "benchmark_id": BENCHMARK_ID,
-            "title": "JAWS Benchmark 0 contract example",
-            "canonical": False,
+            "title": title,
+            "canonical": canonical,
             "created_at": created_at,
-            "description": (
-                "Noncanonical validation fixture proving that the Benchmark 0 contract "
-                "can retain complete current rankings and explicit unavailable-data states."
-            ),
+            "description": description,
         },
         "subject": {
             "repository": "https://github.com/derekburgess/jaws",
@@ -1345,16 +1441,20 @@ def _manifest(
         "collector": {
             "revision": collector_revision,
             "working_tree_dirty": collector_dirty,
-            "source_sha256": _tree_digest(_collector_source_paths()),
+            "source_sha256": (
+                _tree_digest_at_revision(
+                    collector_revision, _collector_source_paths())
+                if canonical else _tree_digest(_collector_source_paths())
+            ),
         },
         "commands": [
             {
-                "command_id": "collect-contract-example",
+                "command_id": command,
                 "argv": [
                     "python",
                     "-m",
                     "harness.benchmark_contract",
-                    "collect-example",
+                    command,
                     "--subject-revision",
                     subject_revision,
                     "--collector-revision",
@@ -1488,11 +1588,29 @@ def _run_record(
     ended_at: str,
     duration_ms: float,
     rankings: list[dict[str, Any]],
+    subject_revision: str,
+    collector_revision: str,
+    canonical: bool,
 ) -> dict[str, Any]:
+    command = "collect-baseline" if canonical else "collect-example"
+    argv = [
+        "python",
+        "-m",
+        "harness.benchmark_contract",
+        command,
+    ]
+    if canonical:
+        argv.extend([
+            "--subject-revision",
+            subject_revision,
+            "--collector-revision",
+            collector_revision,
+        ])
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "run",
-        "run_id": "baseline-0-contract-example",
+        "run_id": (
+            "baseline-0-canonical" if canonical else "baseline-0-contract-example"),
         "benchmark_id": BENCHMARK_ID,
         "lifecycle": {
             "status": "completed",
@@ -1501,12 +1619,7 @@ def _run_record(
             "duration_ms": round(duration_ms, 3),
         },
         "invocation": {
-            "argv": [
-                "python",
-                "-m",
-                "harness.benchmark_contract",
-                "collect-example",
-            ],
+            "argv": argv,
             "cwd": ".",
             "exit_code": 0,
             "stdout_artifact": "logs/collector.stdout.log",
@@ -1580,7 +1693,7 @@ def render_report(bundle: Path | str) -> str:
     burden_metric = metrics[f"benign_top_{cutoff}_burden"]
     tick = "`"
     lines = [
-        "# JAWS Benchmark 0 contract example",
+        "# JAWS Benchmark 0" if canonical else "# JAWS Benchmark 0 contract example",
         "",
         "> This is a canonical Benchmark 0 result."
         if canonical else
@@ -1657,12 +1770,12 @@ def render_report(bundle: Path | str) -> str:
     return "\n".join(lines)
 
 
-def collect_example_bundle(
-    output: Path | str = DEFAULT_EXAMPLE,
-    subject_revision: str = DEFAULT_SUBJECT_REVISION,
-    collector_revision: str = "worktree",
+def _collect_bundle(
+    output: Path | str,
+    subject_revision: str,
+    collector_revision: str,
+    canonical: bool,
 ) -> Path:
-    """Collect a noncanonical fixture that exercises the entire bundle contract."""
     output = Path(output).resolve()
     if output.exists() and any(output.iterdir()):
         raise ContractViolation(
@@ -1728,12 +1841,20 @@ def collect_example_bundle(
     evaluation_document = build_evaluation(
         scenarios_document, rankings, known_document)
     run_document = _run_record(
-        started_at, ended_at, duration_ms, rankings)
+        started_at,
+        ended_at,
+        duration_ms,
+        rankings,
+        subject_revision,
+        collector_revision,
+        canonical,
+    )
     manifest_document = _manifest(
         started_at,
         subject_revision,
         collector_revision,
         collector_revision == "worktree",
+        canonical,
     )
 
     _write_json(output / "manifest.json", manifest_document)
@@ -1753,6 +1874,60 @@ def collect_example_bundle(
     return output
 
 
+def collect_example_bundle(
+    output: Path | str = DEFAULT_EXAMPLE,
+    subject_revision: str = DEFAULT_SUBJECT_REVISION,
+    collector_revision: str = "worktree",
+) -> Path:
+    """Collect a noncanonical fixture that exercises the entire bundle contract."""
+    return _collect_bundle(
+        output,
+        subject_revision,
+        collector_revision,
+        canonical=False,
+    )
+
+
+def collect_baseline_bundle(
+    output: Path | str = DEFAULT_BASELINE,
+    subject_revision: str = DEFAULT_SUBJECT_REVISION,
+    collector_revision: str | None = None,
+) -> Path:
+    """Collect canonical Benchmark 0 from a committed, clean collector revision."""
+    if not collector_revision or collector_revision == "worktree":
+        raise ContractViolation(
+            "canonical collection requires --collector-revision naming a commit")
+    output = Path(output).resolve()
+    if output.exists() and any(output.iterdir()):
+        raise ContractViolation(
+            f"refusing to overwrite non-empty bundle directory: {output}")
+    changes = _worktree_changes()
+    if changes:
+        preview = ", ".join(changes[:5])
+        raise ContractViolation(
+            "canonical collection requires a clean working tree; "
+            f"found {preview}")
+    resolved_subject = _resolve_commit(subject_revision)
+    resolved_collector = _resolve_commit(collector_revision)
+    expected_subject = _resolve_commit(DEFAULT_SUBJECT_REVISION)
+    if resolved_subject != expected_subject:
+        raise ContractViolation(
+            "canonical Benchmark 0 must measure subject revision "
+            f"{expected_subject}, got {resolved_subject}")
+    committed_digest = _tree_digest_at_revision(
+        resolved_collector, _collector_source_paths())
+    working_digest = _tree_digest(_collector_source_paths())
+    if working_digest != committed_digest:
+        raise ContractViolation(
+            "collector sources differ from --collector-revision")
+    return _collect_bundle(
+        output,
+        resolved_subject,
+        resolved_collector,
+        canonical=True,
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Collect, validate, and render the JAWS Benchmark 0 contract.")
@@ -1764,6 +1939,13 @@ def _build_parser() -> argparse.ArgumentParser:
     collect.add_argument(
         "--subject-revision", default=DEFAULT_SUBJECT_REVISION)
     collect.add_argument("--collector-revision", default="worktree")
+
+    baseline = subparsers.add_parser(
+        "collect-baseline", help="collect canonical Benchmark 0")
+    baseline.add_argument("--output", type=Path, default=DEFAULT_BASELINE)
+    baseline.add_argument(
+        "--subject-revision", default=DEFAULT_SUBJECT_REVISION)
+    baseline.add_argument("--collector-revision", required=True)
 
     validate = subparsers.add_parser("validate", help="validate an existing bundle")
     validate.add_argument("bundle", type=Path)
@@ -1780,6 +1962,10 @@ def main(argv: list[str] | None = None) -> int:
             path = collect_example_bundle(
                 args.output, args.subject_revision, args.collector_revision)
             print(f"collected and validated {path}")
+        elif args.command == "collect-baseline":
+            path = collect_baseline_bundle(
+                args.output, args.subject_revision, args.collector_revision)
+            print(f"collected and validated canonical {path}")
         elif args.command == "validate":
             validate_bundle(args.bundle)
             print(f"validated {args.bundle}")
