@@ -1,188 +1,274 @@
 # JAWS
-![hehe](/assets/cover.jpg)
 
-## 2026
+![JAWS cover](assets/cover.jpg)
 
-JAWS is now an MCP server first. The Semantic Kernel `jaws-agent` and the older `smol.py` experiment have been removed — instead of bundling agents, JAWS exposes its pipeline as MCP tools (`jaws-mcp`) that any MCP client (e.g. Claude Code) can drive. Deploy to a Raspberry Pi at the edge of a network (passive LAN taps work great) and run the MCP server from it.
+JAWS is an open research workbench for investigating which representations, comparisons, and ranking methods surface behaviorally meaningful anomalies in network traffic—so security researchers can form hypotheses, run reproducible experiments, and trace ranked findings back to packet evidence.
 
-Reworked the analysis model: traffic is now aggregated into one **endpoint profile per IP address** (labeled with its organization), describing inbound/outbound bytes, packets, peers, ports, protocols, and inter-packet timing. Anomaly detection clusters those endpoints, blending the embedding with standardized behavioral features so volume/fan-out outliers (e.g. unusual outbound traffic) actually surface — and every endpoint now gets an interpretable **anomaly score** (aggregate robust-z over the raw behavioral features) with per-feature *reasons* in real units, so a flag explains itself (high outbound bytes vs. suspiciously regular beacon-like timing). A dedicated **host-outbound view** ranks the capture host's own upload destinations from raw packets, answering the exfiltration/beaconing question directly, and `jaws-finder --ablate` quantifies how much the text embedding actually contributes versus the numeric features (text-only vs. numeric-only vs. blended, with silhouette and Jaccard agreement). On the MCP side, `inspect_endpoint` drills from any flagged IP back to its peers and raw packets. Local embeddings moved to sentence-transformers with a small model registry (`config.PACKET_MODELS`), so swapping/adding models is a one-line change.
+JAWS is built for security researchers, blue teams, and technically capable hackers studying network behavior. It ranks observations for investigation; it does not claim that an anomaly is malicious or provide autonomous threat verdicts.
 
-**Captures accumulate, and detection improves with every run.** Each capture is stamped as a session (a `CAPTURE` node plus a `CAPTURE_ID` on every packet), and `jaws-compute` stores one endpoint profile set per session rather than overwriting the last — so each IP builds a per-session history. `jaws-finder` uses it: an endpoint that has been profiled in earlier sessions is scored against **its own past** instead of only against its current peers. The server that is always the heaviest talker stops topping the ranking for volume it posts every single run, and what surfaces instead is *change* — plus endpoints never seen in any prior session (`first_seen`). Every reason states which reference produced it (`compared_to: "own history"` vs `"peer endpoints"`) and carries the baseline value it was measured against, and `inspect_endpoint` returns the full per-session series behind it. Two deliberate limits: cadence features (`interval_mean`/`interval_cv`) are never baselined, because a beacon looks identical in every session and its own history would declare it normal; and a shift affecting the whole population (a 120s capture after a 30s one) cancels out rather than flagging everything. Nothing extra to run — just capture → compute → detect again, and check `baseline.enabled` in the result. This is also why `drop_database` is now optional between captures: wiping the graph throws the history away.
+## The research question
 
-## 2025
+> Which representations of network traffic, evaluated against which reference populations and ranked by which methods, most reliably bring meaningful anomalies to an investigator's attention?
 
-Refactored the experience to be more agentic — CLI commands plus experimental agents that collected data, used tools, and produced analysis. `smol.py` used smolagents to orchestrate a manager/analyst hand-off; `jaws-agent` used Microsoft Semantic Kernel with a Gradio command center. Both have since been removed in favor of the MCP server (see 2026).
+The practical output of JAWS is therefore not a binary classification. It is an allocation of investigative attention: given an observation window and an investigative objective, what should a researcher inspect first, and why?
 
-## Context
+## Research model
 
-JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for the purpose of identifying outliers. It also works as a Graph RAG, utilizing OpenAI or local Transformers. It gathers and stores packets/osint in a graph database (Neo4j). It provides a set of commands to transform and process packets into plots and reports using: PCA, DBSCAN, OpenAI, Jina Code embeddings, etc. It is intended to run locally using "open" models, but is set to run using OpenAI by default for demos and ease of use.
+JAWS separates four ideas that anomaly systems often blur together:
 
+| Concept | Question | Examples |
+| --- | --- | --- |
+| Representation | What facts describe the entity? | Bytes, packets, peers, ports, protocols, timing, text embeddings |
+| Reference | Compared with what? | Current peers, the endpoint's own prior sessions |
+| Ranking | What makes an observation interesting? | Behavioral distance, novelty, cadence, fan-out, upload ratio, cluster isolation |
+| Evaluation | Was the ranking useful? | Recall@k, reciprocal rank, benign burden, stability, runtime, cost |
 
-## Prerequisites and initial setup
+The current analytical entity is an **endpoint profile**: one IP address, viewed during one capture session, with its inbound and outbound behavior aggregated into numeric features and a textual representation. The longer-term unit of reproducibility is the **experiment**, which will bind an observation window, entity definition, representation, reference population, ranker, parameters, software version, results, and evaluation artifacts into one immutable record.
 
-This part of the guide is assuming a clean install and mainly exists as a guide for myself when setting up new systems.
+### Orient → Hypothesize → Experiment → Observe
 
+JAWS is being organized around a repeatable research loop:
 
-### CUDA Support
+1. **Orient** — inspect available captures, endpoint history, prior results, labels, and benchmark performance.
+2. **Hypothesize** — state a falsifiable claim, its control, success metric, and acceptable regressions.
+3. **Experiment** — run control and treatment configurations against declared data and retain their provenance.
+4. **Observe** — compare rankings, false-positive movement, stability, explanations, and computational cost.
 
-If you plan on running local models against a NVIDIA GPU, you will need the CUDA Toolkit installed. [You can configure an installer or guide here](https://developer.nvidia.com/cuda-downloads) -- On Ubuntu, if you installed the additional drivers for NVIDIA, you can run:
+An example hypothesis might be:
 
-`apt install nvidia-cuda-toolkit`
+> Adding per-destination upload/download asymmetry will improve exfiltration recall@3 without moving ordinary backup traffic into the top three results.
 
+## How JAWS works today
 
-### Wireshark
+The current pipeline exposes five core operations through both command-line tools and an MCP server:
 
-JAWS uses pyshark which requires termshark, which can be installed with [Wireshark](https://www.wireshark.org/). Termshark is an optional installation and bundled with the executables for Windows and Mac. On Ubuntu you can install both using:
+1. **Capture or import** packets into Neo4j as a timestamped capture session.
+2. **Enrich** observed IP addresses with organization and ASN information.
+3. **Profile** each endpoint's behavior and create an OpenAI or local sentence-transformer embedding.
+4. **Rank** endpoint anomalies using behavioral scores and PCA/DBSCAN clustering.
+5. **Inspect** a ranked endpoint by tracing it back to peers, session history, and raw packet samples.
 
-`apt install wireshark` and `apt install termshark`
+Two complementary views are produced:
 
-Wireshark will ask you about adding non-root users to the Wireshark group. It is recommended that you say Yes. If you said No, then you can run:
+- **Endpoint ranking** compares remote endpoints with their peers or, when history exists, with their own earlier sessions.
+- **Host-outbound ranking** examines the capture host's destinations directly for upload, exfiltration, and beacon-like patterns.
 
-`dpkg-reconfigure wireshark-common`
+Captures accumulate rather than overwrite one another. After an endpoint appears in multiple profiled sessions, JAWS can compare its current behavior with its own history. This suppresses hosts that are consistently unusual and emphasizes meaningful change. Cadence features remain peer-relative because a persistent beacon could otherwise normalize itself.
 
-In addition, the installation and adding non-root users is suppose to add your user to the Wireshark group and set permissions, but I have found that it doesn't always do this. You may need to run:
+Every ranked result includes human-readable reasons in the original units and identifies its reference frame (`own history` or `peer endpoints`). The `inspect_endpoint` MCP tool connects a finding back to its supporting evidence.
 
-`adduser $USER wireshark` and `chmod +x /usr/bin/dumpcap`
+## Interfaces
 
+JAWS can be used in two ways:
 
-### Neo4j DBMS
+- The **CLI** is the direct interface for researchers, scripts, and benchmarks.
+- The **MCP server** exposes the same pipeline to any compatible research client or agent.
 
-JAWS also uses Neo4j as the graph database. You can run the provided Neo4j docker container (See below), or install and run the [Neo4j DBMS/Desktop app](https://neo4j.com/product/developer-tools/) on Windows/Mac/Linux.
+MCP is an interface boundary, not the analytical core. Agents are optional research collaborators. They may propose hypotheses and configure bounded experiments, but scoring and rewards should remain deterministic, inspectable, and reproducible. An agent should not receive unrestricted capture privileges, destructive database access, or shell execution merely because it can call the research interface.
 
-On Ubuntu, you can follow these instructions for installing the package: 
+## Benchmark principles
 
-https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debian-installation
+Detector quality is separate from software correctness. JAWS evaluates both.
 
-To use the desktop application on Linux, you will need to set its permissions:
+- **Unit invariants** protect statistical and historical-baseline behavior.
+- **Controlled scenarios** test beaconing, exfiltration, scans, fan-out changes, and benign counterexamples.
+- **Real PCAP scenarios** test whether improvements survive outside synthetic assumptions.
+- **Simple baselines** such as bytes, first-seen status, upload ratio, and random ranking provide necessary floors.
+- **Reward vectors** preserve tradeoffs instead of hiding them inside a single score.
 
-`chmod +x neo4j...`
+Useful evaluation outputs include Recall@k, mean reciprocal rank, benign observations ranked above the target, rank stability, parameter sensitivity, explanation fidelity, runtime, memory use, and embedding cost. A more complex method should earn its place by outperforming simple sorts on held-out scenarios.
 
-Ubuntu may complain about lack of [FUSE](https://github.com/AppImage/AppImageKit/wiki/FUSE).
+The existing recall harness is an early baseline rather than a finished benchmark. Run it with:
 
-Ubuntu may also complain about lack of sandbox... So far I have only found running the app image with `--no-sandbox` appended.
+```bash
+pytest -m recall -s
+```
 
-Additionally, the problem appears to stem from changes made to Ubuntu 24.04, this command, recommended in the Docker documentation, which appears to disable "AppArmor", also resolves the issue:
+Set `JAWS_PCAP_DIR` to include the supported real-capture scenarios; otherwise those scenarios are skipped.
 
-`sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
+## Evidence, provenance, and non-goals
 
+Research results should retain enough information to be reproduced and challenged: capture and session identifiers, observation scope, entity definition, feature and model configuration, reference population, ranking parameters, software version, ranked outputs, labels, metrics, and generated artifacts.
 
-### Conda/Anaconda/Miniconda
+JAWS does not currently claim to:
 
-I tend to use [Anaconda](https://www.anaconda.com/download/success) and prefer their installation script over the guide...
+- determine whether every anomaly is malicious;
+- replace packet inspection or analyst judgment;
+- provide a production IDS/IPS or turnkey SOC platform;
+- establish detector quality from synthetic scenarios alone;
+- treat IP addresses as perfect durable device identities;
+- make agent-generated interpretations part of the ground truth.
 
-If you used the installation script, add Conda to bash: `nano ~/.bashrc` and append `export PATH=~/anaconda3/bin:$PATH` to the end of the file, replacing /anaconda3/bin with your actual installation path.
+An anomaly may be malicious, benign, novel, misconfigured, or simply worth understanding.
 
-Some other useful(and basic) Conda commands:
+## Project status and direction
 
-`conda create --name env_name python=version`
+JAWS 2.0 is beta research software. The current endpoint model, historical baseline, explainable scoring, host-outbound view, MCP interface, and recall harness provide the behavioral baseline for the next refactor.
 
-`conda activate env_name` and `conda deactivate`
+The planned direction is to:
 
-`conda env config vars list` and `conda env config vars set ENV_VAR=value`
+1. Freeze the current detector as Benchmark 0.
+2. Separate ingestion, enrichment, representation, comparison, ranking, explanation, storage, and evaluation behind typed Python APIs.
+3. Introduce immutable experiment specifications, results, and provenance.
+4. Compare rankers through a shared benchmark and reward-vector format.
+5. Rebuild the Neo4j, analysis, capture, GPU, and MCP container boundaries for reproducibility and least privilege.
+6. Make CLI and MCP thin adapters over the same core.
+7. Explore an optional sandboxed research agent only after the experiment and evaluation foundations exist.
 
-Finally, if you want to use the navigator GUI, it can be installed using: 
+## Setup
 
-`conda install anaconda-navigator` and `anaconda-navigator`
+### Requirements
 
+- Python 3.12
+- Neo4j
+- Wireshark's `tshark`/`dumpcap` for live capture or PCAP import
+- An OpenAI API key **or** sufficient local compute for sentence-transformer embeddings
+- An IPinfo API key for organization and ASN enrichment
+- Optional: an NVIDIA GPU and CUDA for faster local embeddings
 
-### Docker
+### 1. Install system dependencies
 
-As mentioned above, JAWS optionally uses [Docker](https://www.docker.com/). Again, easy enough to figure out.
+On Ubuntu:
 
-Some useful (and basic) Docker commands:
+```bash
+sudo apt install wireshark tshark
+sudo dpkg-reconfigure wireshark-common
+sudo usermod -aG wireshark "$USER"
+```
 
-`docker ps -a` and `docker volume ls`
+Log out and back in after changing group membership. Live capture permissions vary by operating system; PCAP import does not require a capture interface.
 
-`docker inspect` and `docker stop`
+Install Neo4j locally, use Neo4j Desktop, or run the database container described below.
 
-`docker rm` and `docker volume rm`
+### 2. Install JAWS
 
-`docker system prune -a --volumes`
+```bash
+git clone https://github.com/derekburgess/jaws.git
+cd jaws
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install .
+```
 
+### 3. Configure the environment
 
-### Set Neo4j Environment Variables
+JAWS expects these Neo4j settings:
 
-`NEO4J_URI` (bolt://localhost:7687)
+```bash
+export NEO4J_URI="bolt://localhost:7687"
+export NEO4J_USERNAME="neo4j"
+export NEO4J_PASSWORD="choose-a-password"
+```
 
-`NEO4J_USERNAME` (neo4j)
+Configure the services you intend to use:
 
-`NEO4J_PASSWORD` (you set)
+```bash
+export IPINFO_API_KEY="..."       # enrichment
+export OPENAI_API_KEY="..."       # OpenAI embeddings
+export HUGGINGFACE_API_KEY="..."  # only for gated local models
+export JAWS_FINDER_ENDPOINT="..." # optional plot output directory
+```
 
+OpenAI embeddings are the CLI default. To run locally, pass `--api transformers`; public models in `jaws.config.PACKET_MODELS` do not require a Hugging Face key. The MCP server defaults to local transformers.
 
-### Set Environment Variables for Additional Services
+### 4. Start Neo4j
 
-To run jaws-ipinfo, you will need to sign up for a free account with [ipinfo](https://ipinfo.io/), and create an env variable for:
+The repository currently includes an experimental Neo4j image in `harbor/`:
 
-`IPINFO_API_KEY`
+```bash
+cd harbor
+docker build \
+  --build-arg NEO4J_USERNAME="$NEO4J_USERNAME" \
+  --build-arg NEO4J_PASSWORD="$NEO4J_PASSWORD" \
+  --build-arg DEFAULT_DATABASE=captures \
+  -t jaws-neodbms .
 
+docker run --name captures \
+  -p 7474:7474 \
+  -p 7687:7687 \
+  --detach jaws-neodbms
+cd ..
+```
 
-jaws-compute uses OpenAI (text-embedding-3-large) by default. This requires that you have an OpenAI account (not free) and create an env variable for: 
+The current `harbor/` and `ocean/` images predate the planned container refactor: their base images are not fully pinned, and the compute image accepts credentials as build arguments. Treat them as development aids, not reproducible or hardened deployments. A local Python installation plus a separately managed Neo4j instance is the recommended research setup for now.
 
-`OPENAI_API_KEY`
+### 5. Run the pipeline
 
-Note: the MCP server (`jaws-mcp`) defaults to `transformers` instead, since it typically runs on a GPU host — the CLI default stays `openai` for easy demos.
+View the complete command guide:
 
+```bash
+jaws-guide
+```
 
-Optional: Since OpenAI is not free, by passing --api transformers, or jaws-utils --model jina-code, jaws can download and run on device models from Hugging Face (see `config.PACKET_MODELS`; the default is jinaai/jina-embeddings-v2-base-code). The bundled models are public and download without any API key — you only need an env variable if you add a gated model to the registry:
+A typical local session is:
 
-`HUGGINGFACE_API_KEY`
+```bash
+# List interfaces, then capture live traffic or import a PCAP.
+jaws-capture --list
+jaws-capture --interface eth0 --duration 60
+# jaws-capture --file /path/to/capture.pcap
 
+# Enrich, profile, and rank the latest session.
+jaws-ipinfo
+jaws-compute --api openai --session latest
+jaws-finder --session latest
+```
 
-The command jaws-finder displays several plots using Matplot, but also saves those plots to a directory/endpoint of your choice, using:
+For local embeddings:
 
-`JAWS_FINDER_ENDPOINT`
+```bash
+jaws-utils --model jina-code
+jaws-compute --api transformers --model jina-code --session latest
+```
 
+Do not drop the database between ordinary captures: earlier profile sets provide the endpoint history used by the baseline. Use `jaws-utils --drop captures` only when you intentionally want to erase the research dataset.
 
-### Install the JAWS Python Package
+### 6. Run the MCP server
 
+For a spawn-based MCP client:
 
-From the /jaws root directory, install JAWS (dependencies are pulled in automatically from requirements.txt):
+```bash
+jaws-mcp --stdio
+```
 
-`pip install .`
+For an SSE server:
 
+```bash
+jaws-mcp --host 0.0.0.0 --port 8765
+```
 
-If you are using the Neo4j dbms and GUI, that is it, you can skip the Docker steps and run jaws-guide for the rest of the instructions and command overview.
+The MCP tools follow the same sequence: `list_interfaces` → `capture_packets` → `document_organizations` → `compute_embeddings` → `anomaly_detection`. Use `list_captures`, `fetch_traffic`, and `inspect_endpoint` to orient and investigate without starting a new capture.
 
+### 7. Run tests
 
-### Neo4j Docker Container
+```bash
+# Software correctness; Neo4j and recall tests are excluded by default.
+pytest
 
-This Docker container operates as a local/headless Neo4j database. You can run all commands against it by default and easily connect to and view the graph using the Neo4j GUI.
+# Detector-quality scenarios.
+pytest -m recall -s
 
-From the /jaws/harbor directory run: 
+# Tests requiring a configured Neo4j instance.
+pytest -m neo4j
+```
 
-`docker build -t jaws-neodbms --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg DEFAULT_DATABASE=captures .` 
+## History
 
+### 2026 — MCP and historical behavior
 
-Then run: 
+JAWS 2.0 moved from bundled agents to an MCP-first interface that any compatible client can drive. Traffic analysis was reorganized around one behavioral profile per endpoint and capture session. Numeric features were blended with text embeddings, interpretable anomaly scores and per-feature reasons were added, and the host-outbound view made the capture host's own upload destinations explicit.
 
-`docker run --name captures -p 7474:7474 -p 7687:7687 --detach jaws-neodbms`
+Capture sessions and endpoint profiles began accumulating in Neo4j, enabling comparison with each endpoint's own past. First-seen endpoints, historical references, baseline values, cadence exemptions, population-shift handling, endpoint inspection, and embedding ablation were added. The recall harness began separating detector quality from ordinary software tests.
 
+### 2025 — Agent experiments
 
-If you plan to run the Hugging Face models on your local machine that is it, you can skip the next step and run jaws-guide for the rest of the instructions and command overview.
+JAWS explored agent-driven workflows over its command-line tools. `smol.py` used smolagents for a manager/analyst handoff, while `jaws-agent` used Microsoft Semantic Kernel with a Gradio command center. Both experiments were later removed so JAWS could expose a model-agnostic MCP research interface rather than bundle a particular agent framework.
 
+### Earlier direction
 
-### JAWS Compute Docker Container
+JAWS began as a Python shell pipeline for capturing network traffic, enriching it with OSINT, storing it in Neo4j, and using graph queries, embeddings, PCA, DBSCAN, plots, and reports to explore the shape and activity of networks.
 
-This Docker container operates as a full instance of JAWS. However, the intended purpose is for providing a deployable container for compute resources.
+## License
 
-
-From the /jaws/ocean directory run:
-
-`docker build -t jaws-image --build-arg NEO4J_URI --build-arg NEO4J_USERNAME --build-arg NEO4J_PASSWORD --build-arg IPINFO_API_KEY --build-arg OPENAI_API_KEY --build-arg HUGGINGFACE_API_KEY .`
-
-`docker run --gpus 1 --network host --name jaws-container --detach jaws-image`
-
-
-To pull the Hugging Face models, run jaws-utils with the model argument.
-
-`docker exec -it jaws-container jaws-utils --model jina-code`
-
-
-To use the container run:
-
-`docker exec -it jaws-container jaws-compute --api "transformers"`
-
-
-## Usage
-
-`jaws-guide`
+JAWS is licensed under GPL-2.0-only.
