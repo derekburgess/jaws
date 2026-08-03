@@ -304,12 +304,12 @@ Create an immutable record of what the existing code does before structural chan
 
 #### Research contract
 
-- [ ] Confirm the README statement, research question, intended users, and non-goals as the project charter.
-- [ ] Confirm the four analytical axes: representation, reference, ranking, and evaluation.
-- [ ] Confirm the seven operations: ingest, enrich, profile, compare, rank, inspect, and evaluate.
-- [ ] Adopt terminology for dataset, capture, observation window, entity, hypothesis, experiment, run, finding, evidence pointer, metric, and observation.
-- [ ] Add an ADR template with sections for context, decision, alternatives, consequences, benchmark impact, migration, and reversal conditions.
-- [ ] Record the initial ADRs listed under “Decision queue” below.
+- [x] Confirm the README statement, research question, intended users, and non-goals as the project charter ([ADR-0001](docs/adr/0001-network-anomaly-ranking-research-workbench.md)).
+- [x] Confirm the four analytical axes: representation, reference, ranking, and evaluation ([ADR-0002](docs/adr/0002-analytical-axes-and-research-operations.md)).
+- [x] Confirm the seven operations: ingest, enrich, profile, compare, rank, inspect, and evaluate ([ADR-0002](docs/adr/0002-analytical-axes-and-research-operations.md)).
+- [x] Adopt terminology for dataset, capture, observation window, entity, hypothesis, experiment, run, finding, evidence pointer, metric, and observation ([ADR-0003](docs/adr/0003-shared-research-terminology.md)).
+- [x] Add an ADR template with sections for context, decision, alternatives, consequences, benchmark impact, migration, and reversal conditions ([template](docs/adr/template.md)).
+- [x] Record the seven initial fixed research/architecture ADRs ([ADR index](docs/adr/README.md)); retain milestone-specific choices in the decision queue until they are due.
 
 #### Reproducible development entry point
 
@@ -1174,6 +1174,17 @@ When implementation begins, start with Milestone 0 in this order:
 No detector refactoring should begin before those artifacts exist.
 
 ## Change log
+
+### 2026-08-03 — Milestone 0 research contract and initial ADRs
+
+- Accepted the README statement, primary research question, intended users, and non-goals as the project charter.
+- Fixed the four analytical axes and seven research operations as separate but related contracts.
+- Adopted normative terminology for research objects, ranking outputs, metrics, and observations.
+- Separated immutable experiment specifications from append-only execution runs.
+- Assigned Neo4j and portable experiment bundles distinct evidence and research-record responsibilities.
+- Required one deterministic application core behind CLI, MCP, benchmark, notebook, and optional-agent adapters.
+- Required Benchmark 0 at `0b68a8c` before any detector refactoring and retained known quality failures as observations.
+- Added the ADR template, status/process rules, and index. Later milestone-specific decisions remain deliberately open in the decision queue.
 
 ### 2026-08-03 — Milestone 0 development entry point
 
