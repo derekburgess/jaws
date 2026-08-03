@@ -8,6 +8,9 @@ The committed `baseline-0/` directory is the **canonical Benchmark 0 bundle**. I
 the observational freeze of detector revision
 `0b68a8c1ed615c96355989702126de623c78a714`, collected by committed collector revision
 `7cc27297a68512fcae825a1182ca06dd2ff0d892` from a clean working tree.
+Its CLI and Neo4j compatibility inventories were collected separately by committed
+collector revision `8679f23c4b536f61961000b8f60406fd9ac3f5c2`; they retain their own
+collector provenance without redefining the original ranking run.
 
 The committed `examples/baseline-0/` directory is a **noncanonical contract fixture**.
 It proves that the format can represent every current synthetic scenario, both ranking
@@ -32,6 +35,11 @@ The version 1.0.0 contract contains:
 | `report.md` | Human report rendered only from machine-readable records |
 | `schemas/` | The exact JSON Schemas used to validate the bundle |
 | `checksums.sha256` | SHA-256 coverage for every other retained file |
+
+The canonical bundle additionally contains `compatibility/cli-contract.json`,
+`compatibility/neo4j-schema.json`, and their deterministic README. These are
+source-derived compatibility reports declared by the manifest and covered by the root
+checksum inventory; they do not extend or reinterpret the version 1.0.0 ranking schema.
 
 The canonical schemas live in `schemas/baseline-0/`. A copy is embedded in each
 bundle so an artifact remains interpretable without relying on a moving branch.
@@ -71,6 +79,9 @@ PYTHONPATH=tests .venv/bin/python -m harness.benchmark_contract \
 
 PYTHONPATH=tests .venv/bin/python -m harness.benchmark_contract \
   validate benchmarks/examples/baseline-0
+
+PYTHONPATH=tests .venv/bin/python -m harness.compatibility_contract \
+  validate benchmarks/baseline-0/compatibility
 ```
 
 The validator checks:
@@ -127,6 +138,32 @@ Runtime timestamps and durations may differ. Dataset manifests, scenario definit
 complete ranking payloads, scores, reasons, evidence digests, quality outcomes, and
 known-failure identities must remain equal. The committed environment record contains
 the exact package versions used for the retained run.
+
+## Reproduce the compatibility inventories
+
+Compatibility collection must start from its clean collector revision, where the
+canonical ranking bundle exists but the compatibility directory does not. It uses
+deterministic fakes for external CLI boundaries and reads Cypher from the exact subject
+revision, so it requires no credentials, live capture, Neo4j instance, model, or PCAP.
+
+```bash
+git worktree add /tmp/jaws-benchmark-0-compatibility \
+  8679f23c4b536f61961000b8f60406fd9ac3f5c2
+cd /tmp/jaws-benchmark-0-compatibility
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install --editable ".[dev]"
+PYTHONPATH=tests .venv/bin/python -m harness.compatibility_contract \
+  collect \
+  --bundle benchmarks/baseline-0 \
+  --subject-revision 0b68a8c \
+  --collector-revision 8679f23c4b536f61961000b8f60406fd9ac3f5c2
+```
+
+The CLI record retains seven exact agent-mode invocations, including both ranking
+surfaces and three kinds of failure. The graph record is derived from 44 Cypher-bearing
+source locations and inventories six labels, 40 node properties, five relationship
+types, three uniqueness constraints, and five range indexes.
 
 ## Evidence and secret policy
 

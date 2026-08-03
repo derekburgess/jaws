@@ -32,7 +32,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 
 | Milestone | Outcome | Status | Depends on |
 | --- | --- | --- | --- |
-| 0 | Research contract and Benchmark 0 | In progress | — |
+| 0 | Research contract and Benchmark 0 | Complete | — |
 | 1 | Project foundation and typed contracts | Not started | 0 |
 | 2 | Versioned evidence storage and migrations | Not started | 1 |
 | 3 | Ingest, enrichment, and profiling services | Not started | 2 |
@@ -91,10 +91,10 @@ This inventory is the baseline for the plan. It should be updated when a milesto
 - No committed GitHub Actions workflow, lint configuration, type-check job, lock/constraints file, or declared test dependency.
 - `requirements.txt` is one unsegmented runtime dependency set; most versions are unpinned.
 
-Milestone 0 has since added a declared development test dependency group, eight
-Benchmark 0 schemas, a portable noncanonical bundle, and fifteen contract-test functions
-collecting as twenty cases. The detector subject inventory above remains fixed so the
-baseline is not silently redefined by its collector.
+Milestone 0 subsequently added a declared development test dependency group, eight
+Benchmark 0 schemas, canonical and noncanonical bundles, seven deterministic CLI
+compatibility cases, and a source-derived graph inventory. The detector subject inventory
+above remains fixed so the baseline is not silently redefined by its collectors.
 
 ### Strengths to preserve
 
@@ -128,13 +128,14 @@ baseline is not silently redefined by its collector.
 - General experiment specifications, control/treatment relationships, and append-only
   experiment runs do not yet exist; Benchmark 0 now has a deliberately narrow run record.
 - The legacy recall command still prints only a human table. The Benchmark 0 collector
-  now retains a versioned machine-readable bundle, but the canonical run is not yet captured.
+  now retains the canonical versioned machine-readable replacement for comparison.
 - Benchmark 0 now names and guards its three current known failures; general regression
   budgets and held-out-data governance remain undefined.
 - Heavy dependencies are installed together even for operations that do not need them.
 - The development dependency group now installs pytest and JSON Schema validation, but
   runtime dependencies remain unpinned and unsplit across lightweight, CPU, and GPU use.
-- Database, MCP, CLI, capture, and full-pipeline contracts have little automated coverage.
+- Database, MCP, capture, and full-pipeline contracts have little automated coverage;
+  Milestone 0 now pins representative CLI envelopes and the existing graph shape.
 - Container builds accept credentials as build arguments, use unpinned bases, clone a moving branch, and keep the analyzer alive with `tail -f /dev/null`.
 - Destructive database reset is exposed to agent-mode callers without the interactive confirmation used for humans.
 
@@ -350,8 +351,8 @@ Create an immutable record of what the existing code does before structural chan
 - [x] Record absence of optional datasets as an explicit skip with reason, never as a pass.
 - [x] Capture both endpoint and host-outbound ranking surfaces.
 - [x] Capture numeric-only output and explicitly record text-only and blended modes as unavailable for this harness.
-- [ ] Record current CLI JSON envelopes for capture-listing, compute, rank, and failure paths using fixtures/fakes where needed.
-- [ ] Record current Neo4j labels, relationships, properties, indexes, and constraints.
+- [x] Record current CLI JSON envelopes for capture-listing, compute, rank, and failure paths using deterministic fixtures/fakes ([CLI contract](benchmarks/baseline-0/compatibility/cli-contract.json)).
+- [x] Record current Neo4j labels, relationships, properties, indexes, and constraints across every Cypher-bearing source location ([graph inventory](benchmarks/baseline-0/compatibility/neo4j-schema.json)).
 - [x] Record the resolved package inventory and current container-definition digests and base images.
 - [x] Store stdout, stderr, exit status, timing, environment, seed, scenario, rank, score, reasons, DBSCAN label, and parameters as machine-readable data.
 
@@ -378,6 +379,26 @@ Create an immutable record of what the existing code does before structural chan
 - Development/test dependency declaration.
 - Benchmark 0 manifest, results, environment record, generated report, and checksum file.
 - Current graph schema inventory.
+
+### Completion evidence
+
+- The canonical bundle identifies detector subject
+  `0b68a8c1ed615c96355989702126de623c78a714`, ranking collector
+  `7cc27297a68512fcae825a1182ca06dd2ff0d892`, and compatibility collector
+  `8679f23c4b536f61961000b8f60406fd9ac3f5c2`.
+- All eight controlled scenarios retain complete rankings. Five detection scenarios meet
+  Recall@3; the three benign counterexamples remain named known failures rather than
+  being relabeled as passes.
+- All three documented real-PCAP scenarios are explicit `dataset_unavailable` skips.
+- Seven CLI cases retain exact stdout, stderr, exit status, and parsed envelopes for
+  capture listing, compute, endpoint/host-outbound ranking, handled failures, and
+  argument validation.
+- The graph inventory derives six labels, 40 node properties, five relationship types,
+  three uniqueness constraints, and five indexes from 44 Cypher source locations.
+- The compatibility files are manifest-declared, checksummed, secret-scanned, and
+  reproducible from their clean collector revision.
+- Detector, feature, scoring, threshold, label, and ordering source remains byte-identical
+  to the Benchmark 0 subject.
 
 ## Milestone 1 — Project foundation and typed contracts
 
@@ -1182,7 +1203,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 
 ## Immediate next actions
 
-When implementation begins, start with Milestone 0 in this order:
+Milestone 0 is complete. Its execution order and evidence are retained below:
 
 1. Add the development/test dependency declaration and one clean-environment test command.
 2. Create the ADR template and record the fixed research/architecture decisions.
@@ -1197,11 +1218,36 @@ When implementation begins, start with Milestone 0 in this order:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-The canonical ranking freeze now exists. The remaining Milestone 0 compatibility
-inventories—CLI JSON envelopes and the current Neo4j graph schema—must be recorded
-before detector refactoring begins.
+The next active work is Milestone 1. Begin with dependency/package boundaries, then add
+quality automation and the typed domain, result-envelope, settings, error, and service
+port contracts while continuously comparing CLI behavior and rankings with Benchmark 0.
 
 ## Change log
+
+### 2026-08-03 — Milestone 0 compatibility closeout
+
+- Froze seven deterministic agent-mode CLI invocations covering capture listing,
+  profile computation, full endpoint and host-outbound ranking output, missing-session
+  and missing-PCAP failures, Neo4j unavailability, and argparse validation.
+- Retained exact stdout, stderr, exit codes, parsed envelopes, and stream digests. The
+  record makes the current error split explicit: Reporter-handled errors emit
+  `ok=false` with exit 0, while argparse emits stderr text and exits 2.
+- Derived the graph inventory from all 44 Cypher-bearing source locations at the frozen
+  subject revision: six labels, 40 node properties, five relationship types, three
+  uniqueness constraints, five range indexes, three implicit property joins, seed
+  behavior, lifecycle semantics, and six named limitations.
+- Added the three compatibility files to the canonical manifest and root checksum set
+  without changing the original `collect-baseline` command or ranking collector.
+- Used committed compatibility collector
+  `8679f23c4b536f61961000b8f60406fd9ac3f5c2`; both inventories retain and verify its
+  source digest independently from ranking collector `7cc27297`.
+- Verification evidence: 53 offline correctness cases pass; canonical, example, and
+  compatibility validation pass; dependency integrity passes; Neo4j and real-PCAP tiers
+  skip explicitly without their external resources; the synthetic tier preserves five
+  detection successes and the same three named benign failures; an independent clean
+  regeneration produced byte-identical compatibility records, manifest, and checksums.
+- Closed every Milestone 0 checklist item and advanced the plan's active work to
+  Milestone 1. No analytical or runtime source file changed.
 
 ### 2026-08-03 — Canonical Benchmark 0 freeze
 

@@ -1,0 +1,1097 @@
+{
+  "artifact_kind": "neo4j_schema_inventory",
+  "benchmark_id": "baseline-0",
+  "collector": {
+    "revision": "8679f23c4b536f61961000b8f60406fd9ac3f5c2",
+    "source_paths": [
+      "tests/harness/compatibility_contract.py"
+    ],
+    "source_sha256": "4e8e759aeb8c6a3313d0f2f8cf6b02c1712ee62d2fb0c254791f72f02083f750",
+    "working_tree_dirty": false
+  },
+  "constraints": [
+    {
+      "kind": "node uniqueness",
+      "label": "CAPTURE",
+      "name": "capture_id_unique",
+      "properties": [
+        "CAPTURE_ID"
+      ],
+      "query_sha256": "cf36ab6edcd3b58b995edcc5145fd484c995bf5dc9f5504fc664e485318848f9"
+    },
+    {
+      "kind": "node uniqueness",
+      "label": "IP_ADDRESS",
+      "name": "ip_address_unique",
+      "properties": [
+        "IP_ADDRESS"
+      ],
+      "query_sha256": "7ee72f8009bea282aefb79f5d9395bd2b48ad1da1b4f98ad6b5041f1de2a2280"
+    },
+    {
+      "kind": "node uniqueness",
+      "label": "ORGANIZATION",
+      "name": "organization_unique",
+      "properties": [
+        "ORGANIZATION"
+      ],
+      "query_sha256": "c22b7f4f023e2729e733d1541b6d359c39310dd97c3d43d08eb7793eb05a00e9"
+    }
+  ],
+  "database": {
+    "default_name": "captures",
+    "role": "packet evidence, relationships, capture history, enrichment, and computed profiles"
+  },
+  "implicit_property_joins": [
+    {
+      "from": "PACKET.CAPTURE_ID",
+      "purpose": "session scoping without per-packet CAPTURE edges",
+      "relationship": null,
+      "to": "CAPTURE.CAPTURE_ID"
+    },
+    {
+      "from": "PACKET.SRC_IP / PACKET.DST_IP",
+      "purpose": "packet-to-endpoint inspection and host-relative aggregation",
+      "relationship": null,
+      "to": "IP_ADDRESS.IP_ADDRESS"
+    },
+    {
+      "from": "ENDPOINT.IP_ADDRESS",
+      "purpose": "profile/enrichment joins and compatibility with legacy reads",
+      "relationship": "PROFILE also exists",
+      "to": "IP_ADDRESS.IP_ADDRESS"
+    }
+  ],
+  "indexes": [
+    {
+      "kind": "range index",
+      "label": "ENDPOINT",
+      "name": "endpoint_capture_index",
+      "properties": [
+        "IP_ADDRESS",
+        "CAPTURE_ID"
+      ],
+      "query_sha256": "ca52bed91210fc21e732f35561e19a44b3e1836b01772b200df83f9d9d874cd9"
+    },
+    {
+      "kind": "range index",
+      "label": "ENDPOINT",
+      "name": "endpoint_ip_index",
+      "properties": [
+        "IP_ADDRESS"
+      ],
+      "query_sha256": "ddc03e29d9be3ab71f6d2ac94f24db2c05ffab1f3d76ebe5df9bfdc7754dfdc9"
+    },
+    {
+      "kind": "range index",
+      "label": "PACKET",
+      "name": "packet_capture_index",
+      "properties": [
+        "CAPTURE_ID"
+      ],
+      "query_sha256": "657558f30208d7f2ec74565d4e80a08e1b53c926376cbd171968f8f4abb7e5ac"
+    },
+    {
+      "kind": "range index",
+      "label": "PACKET",
+      "name": "packet_timestamp_index",
+      "properties": [
+        "TIMESTAMP"
+      ],
+      "query_sha256": "bcfb6142530bad8cf24263a562bdff5a5ea7dfaf53311900b18e9bf2f663e411"
+    },
+    {
+      "kind": "range index",
+      "label": "PORT",
+      "name": "port_composite_index",
+      "properties": [
+        "PORT",
+        "IP_ADDRESS"
+      ],
+      "query_sha256": "dae0b7b648182d87bafb760300cb70eaeba24e031c471aa51909c5d4a07995d5"
+    }
+  ],
+  "lifecycle": {
+    "failure_policy": "Collect every schema-statement exception, emit a warning, and continue the capture path rather than failing atomically.",
+    "idempotence": "named constraints/indexes use IF NOT EXISTS; seed data uses MERGE",
+    "initialized_by": "jaws.jaws_utils.initialize_schema",
+    "migration_history": null,
+    "trigger": "opportunistically before each capture/import run",
+    "version_record": null
+  },
+  "limitations": [
+    {
+      "limitation_id": "GRAPH-B0-001",
+      "summary": "No graph schema version node or ordered migration history exists."
+    },
+    {
+      "limitation_id": "GRAPH-B0-002",
+      "summary": "ENDPOINT has a composite range index on (IP_ADDRESS, CAPTURE_ID) but no composite uniqueness constraint."
+    },
+    {
+      "limitation_id": "GRAPH-B0-003",
+      "summary": "PACKET-to-CAPTURE and PACKET-to-IP referential joins are properties, not graph relationships or enforced foreign keys."
+    },
+    {
+      "limitation_id": "GRAPH-B0-004",
+      "summary": "No property-existence, relationship, or type constraints exist."
+    },
+    {
+      "limitation_id": "GRAPH-B0-005",
+      "summary": "Port 0 is retained on PACKET as a non-TCP/UDP placeholder but is never materialized as a PORT node."
+    },
+    {
+      "limitation_id": "GRAPH-B0-006",
+      "summary": "Schema initialization warnings do not abort capture, so a graph may operate with only part of the declared index/constraint set."
+    }
+  ],
+  "nodes": [
+    {
+      "label": "CAPTURE",
+      "logical_identity": [
+        "CAPTURE_ID"
+      ],
+      "properties": [
+        {
+          "name": "CAPTURE_ID",
+          "observed_type": "string"
+        },
+        {
+          "name": "PACKETS",
+          "observed_type": "integer"
+        },
+        {
+          "name": "SOURCE",
+          "observed_type": "string"
+        },
+        {
+          "name": "STARTED",
+          "observed_type": "neo4j datetime"
+        }
+      ],
+      "purpose": "One capture/import session."
+    },
+    {
+      "label": "ENDPOINT",
+      "logical_identity": [
+        "IP_ADDRESS",
+        "CAPTURE_ID"
+      ],
+      "properties": [
+        {
+          "name": "BYTES_IN",
+          "observed_type": "integer"
+        },
+        {
+          "name": "BYTES_OUT",
+          "observed_type": "integer"
+        },
+        {
+          "name": "CAPTURE_ID",
+          "observed_type": "string or null on legacy profiles"
+        },
+        {
+          "name": "EMBEDDING",
+          "observed_type": "list<number>"
+        },
+        {
+          "name": "ENDPOINT_TYPE",
+          "observed_type": "string"
+        },
+        {
+          "name": "HOSTNAME",
+          "observed_type": "string or null"
+        },
+        {
+          "name": "INTERVAL_CV",
+          "observed_type": "number or null"
+        },
+        {
+          "name": "INTERVAL_MEAN",
+          "observed_type": "number or null"
+        },
+        {
+          "name": "IN_PEERS",
+          "observed_type": "integer"
+        },
+        {
+          "name": "IN_PORTS",
+          "observed_type": "list<integer>"
+        },
+        {
+          "name": "IP_ADDRESS",
+          "observed_type": "string"
+        },
+        {
+          "name": "LOCATION",
+          "observed_type": "string or null"
+        },
+        {
+          "name": "ORGANIZATION",
+          "observed_type": "string or null"
+        },
+        {
+          "name": "OUTLIER",
+          "observed_type": "boolean or absent before ranking"
+        },
+        {
+          "name": "OUT_PEERS",
+          "observed_type": "integer"
+        },
+        {
+          "name": "OUT_PORTS",
+          "observed_type": "list<integer>"
+        },
+        {
+          "name": "PACKETS_IN",
+          "observed_type": "integer"
+        },
+        {
+          "name": "PACKETS_OUT",
+          "observed_type": "integer"
+        },
+        {
+          "name": "PROTOCOLS",
+          "observed_type": "list<string>"
+        },
+        {
+          "name": "TIMESTAMP",
+          "observed_type": "neo4j datetime"
+        }
+      ],
+      "purpose": "One computed IP behavior profile in one capture/session scope."
+    },
+    {
+      "label": "IP_ADDRESS",
+      "logical_identity": [
+        "IP_ADDRESS"
+      ],
+      "properties": [
+        {
+          "name": "COORDINATES",
+          "observed_type": "string"
+        },
+        {
+          "name": "HOSTNAME",
+          "observed_type": "string"
+        },
+        {
+          "name": "IP_ADDRESS",
+          "observed_type": "string"
+        },
+        {
+          "name": "LOCATION",
+          "observed_type": "string"
+        }
+      ],
+      "purpose": "Observed IP address and optional enrichment metadata."
+    },
+    {
+      "label": "ORGANIZATION",
+      "logical_identity": [
+        "ORGANIZATION"
+      ],
+      "properties": [
+        {
+          "name": "ORGANIZATION",
+          "observed_type": "string"
+        }
+      ],
+      "purpose": "IPinfo organization label or the local-host sentinel organization."
+    },
+    {
+      "label": "PACKET",
+      "logical_identity": [],
+      "properties": [
+        {
+          "name": "CAPTURE_ID",
+          "observed_type": "string"
+        },
+        {
+          "name": "DST_IP",
+          "observed_type": "string"
+        },
+        {
+          "name": "DST_PORT",
+          "observed_type": "integer"
+        },
+        {
+          "name": "PAYLOAD",
+          "observed_type": "string or null"
+        },
+        {
+          "name": "PROTOCOL",
+          "observed_type": "string"
+        },
+        {
+          "name": "SIZE",
+          "observed_type": "integer"
+        },
+        {
+          "name": "SRC_IP",
+          "observed_type": "string"
+        },
+        {
+          "name": "SRC_PORT",
+          "observed_type": "integer"
+        },
+        {
+          "name": "TIMESTAMP",
+          "observed_type": "neo4j datetime"
+        }
+      ],
+      "purpose": "Raw packet evidence retained at 5-tuple granularity."
+    },
+    {
+      "label": "PORT",
+      "logical_identity": [
+        "PORT",
+        "IP_ADDRESS"
+      ],
+      "properties": [
+        {
+          "name": "IP_ADDRESS",
+          "observed_type": "string"
+        },
+        {
+          "name": "PORT",
+          "observed_type": "integer"
+        }
+      ],
+      "purpose": "An IP-scoped nonzero transport port observed in packet evidence."
+    }
+  ],
+  "observed_sets": {
+    "labels": [
+      "CAPTURE",
+      "ENDPOINT",
+      "IP_ADDRESS",
+      "ORGANIZATION",
+      "PACKET",
+      "PORT"
+    ],
+    "properties_by_label": {
+      "CAPTURE": [
+        "CAPTURE_ID",
+        "PACKETS",
+        "SOURCE",
+        "STARTED"
+      ],
+      "ENDPOINT": [
+        "BYTES_IN",
+        "BYTES_OUT",
+        "CAPTURE_ID",
+        "EMBEDDING",
+        "ENDPOINT_TYPE",
+        "HOSTNAME",
+        "INTERVAL_CV",
+        "INTERVAL_MEAN",
+        "IN_PEERS",
+        "IN_PORTS",
+        "IP_ADDRESS",
+        "LOCATION",
+        "ORGANIZATION",
+        "OUTLIER",
+        "OUT_PEERS",
+        "OUT_PORTS",
+        "PACKETS_IN",
+        "PACKETS_OUT",
+        "PROTOCOLS",
+        "TIMESTAMP"
+      ],
+      "IP_ADDRESS": [
+        "COORDINATES",
+        "HOSTNAME",
+        "IP_ADDRESS",
+        "LOCATION"
+      ],
+      "ORGANIZATION": [
+        "ORGANIZATION"
+      ],
+      "PACKET": [
+        "CAPTURE_ID",
+        "DST_IP",
+        "DST_PORT",
+        "PAYLOAD",
+        "PROTOCOL",
+        "SIZE",
+        "SRC_IP",
+        "SRC_PORT",
+        "TIMESTAMP"
+      ],
+      "PORT": [
+        "IP_ADDRESS",
+        "PORT"
+      ]
+    },
+    "relationships": [
+      "OWNERSHIP",
+      "PORT",
+      "PROFILE",
+      "RECEIVED",
+      "SENT"
+    ]
+  },
+  "relationships": [
+    {
+      "from": "ORGANIZATION",
+      "properties": [],
+      "purpose": "Associates enriched or local-sentinel organization identity.",
+      "to": "IP_ADDRESS",
+      "type": "OWNERSHIP"
+    },
+    {
+      "from": "IP_ADDRESS",
+      "properties": [],
+      "purpose": "Scopes a materialized nonzero port to an IP address.",
+      "to": "PORT",
+      "type": "PORT"
+    },
+    {
+      "from": "IP_ADDRESS",
+      "properties": [],
+      "purpose": "Connects an IP to each session-scoped behavior profile.",
+      "to": "ENDPOINT",
+      "type": "PROFILE"
+    },
+    {
+      "from": "PACKET",
+      "properties": [],
+      "purpose": "Links a packet to its nonzero destination port.",
+      "to": "PORT",
+      "type": "RECEIVED"
+    },
+    {
+      "from": "PORT",
+      "properties": [],
+      "purpose": "Links a nonzero source port to a packet.",
+      "to": "PACKET",
+      "type": "SENT"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "seed_data": [
+    {
+      "behavior": "MERGE the detected local IP, ORGANIZATION 'YOU ARE HERE', and their OWNERSHIP relationship.",
+      "name": "local-host ownership"
+    }
+  ],
+  "source_queries": [
+    {
+      "access": "write",
+      "function": "register_capture",
+      "labels": [
+        "CAPTURE"
+      ],
+      "normalized_sha256": "07ebea946c7ce1a399fe7474d4502241b1628d03b6252bccaf47189e6091e6dd",
+      "path": "jaws/jaws_capture.py",
+      "query_id": "Q001",
+      "relationships": [],
+      "subject_line": 59
+    },
+    {
+      "access": "write",
+      "function": "finalize_capture",
+      "labels": [
+        "CAPTURE"
+      ],
+      "normalized_sha256": "201b37b14b7d9d8de69db18b78318ef80913afbf77150ac54e44f1d1053e793a",
+      "path": "jaws/jaws_capture.py",
+      "query_id": "Q002",
+      "relationships": [],
+      "subject_line": 69
+    },
+    {
+      "access": "write",
+      "function": "add_packets_to_database",
+      "labels": [
+        "IP_ADDRESS",
+        "PACKET",
+        "PORT"
+      ],
+      "normalized_sha256": "3baf1af216026668d12b039af6a3da35f4ef6ef02e91737206fd52f569102ee5",
+      "path": "jaws/jaws_capture.py",
+      "query_id": "Q003",
+      "relationships": [
+        "PORT",
+        "RECEIVED",
+        "SENT"
+      ],
+      "subject_line": 79
+    },
+    {
+      "access": "read",
+      "function": "fetch_packets",
+      "labels": [
+        "PACKET"
+      ],
+      "normalized_sha256": "054a9afb6652e717406c625704d4bce21ba5b74c5d6fa073397ced2ed93d186d",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q004",
+      "relationships": [],
+      "subject_line": 30
+    },
+    {
+      "access": "read",
+      "function": "resolve_session",
+      "labels": [
+        "CAPTURE"
+      ],
+      "normalized_sha256": "cf309ba3903eed75ef6f907afec41306021210fe28eda4b9d8b4a41650e82d4b",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q005",
+      "relationships": [],
+      "subject_line": 53
+    },
+    {
+      "access": "read",
+      "function": "fetch_ip_metadata",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "64643f123cf1d828aba1bf1441ecb27e60d7f43740b311d18cf924494e25f521",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q006",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 71
+    },
+    {
+      "access": "write",
+      "function": "clear_session_profiles",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "4a7f540fd798a5fed376f27961b713893c58920a26c021518c5bb596f0cdedc9",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q007",
+      "relationships": [],
+      "subject_line": 224
+    },
+    {
+      "access": "read",
+      "function": "prune_profile_sessions",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "dfa99729507ca083a6ba425672020c0b4a5e034da4d504f3c286f18838b4eab7",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q008",
+      "relationships": [],
+      "subject_line": 242
+    },
+    {
+      "access": "write",
+      "function": "prune_profile_sessions",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "eda054e8227d4e348128dac1d9ffbaf80f47cff1796c72bb1a31cdf09c716ab7",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q009",
+      "relationships": [],
+      "subject_line": 247
+    },
+    {
+      "access": "read",
+      "function": "count_profile_sessions",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "0cbf6a761e81f0dc000aa0466c653ec111ee3f00cc3cfd56958cd367a407707e",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q010",
+      "relationships": [],
+      "subject_line": 263
+    },
+    {
+      "access": "write",
+      "function": "add_endpoint_to_database",
+      "labels": [
+        "ENDPOINT",
+        "IP_ADDRESS"
+      ],
+      "normalized_sha256": "4e477a4fa55a2eb25f2628ae7435c9f8dababd089a4ce660d54bcccc9b71128e",
+      "path": "jaws/jaws_compute.py",
+      "query_id": "Q011",
+      "relationships": [
+        "PROFILE"
+      ],
+      "subject_line": 272
+    },
+    {
+      "access": "read",
+      "function": "resolve_profile_scope",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "8107c616c025a02b216ac0db2b97adc2687855ebbf43a3415bd859e6fa8ff236",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q012",
+      "relationships": [],
+      "subject_line": 571
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "3a500280b795517af23a1e82326d722714d6d6c5ba4a6a9f24369acc75f450c3",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q013",
+      "relationships": [],
+      "subject_line": 594
+    },
+    {
+      "access": "read",
+      "function": "fetch_data_for_dbscan",
+      "labels": [
+        "ENDPOINT",
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "0f43e7444ab6a2af845dcd550a907a59ac419934b95a34a507d76b1d399f535b",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q014",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 654
+    },
+    {
+      "access": "read",
+      "function": "fetch_data_for_portsize",
+      "labels": [
+        "PACKET",
+        "PORT"
+      ],
+      "normalized_sha256": "3d2748063b31f80b4f2a58a1f63bd1b0d7d147936d630c9f5566b49f06d75c2c",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q015",
+      "relationships": [
+        "RECEIVED",
+        "SENT"
+      ],
+      "subject_line": 721
+    },
+    {
+      "access": "read",
+      "function": "fetch_host_outbound",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "a18eb3924161d05503f60974a35c9c5f1d9133e352aee53b4551f7e4925510a2",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q016",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 745
+    },
+    {
+      "access": "read",
+      "function": "fetch_host_outbound",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION",
+        "PACKET"
+      ],
+      "normalized_sha256": "0a2756c96e402a00da4953678e4c535c76c2355ba401e39a171cc43da0eb878e",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q017",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 751
+    },
+    {
+      "access": "write",
+      "function": "add_outlier_to_database",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "68d61b75f8959f5853cb6ebe4f206d74ff2f75381db85a087af5cdaafe3785a1",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q018",
+      "relationships": [],
+      "subject_line": 791
+    },
+    {
+      "access": "write",
+      "function": "add_outlier_to_database",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "5f8aea2a83238252775c3961c29d0a46c38c08926d763ab10a88a6e71a654e6b",
+      "path": "jaws/jaws_finder.py",
+      "query_id": "Q019",
+      "relationships": [],
+      "subject_line": 797
+    },
+    {
+      "access": "read",
+      "function": "fetch_data_for_organization",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "bab28112c779fd8330e66980b29efec8343c7612c5e4d3bf21bd068cfbb2d322",
+      "path": "jaws/jaws_ipinfo.py",
+      "query_id": "Q020",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 26
+    },
+    {
+      "access": "read",
+      "function": "fetch_total_addresses",
+      "labels": [
+        "IP_ADDRESS"
+      ],
+      "normalized_sha256": "5c3f8090cd8e3e3fdebaf7d320b71e609db65ebb76bc3af0249311de084e69e3",
+      "path": "jaws/jaws_ipinfo.py",
+      "query_id": "Q021",
+      "relationships": [],
+      "subject_line": 37
+    },
+    {
+      "access": "read",
+      "function": "cleanup_legacy_unknown",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "eb6fd50e9f1984642fb690692d3ff81d47847e1f522635a3ee8f557dca43c9c2",
+      "path": "jaws/jaws_ipinfo.py",
+      "query_id": "Q022",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 51
+    },
+    {
+      "access": "write",
+      "function": "cleanup_legacy_unknown",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "855741b56bbf59eddc75468567bfab04b726fcb028a6e24d35f3a126d0c0470a",
+      "path": "jaws/jaws_ipinfo.py",
+      "query_id": "Q023",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 55
+    },
+    {
+      "access": "write",
+      "function": "add_organization_to_database",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "8c1b1cddc4061609ce9b3b91f1a25dc2dfb0873796da55d48b44c0a01d267797",
+      "path": "jaws/jaws_ipinfo.py",
+      "query_id": "Q024",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 84
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "IP_ADDRESS"
+      ],
+      "normalized_sha256": "7ee72f8009bea282aefb79f5d9395bd2b48ad1da1b4f98ad6b5041f1de2a2280",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q025",
+      "relationships": [],
+      "subject_line": 191
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "PACKET"
+      ],
+      "normalized_sha256": "bcfb6142530bad8cf24263a562bdff5a5ea7dfaf53311900b18e9bf2f663e411",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q026",
+      "relationships": [],
+      "subject_line": 198
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "PORT"
+      ],
+      "normalized_sha256": "dae0b7b648182d87bafb760300cb70eaeba24e031c471aa51909c5d4a07995d5",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q027",
+      "relationships": [],
+      "subject_line": 205
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "c22b7f4f023e2729e733d1541b6d359c39310dd97c3d43d08eb7793eb05a00e9",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q028",
+      "relationships": [],
+      "subject_line": 212
+    },
+    {
+      "access": "write",
+      "function": "initialize_schema",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "5f915c6e8cfa498b64b0c6d2c0f11a2a363909c670dabb4068b933a8c4820f55",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q029",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 218
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "ddc03e29d9be3ab71f6d2ac94f24db2c05ffab1f3d76ebe5df9bfdc7754dfdc9",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q030",
+      "relationships": [],
+      "subject_line": 226
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "ca52bed91210fc21e732f35561e19a44b3e1836b01772b200df83f9d9d874cd9",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q031",
+      "relationships": [],
+      "subject_line": 237
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "CAPTURE"
+      ],
+      "normalized_sha256": "cf36ab6edcd3b58b995edcc5145fd484c995bf5dc9f5504fc664e485318848f9",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q032",
+      "relationships": [],
+      "subject_line": 244
+    },
+    {
+      "access": "schema",
+      "function": "initialize_schema",
+      "labels": [
+        "PACKET"
+      ],
+      "normalized_sha256": "657558f30208d7f2ec74565d4e80a08e1b53c926376cbd171968f8f4abb7e5ac",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q033",
+      "relationships": [],
+      "subject_line": 251
+    },
+    {
+      "access": "read",
+      "function": "drop_database",
+      "labels": [],
+      "normalized_sha256": "82ec7d1e270cf570728bddd21870fe69b9b9277a47dac67aab2faa98be5d316a",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q034",
+      "relationships": [],
+      "subject_line": 273
+    },
+    {
+      "access": "write",
+      "function": "drop_database",
+      "labels": [],
+      "normalized_sha256": "fe663da50b2e5f12c4b456d8e9c7c6f5789e37507e2c78015a38e32cf6ed4182",
+      "path": "jaws/jaws_utils.py",
+      "query_id": "Q035",
+      "relationships": [],
+      "subject_line": 282
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "CAPTURE"
+      ],
+      "normalized_sha256": "1cc1f3ec67c73dadb89eaf0cce81436ecdd370096b3d6b4d6f33042b813da7bb",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q036",
+      "relationships": [],
+      "subject_line": 154
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "9f516c000882c1b8c164160a9a185f0d1258e16623329f75d06b79d6b760a5c6",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q037",
+      "relationships": [],
+      "subject_line": 164
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "7775eaf347f056080cbb59b7445c1e894e2953667ac88a7f64a2d0b09e7b9937",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q038",
+      "relationships": [],
+      "subject_line": 320
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT",
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "c808969a82a7dedf89c8c5a82719ddee43f6026aaf25c3935fbb3fcfbc5720c6",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q039",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 331
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT",
+        "IP_ADDRESS",
+        "ORGANIZATION"
+      ],
+      "normalized_sha256": "ff183d4df5ba26cfbd5bea77c4225858435c27310e3ad945b33ef070965cd1ff",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q040",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 406
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "ENDPOINT"
+      ],
+      "normalized_sha256": "60bc116ecbfc4d127adafa87ff2286a97d958988790d12e66dd055878f2d0eb0",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q041",
+      "relationships": [],
+      "subject_line": 438
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "PACKET"
+      ],
+      "normalized_sha256": "3e59413d2521199e0ffce0a7db1aa380c49779e45e26ecdc9b25185b8d346216",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q042",
+      "relationships": [],
+      "subject_line": 459
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "IP_ADDRESS",
+        "ORGANIZATION",
+        "PACKET"
+      ],
+      "normalized_sha256": "f0cddb64a0b1f7006259178b8176d4267a9083fd71424afd08e6707d67cd8689",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q043",
+      "relationships": [
+        "OWNERSHIP"
+      ],
+      "subject_line": 477
+    },
+    {
+      "access": "read",
+      "function": "<module>",
+      "labels": [
+        "PACKET"
+      ],
+      "normalized_sha256": "a9cd563d0d6fdd35e86cca048189461f99c11a81bad0d2e3b3f5eed0100b8506",
+      "path": "jaws_mcp/server.py",
+      "query_id": "Q044",
+      "relationships": [],
+      "subject_line": 509
+    }
+  ],
+  "statistics": {
+    "constraints": 3,
+    "cypher_source_locations": 44,
+    "indexes": 5,
+    "labels": 6,
+    "node_properties": 40,
+    "relationship_properties": 0,
+    "relationship_types": 5
+  },
+  "subject": {
+    "revision": "0b68a8c1ed615c96355989702126de623c78a714",
+    "source_files": [
+      {
+        "path": "jaws/jaws_capture.py",
+        "sha256": "ef36bc73202220ed09887e9ae6b8c9b94afb099f7416d9fb9ff29e9f3d533c76"
+      },
+      {
+        "path": "jaws/jaws_compute.py",
+        "sha256": "7a17a431dbd9eb27c9687375306b9784c83d29b1b9f1839c5e850701bb4d48fe"
+      },
+      {
+        "path": "jaws/jaws_finder.py",
+        "sha256": "fd46d4b6c7cc6513e76cc4b8b0c126468930f3fa6a027fabe74471fc39d8cb72"
+      },
+      {
+        "path": "jaws/jaws_ipinfo.py",
+        "sha256": "7074a6b821b5d081e4905809c906dd31c3d17c593e1d56fddf178924c3da2b63"
+      },
+      {
+        "path": "jaws/jaws_utils.py",
+        "sha256": "f352389ee10636ae1bafc8ed5fde621c9de9d2af2d2f2dd84f9e420ce92079ee"
+      },
+      {
+        "path": "jaws_mcp/server.py",
+        "sha256": "f5470a3e0ae48cf7f51ee11f5ab8a21b9233426c08b3b79e0d4b66d123894367"
+      }
+    ]
+  }
+}

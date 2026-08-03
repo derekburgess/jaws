@@ -2,10 +2,28 @@
   "artifact_kind": "manifest",
   "artifacts": [
     {
-      "media_type": "application/json",
-      "path": "manifest.json",
+      "media_type": "text/plain",
+      "path": "checksums.sha256",
       "required": true,
-      "role": "manifest"
+      "role": "checksums"
+    },
+    {
+      "media_type": "text/markdown",
+      "path": "compatibility/README.md",
+      "required": true,
+      "role": "report"
+    },
+    {
+      "media_type": "application/json",
+      "path": "compatibility/cli-contract.json",
+      "required": true,
+      "role": "report"
+    },
+    {
+      "media_type": "application/json",
+      "path": "compatibility/neo4j-schema.json",
+      "required": true,
+      "role": "report"
     },
     {
       "media_type": "application/json",
@@ -15,27 +33,9 @@
     },
     {
       "media_type": "application/json",
-      "path": "scenarios.json",
-      "required": true,
-      "role": "scenario_catalog"
-    },
-    {
-      "media_type": "application/json",
-      "path": "run.json",
-      "required": true,
-      "role": "run"
-    },
-    {
-      "media_type": "application/json",
       "path": "environment.json",
       "required": true,
       "role": "environment"
-    },
-    {
-      "media_type": "application/x-ndjson",
-      "path": "rankings.jsonl",
-      "required": true,
-      "role": "rankings"
     },
     {
       "media_type": "application/json",
@@ -51,15 +51,27 @@
     },
     {
       "media_type": "text/plain",
+      "path": "logs/collector.stderr.log",
+      "required": true,
+      "role": "stderr"
+    },
+    {
+      "media_type": "text/plain",
       "path": "logs/collector.stdout.log",
       "required": true,
       "role": "stdout"
     },
     {
-      "media_type": "text/plain",
-      "path": "logs/collector.stderr.log",
+      "media_type": "application/json",
+      "path": "manifest.json",
       "required": true,
-      "role": "stderr"
+      "role": "manifest"
+    },
+    {
+      "media_type": "application/x-ndjson",
+      "path": "rankings.jsonl",
+      "required": true,
+      "role": "rankings"
     },
     {
       "media_type": "text/markdown",
@@ -68,16 +80,16 @@
       "role": "report"
     },
     {
-      "media_type": "text/plain",
-      "path": "checksums.sha256",
+      "media_type": "application/json",
+      "path": "run.json",
       "required": true,
-      "role": "checksums"
+      "role": "run"
     },
     {
-      "media_type": "application/schema+json",
-      "path": "schemas/manifest.schema.json",
+      "media_type": "application/json",
+      "path": "scenarios.json",
       "required": true,
-      "role": "schema"
+      "role": "scenario_catalog"
     },
     {
       "media_type": "application/schema+json",
@@ -87,25 +99,7 @@
     },
     {
       "media_type": "application/schema+json",
-      "path": "schemas/scenario.schema.json",
-      "required": true,
-      "role": "schema"
-    },
-    {
-      "media_type": "application/schema+json",
-      "path": "schemas/run.schema.json",
-      "required": true,
-      "role": "schema"
-    },
-    {
-      "media_type": "application/schema+json",
       "path": "schemas/environment.schema.json",
-      "required": true,
-      "role": "schema"
-    },
-    {
-      "media_type": "application/schema+json",
-      "path": "schemas/ranking.schema.json",
       "required": true,
       "role": "schema"
     },
@@ -118,6 +112,30 @@
     {
       "media_type": "application/schema+json",
       "path": "schemas/known-failures.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/manifest.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/ranking.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/run.schema.json",
+      "required": true,
+      "role": "schema"
+    },
+    {
+      "media_type": "application/schema+json",
+      "path": "schemas/scenario.schema.json",
       "required": true,
       "role": "schema"
     }

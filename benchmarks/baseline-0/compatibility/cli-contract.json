@@ -1,0 +1,426 @@
+{
+  "artifact_kind": "cli_contract",
+  "benchmark_id": "baseline-0",
+  "cases": [
+    {
+      "argv": [
+        "jaws-capture",
+        "--list"
+      ],
+      "case_id": "capture-list-success",
+      "category": "success",
+      "description": "List active capture interfaces without touching Neo4j.",
+      "entry_point": "jaws-capture",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "interfaces": [
+          "en0",
+          "eth0"
+        ],
+        "ok": true
+      },
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\n  \"ok\": true,\n  \"interfaces\": [\n    \"en0\",\n    \"eth0\"\n  ]\n}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "173506b6d9cd7ccecb5a02d72ce0f71bc15d4583a55a8275fbb6705099cf60c4"
+    },
+    {
+      "argv": [
+        "jaws-compute",
+        "--api",
+        "openai",
+        "--database",
+        "fixtures",
+        "--session",
+        "latest"
+      ],
+      "case_id": "compute-success",
+      "category": "success",
+      "description": "Profile one capture session and emit the complete success envelope.",
+      "entry_point": "jaws-compute",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "api": "openai",
+        "database": "fixtures",
+        "endpoints_embedded": 2,
+        "model": "text-embedding-3-large",
+        "ok": true,
+        "packets": 3,
+        "profiled_sessions": 2,
+        "profiles_pruned": 0,
+        "session": "20260102T000000Z",
+        "sessions_in_graph": 2
+      },
+      "stderr": "[CONFIG] Profiling session: 20260102T000000Z (2 session(s) in graph)\n[CONFIG] Embedding 2 endpoint profiles using: text-embedding-3-large\n",
+      "stderr_sha256": "ac5682e42ebad0ebd2aa31baca88f01ff75e7a1d206be7a1e9da73082c7221e2",
+      "stdout": "{\n  \"ok\": true,\n  \"database\": \"fixtures\",\n  \"api\": \"openai\",\n  \"model\": \"text-embedding-3-large\",\n  \"session\": \"20260102T000000Z\",\n  \"sessions_in_graph\": 2,\n  \"endpoints_embedded\": 2,\n  \"packets\": 3,\n  \"profiled_sessions\": 2,\n  \"profiles_pruned\": 0\n}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "236a99a3f8ab4770329da96cfbcfe04f60b6f1009d8c9d21ace6e5c84fb7fc67"
+    },
+    {
+      "argv": [
+        "jaws-finder",
+        "--database",
+        "fixtures",
+        "--session",
+        "latest",
+        "--eps",
+        "0.5"
+      ],
+      "case_id": "rank-success",
+      "category": "success",
+      "description": "Rank endpoint and host-outbound surfaces and emit the complete success envelope.",
+      "entry_point": "jaws-finder",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "baseline": {
+          "description": "Not applied — every score here is peer-relative. 1 profiled session(s) precede this one, and no endpoint appeared in the 2 required to form a baseline. Run more capture -> compute -> detect cycles: once the same IPs recur, they are scored against their own history instead.",
+          "enabled": false,
+          "endpoints_baselined": 0,
+          "exempt_features": [
+            "interval_cv",
+            "interval_mean"
+          ],
+          "first_seen": [
+            "4.2.2.2",
+            "9.9.9.9",
+            "1.1.1.1",
+            "8.8.8.8"
+          ],
+          "history_sessions": 1,
+          "min_sessions": 2
+        },
+        "cluster_sizes": [
+          3
+        ],
+        "clusters": 1,
+        "components": 2,
+        "endpoints": [
+          {
+            "anomaly_score": 8.5,
+            "baseline_sessions": 0,
+            "first_seen": true,
+            "ip_address": "4.2.2.2",
+            "is_outlier": true,
+            "reasons": [
+              {
+                "baseline": 1000.0,
+                "compared_to": "peer endpoints",
+                "direction": "high",
+                "feature": "bytes_in",
+                "host_relative": "traffic sent by the host to this remote endpoint",
+                "robust_z": 4.0,
+                "unit": "bytes",
+                "value": 2000.0
+              }
+            ]
+          },
+          {
+            "anomaly_score": 4.0,
+            "baseline_sessions": 0,
+            "first_seen": true,
+            "ip_address": "9.9.9.9",
+            "is_outlier": false,
+            "reasons": []
+          },
+          {
+            "anomaly_score": 2.0,
+            "baseline_sessions": 0,
+            "first_seen": true,
+            "ip_address": "1.1.1.1",
+            "is_outlier": false,
+            "reasons": []
+          },
+          {
+            "anomaly_score": 1.0,
+            "baseline_sessions": 0,
+            "first_seen": true,
+            "ip_address": "8.8.8.8",
+            "is_outlier": false,
+            "reasons": []
+          }
+        ],
+        "endpoints_clustered": 4,
+        "eps": 0.5,
+        "eps_source": "override",
+        "excluded_local": 1,
+        "excluded_non_conversational": {
+          "count": 0,
+          "endpoints": []
+        },
+        "feature_weight": 1.0,
+        "host_outbound": {
+          "destinations": [
+            {
+              "bytes_per_packet": 196.0784,
+              "download_bytes": 100,
+              "download_packets": 2,
+              "hostname": "dns.google",
+              "ip_address": "8.8.8.8",
+              "is_flagged": true,
+              "location": "United States",
+              "org": "AS15169 Google LLC",
+              "outbound_score": 7.25,
+              "reasons": [
+                {
+                  "baseline": 1.0,
+                  "compared_to": "host outbound destinations",
+                  "direction": "high",
+                  "feature": "upload_download_ratio",
+                  "host_relative": "host upload divided by download from this destination",
+                  "robust_z": 6.0,
+                  "unit": "ratio",
+                  "value": 49.505
+                }
+              ],
+              "upload_bytes": 5000,
+              "upload_download_ratio": 49.505,
+              "upload_packets": 25
+            },
+            {
+              "bytes_per_packet": 99.9334,
+              "download_bytes": 1000,
+              "download_packets": 10,
+              "hostname": "one.one.one.one",
+              "ip_address": "1.1.1.1",
+              "is_flagged": false,
+              "location": "United States",
+              "org": "AS13335 Cloudflare, Inc.",
+              "outbound_score": 1.0,
+              "reasons": [],
+              "upload_bytes": 500,
+              "upload_download_ratio": 0.4995,
+              "upload_packets": 5
+            }
+          ],
+          "destinations_ranked": 2,
+          "excluded_non_conversational": 0,
+          "flagged": 1,
+          "local_ips": [
+            "10.0.0.2"
+          ],
+          "note": "Outbound FROM the capture host, per destination, isolated from raw packets (host as source, so upload_bytes is host→peer, not the peer's total inbound). `outbound_score` ranks destinations on the host-upload distribution; upload_download_ratio high = exfil-shaped (host sent far more than it received). Rows with `is_flagged` true are the `flagged` count. Use this, not the download-dominated `endpoints` ranking, to judge host exfil/beaconing.",
+          "units": {
+            "upload_bytes": "bytes",
+            "upload_download_ratio": "ratio",
+            "upload_packets": "packets"
+          }
+        },
+        "knee_index": null,
+        "min_samples": 4,
+        "ok": true,
+        "outliers_flagged": 1,
+        "pca_variance": [
+          0.7,
+          0.2
+        ],
+        "pca_variance_total": 0.9,
+        "perspective": "Endpoint counts are from the endpoint's own perspective. Scored endpoints are remote (capture host excluded by default): bytes_out/packets_out = traffic the remote IP sent to the host (host download); bytes_in/packets_in = traffic the host sent to it (outbound from host). See each reason's host_relative field. The host_outbound section re-frames the same capture from the host's perspective.",
+        "profiled_sessions": [
+          "20260102T000000Z",
+          "20260101T000000Z"
+        ],
+        "reason_z_threshold": 2.5,
+        "scoring": "anomaly_score = L2 norm of the 3 largest |robust-z| components. 'Low' deviations (quieter than the pack) are weighted 0.5 and capped at 3.0 each, so a silent endpoint can never outrank a genuine spike — except interval_cv, where low = beacon-regular and keeps full weight. interval_mean is capped at 3.0 in BOTH directions: cadence is context, not signal (interval_cv carries the beacon indicator). Timing is measured on the endpoint's more regular single direction (a combined stream's request/response pairing forces CV toward 1.0 and hides real beacons); it contributes 0 to the score for endpoints with fewer than 6 packets in each direction (their interval fields read null). Reasons cite unweighted robust-z in both directions.",
+        "session": "20260102T000000Z",
+        "units": {
+          "bytes_in": "bytes",
+          "bytes_out": "bytes",
+          "bytes_out_in_ratio": "ratio",
+          "bytes_per_packet": "bytes/packet",
+          "bytes_per_peer": "bytes/peer",
+          "in_peers": "peers",
+          "interval_cv": "ratio",
+          "interval_mean": "seconds",
+          "out_peers": "peers",
+          "packets_in": "packets",
+          "packets_out": "packets",
+          "packets_out_in_ratio": "ratio"
+        }
+      },
+      "stderr": "[CONFIG] Analyzing profile session: 20260102T000000Z (2 profiled session(s) in graph)\n[CONFIG] Excluding the local host ('YOU ARE HERE') from clustering. Pass --include-local to include it.\n[INFO] Reducing 4 endpoint embeddings to 2 PCA dimensions, blended with 12 behavioral features (counts, shape ratios & timing; weight 1.0).\n[INFO] PCA explained variance ratio: PC1 70.00%, PC2 20.00% (total 90.00% of variance retained in 2 dimensions).\n[INFO] Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN.\n[INFO] Using Kneed to recommend EPS.\nKneed is a library that helps us find the knee point in the K-Distance plot.\n[CONFIG] Using provided EPS: 0.5\n",
+      "stderr_sha256": "acbfedc1ce01696196855cfdd400df759b10d8472c93e5c45dbe2a936caa878c",
+      "stdout": "{\n  \"ok\": true,\n  \"endpoints_clustered\": 4,\n  \"outliers_flagged\": 1,\n  \"clusters\": 1,\n  \"cluster_sizes\": [\n    3\n  ],\n  \"session\": \"20260102T000000Z\",\n  \"profiled_sessions\": [\n    \"20260102T000000Z\",\n    \"20260101T000000Z\"\n  ],\n  \"baseline\": {\n    \"enabled\": false,\n    \"min_sessions\": 2,\n    \"history_sessions\": 1,\n    \"endpoints_baselined\": 0,\n    \"first_seen\": [\n      \"4.2.2.2\",\n      \"9.9.9.9\",\n      \"1.1.1.1\",\n      \"8.8.8.8\"\n    ],\n    \"exempt_features\": [\n      \"interval_cv\",\n      \"interval_mean\"\n    ],\n    \"description\": \"Not applied \\u2014 every score here is peer-relative. 1 profiled session(s) precede this one, and no endpoint appeared in the 2 required to form a baseline. Run more capture -> compute -> detect cycles: once the same IPs recur, they are scored against their own history instead.\"\n  },\n  \"excluded_local\": 1,\n  \"eps\": 0.5,\n  \"eps_source\": \"override\",\n  \"knee_index\": null,\n  \"min_samples\": 4,\n  \"components\": 2,\n  \"feature_weight\": 1.0,\n  \"pca_variance\": [\n    0.7,\n    0.2\n  ],\n  \"pca_variance_total\": 0.9,\n  \"units\": {\n    \"bytes_out\": \"bytes\",\n    \"bytes_in\": \"bytes\",\n    \"packets_out\": \"packets\",\n    \"packets_in\": \"packets\",\n    \"out_peers\": \"peers\",\n    \"in_peers\": \"peers\",\n    \"bytes_out_in_ratio\": \"ratio\",\n    \"packets_out_in_ratio\": \"ratio\",\n    \"bytes_per_packet\": \"bytes/packet\",\n    \"bytes_per_peer\": \"bytes/peer\",\n    \"interval_mean\": \"seconds\",\n    \"interval_cv\": \"ratio\"\n  },\n  \"reason_z_threshold\": 2.5,\n  \"scoring\": \"anomaly_score = L2 norm of the 3 largest |robust-z| components. 'Low' deviations (quieter than the pack) are weighted 0.5 and capped at 3.0 each, so a silent endpoint can never outrank a genuine spike \\u2014 except interval_cv, where low = beacon-regular and keeps full weight. interval_mean is capped at 3.0 in BOTH directions: cadence is context, not signal (interval_cv carries the beacon indicator). Timing is measured on the endpoint's more regular single direction (a combined stream's request/response pairing forces CV toward 1.0 and hides real beacons); it contributes 0 to the score for endpoints with fewer than 6 packets in each direction (their interval fields read null). Reasons cite unweighted robust-z in both directions.\",\n  \"excluded_non_conversational\": {\n    \"count\": 0,\n    \"endpoints\": []\n  },\n  \"perspective\": \"Endpoint counts are from the endpoint's own perspective. Scored endpoints are remote (capture host excluded by default): bytes_out/packets_out = traffic the remote IP sent to the host (host download); bytes_in/packets_in = traffic the host sent to it (outbound from host). See each reason's host_relative field. The host_outbound section re-frames the same capture from the host's perspective.\",\n  \"endpoints\": [\n    {\n      \"ip_address\": \"4.2.2.2\",\n      \"anomaly_score\": 8.5,\n      \"is_outlier\": true,\n      \"baseline_sessions\": 0,\n      \"first_seen\": true,\n      \"reasons\": [\n        {\n          \"feature\": \"bytes_in\",\n          \"value\": 2000.0,\n          \"unit\": \"bytes\",\n          \"robust_z\": 4.0,\n          \"direction\": \"high\",\n          \"compared_to\": \"peer endpoints\",\n          \"baseline\": 1000.0,\n          \"host_relative\": \"traffic sent by the host to this remote endpoint\"\n        }\n      ]\n    },\n    {\n      \"ip_address\": \"9.9.9.9\",\n      \"anomaly_score\": 4.0,\n      \"is_outlier\": false,\n      \"baseline_sessions\": 0,\n      \"first_seen\": true,\n      \"reasons\": []\n    },\n    {\n      \"ip_address\": \"1.1.1.1\",\n      \"anomaly_score\": 2.0,\n      \"is_outlier\": false,\n      \"baseline_sessions\": 0,\n      \"first_seen\": true,\n      \"reasons\": []\n    },\n    {\n      \"ip_address\": \"8.8.8.8\",\n      \"anomaly_score\": 1.0,\n      \"is_outlier\": false,\n      \"baseline_sessions\": 0,\n      \"first_seen\": true,\n      \"reasons\": []\n    }\n  ],\n  \"host_outbound\": {\n    \"local_ips\": [\n      \"10.0.0.2\"\n    ],\n    \"destinations_ranked\": 2,\n    \"flagged\": 1,\n    \"excluded_non_conversational\": 0,\n    \"units\": {\n      \"upload_bytes\": \"bytes\",\n      \"upload_packets\": \"packets\",\n      \"upload_download_ratio\": \"ratio\"\n    },\n    \"note\": \"Outbound FROM the capture host, per destination, isolated from raw packets (host as source, so upload_bytes is host\\u2192peer, not the peer's total inbound). `outbound_score` ranks destinations on the host-upload distribution; upload_download_ratio high = exfil-shaped (host sent far more than it received). Rows with `is_flagged` true are the `flagged` count. Use this, not the download-dominated `endpoints` ranking, to judge host exfil/beaconing.\",\n    \"destinations\": [\n      {\n        \"ip_address\": \"8.8.8.8\",\n        \"org\": \"AS15169 Google LLC\",\n        \"hostname\": \"dns.google\",\n        \"location\": \"United States\",\n        \"upload_bytes\": 5000,\n        \"upload_packets\": 25,\n        \"download_bytes\": 100,\n        \"download_packets\": 2,\n        \"upload_download_ratio\": 49.505,\n        \"bytes_per_packet\": 196.0784,\n        \"outbound_score\": 7.25,\n        \"is_flagged\": true,\n        \"reasons\": [\n          {\n            \"feature\": \"upload_download_ratio\",\n            \"value\": 49.505,\n            \"unit\": \"ratio\",\n            \"robust_z\": 6.0,\n            \"direction\": \"high\",\n            \"compared_to\": \"host outbound destinations\",\n            \"baseline\": 1.0,\n            \"host_relative\": \"host upload divided by download from this destination\"\n          }\n        ]\n      },\n      {\n        \"ip_address\": \"1.1.1.1\",\n        \"org\": \"AS13335 Cloudflare, Inc.\",\n        \"hostname\": \"one.one.one.one\",\n        \"location\": \"United States\",\n        \"upload_bytes\": 500,\n        \"upload_packets\": 5,\n        \"download_bytes\": 1000,\n        \"download_packets\": 10,\n        \"upload_download_ratio\": 0.4995,\n        \"bytes_per_packet\": 99.9334,\n        \"outbound_score\": 1.0,\n        \"is_flagged\": false,\n        \"reasons\": []\n      }\n    ]\n  }\n}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "7cf936c5ed426323312b6a8516afac2199161e5d8e36f1f673c5312c29b3ca8a"
+    },
+    {
+      "argv": [
+        "jaws-compute",
+        "--database",
+        "fixtures",
+        "--session",
+        "missing"
+      ],
+      "case_id": "compute-unknown-session",
+      "category": "handled_error",
+      "description": "Reject a requested capture session that does not exist.",
+      "entry_point": "jaws-compute",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "error": "session 'missing' not found; available: ['20260102T000000Z']",
+        "ok": false
+      },
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"ok\": false, \"error\": \"session 'missing' not found; available: ['20260102T000000Z']\"}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "2ff0f82d2a681b4455cf0df66778630d02e0a676c623ffc69fde8d0e8812d272"
+    },
+    {
+      "argv": [
+        "jaws-capture",
+        "--file",
+        "/fixtures/missing.pcap",
+        "--database",
+        "fixtures"
+      ],
+      "case_id": "capture-missing-file",
+      "category": "handled_error",
+      "description": "Reject a PCAP path that is not present after connecting.",
+      "entry_point": "jaws-capture",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "error": "File not found, please check your file path:\n/fixtures/missing.pcap",
+        "ok": false
+      },
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"ok\": false, \"error\": \"File not found, please check your file path:\\n/fixtures/missing.pcap\"}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "ce0716d8cc3e5279f6d559aec58431e60291efa05ff038d512d6d3fb58912ba1"
+    },
+    {
+      "argv": [
+        "jaws-compute",
+        "--database",
+        "fixtures"
+      ],
+      "case_id": "compute-neo4j-unavailable",
+      "category": "handled_error",
+      "description": "Surface a database configuration/runtime failure as JSON.",
+      "entry_point": "jaws-compute",
+      "exit_code": 0,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": {
+        "error": "Could not connect to Neo4j (fixture: NEO4J_PASSWORD is not set).",
+        "ok": false
+      },
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"ok\": false, \"error\": \"Could not connect to Neo4j (fixture: NEO4J_PASSWORD is not set).\"}\n",
+      "stdout_kind": "json_envelope",
+      "stdout_sha256": "d1eaf5142910902ed2627593c55ad0e4ad01ffb241f5c57a8ed2e309cb02fc6b"
+    },
+    {
+      "argv": [
+        "jaws-capture",
+        "--duration",
+        "not-an-integer"
+      ],
+      "case_id": "capture-invalid-duration",
+      "category": "argument_error",
+      "description": "Let argparse reject an invalid integer before Reporter exists.",
+      "entry_point": "jaws-capture",
+      "exit_code": 2,
+      "fixture_mode": "in-process main() with deterministic patched boundaries",
+      "parsed_stdout": null,
+      "stderr": "usage: jaws-capture [-h] [--interface INTERFACE] [--file CAPTURE_FILE]\n                    [--duration DURATION] [--database DATABASE] [--list]\njaws-capture: error: argument --duration: invalid int value: 'not-an-integer'\n",
+      "stderr_sha256": "2d9b37c6e4704b8e9d18b7dddf38a796698f08b54f5b49713dd0129441a6da7b",
+      "stdout": "",
+      "stdout_kind": "no_stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "collector": {
+    "revision": "8679f23c4b536f61961000b8f60406fd9ac3f5c2",
+    "source_paths": [
+      "tests/harness/compatibility_contract.py"
+    ],
+    "source_sha256": "4e8e759aeb8c6a3313d0f2f8cf6b02c1712ee62d2fb0c254791f72f02083f750",
+    "working_tree_dirty": false
+  },
+  "conventions": {
+    "exit_status": "Recorded observationally; Benchmark 0 does not normalize or repair it.",
+    "handled_error_envelope": {
+      "ok": false,
+      "required": [
+        "ok",
+        "error"
+      ]
+    },
+    "progress_stream": "stderr in agent mode",
+    "stdout_json_documents": "exactly one for Reporter result/error paths",
+    "success_envelope": {
+      "ok": true,
+      "required": [
+        "ok"
+      ]
+    }
+  },
+  "observations": [
+    {
+      "observation_id": "CLI-B0-001",
+      "summary": "Reporter success paths emit one JSON object with ok=true."
+    },
+    {
+      "observation_id": "CLI-B0-002",
+      "summary": "Handled application/configuration failures emit ok=false JSON but currently return process exit status 0."
+    },
+    {
+      "observation_id": "CLI-B0-003",
+      "summary": "argparse validation bypasses Reporter: it emits usage/error text on stderr, no JSON on stdout, and exits 2."
+    },
+    {
+      "observation_id": "CLI-B0-004",
+      "summary": "Agent-mode progress narration is stderr-only; the final JSON stdout remains parseable as one document."
+    }
+  ],
+  "schema_version": "1.0.0",
+  "subject": {
+    "revision": "0b68a8c1ed615c96355989702126de623c78a714",
+    "source_files": [
+      {
+        "path": "jaws/config.py",
+        "sha256": "2d7d048893e2e5973ee78605689eb7cbd6cffe957ef122834b5e87ad812b1d83"
+      },
+      {
+        "path": "jaws/jaws_utils.py",
+        "sha256": "f352389ee10636ae1bafc8ed5fde621c9de9d2af2d2f2dd84f9e420ce92079ee"
+      },
+      {
+        "path": "jaws/jaws_capture.py",
+        "sha256": "ef36bc73202220ed09887e9ae6b8c9b94afb099f7416d9fb9ff29e9f3d533c76"
+      },
+      {
+        "path": "jaws/jaws_compute.py",
+        "sha256": "7a17a431dbd9eb27c9687375306b9784c83d29b1b9f1839c5e850701bb4d48fe"
+      },
+      {
+        "path": "jaws/jaws_finder.py",
+        "sha256": "fd46d4b6c7cc6513e76cc4b8b0c126468930f3fa6a027fabe74471fc39d8cb72"
+      }
+    ]
+  },
+  "surface": {
+    "invocation": "Each entry-point main() is called with deterministic patched network, database, model, plotting, and packet boundaries; stdout, stderr, and SystemExit are captured exactly.",
+    "mode": "agent",
+    "scope": [
+      "capture interface listing",
+      "profile computation",
+      "endpoint ranking",
+      "host-outbound ranking",
+      "missing session",
+      "missing PCAP",
+      "Neo4j unavailable",
+      "argument validation"
+    ],
+    "selection": "Reporter(agent=True), matching non-TTY subprocess capture used by MCP"
+  }
+}
