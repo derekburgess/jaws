@@ -23,11 +23,11 @@ JAWS separates four ideas that anomaly systems often blur together:
 | Ranking | What makes an observation interesting? | Behavioral distance, novelty, cadence, fan-out, upload ratio, cluster isolation |
 | Evaluation | Was the ranking useful? | Recall@k, reciprocal rank, benign burden, stability, runtime, cost |
 
-The current analytical entity is an **endpoint profile**: one IP address, viewed during one capture session, with its inbound and outbound behavior aggregated into numeric features and a textual representation. The longer-term unit of reproducibility is the **experiment**, which will bind an observation window, entity definition, representation, reference population, ranker, parameters, software version, results, and evaluation artifacts into one immutable record.
+The primary unit of reproducibility is the **experiment**. Each experiment binds an observation window, entity definition, representation, reference population, ranker, parameters, software version, results, and evaluation artifacts into one immutable record. An **endpoint profile**—one IP address viewed during one capture session, with its inbound and outbound behavior aggregated into numeric features and a textual representation—is one analytical entity an experiment can rank.
 
 ### Orient → Hypothesize → Experiment → Observe
 
-JAWS is being organized around a repeatable research loop:
+JAWS follows a repeatable research loop:
 
 1. **Orient** — inspect available captures, endpoint history, prior results, labels, and benchmark performance.
 2. **Hypothesize** — state a falsifiable claim, its control, success metric, and acceptable regressions.
@@ -38,7 +38,7 @@ An example hypothesis might be:
 
 > Adding per-destination upload/download asymmetry will improve exfiltration recall@3 without moving ordinary backup traffic into the top three results.
 
-## How JAWS works today
+## How JAWS works
 
 The current pipeline exposes five core operations through both command-line tools and an MCP server:
 
@@ -64,11 +64,11 @@ JAWS can be used in two ways:
 - The **CLI** is the direct interface for researchers, scripts, and benchmarks.
 - The **MCP server** exposes the same pipeline to any compatible research client or agent.
 
-MCP is an interface boundary, not the analytical core. Agents are optional research collaborators. They may propose hypotheses and configure bounded experiments, but scoring and rewards should remain deterministic, inspectable, and reproducible. An agent should not receive unrestricted capture privileges, destructive database access, or shell execution merely because it can call the research interface.
+MCP is an interface boundary, not the analytical core. Agents are optional research collaborators: they orient to prior results, propose falsifiable hypotheses, configure bounded experiments, and interpret deterministic observations. Scoring and rewards remain deterministic, inspectable, and reproducible. Agents operate in a separate sandbox and do not receive unrestricted capture privileges, destructive database access, or shell execution merely because they can call the research interface.
 
 ## Benchmark principles
 
-Detector quality is separate from software correctness. JAWS evaluates both.
+Detector quality is separate from software correctness. JAWS evaluates both through a shared benchmark model:
 
 - **Unit invariants** protect statistical and historical-baseline behavior.
 - **Controlled scenarios** test beaconing, exfiltration, scans, fan-out changes, and benign counterexamples.
@@ -78,7 +78,7 @@ Detector quality is separate from software correctness. JAWS evaluates both.
 
 Useful evaluation outputs include Recall@k, mean reciprocal rank, benign observations ranked above the target, rank stability, parameter sensitivity, explanation fidelity, runtime, memory use, and embedding cost. A more complex method should earn its place by outperforming simple sorts on held-out scenarios.
 
-The existing recall harness is an early baseline rather than a finished benchmark. Run it with:
+The recall harness provides the command-line benchmark entry point:
 
 ```bash
 pytest -m recall -s
@@ -88,7 +88,7 @@ Set `JAWS_PCAP_DIR` to include the supported real-capture scenarios; otherwise t
 
 ## Evidence, provenance, and non-goals
 
-Research results should retain enough information to be reproduced and challenged: capture and session identifiers, observation scope, entity definition, feature and model configuration, reference population, ranking parameters, software version, ranked outputs, labels, metrics, and generated artifacts.
+Research results retain enough information to be reproduced and challenged: capture and session identifiers, observation scope, entity definition, feature and model configuration, reference population, ranking parameters, software version, ranked outputs, labels, metrics, and generated artifacts.
 
 JAWS does not currently claim to:
 
@@ -101,19 +101,25 @@ JAWS does not currently claim to:
 
 An anomaly may be malicious, benign, novel, misconfigured, or simply worth understanding.
 
-## Project status and direction
+## Research architecture
 
-JAWS 2.0 is beta research software. The current endpoint model, historical baseline, explainable scoring, host-outbound view, MCP interface, and recall harness provide the behavioral baseline for the next refactor.
+JAWS 2.0 is beta research software organized around seven composable operations:
 
-The planned direction is to:
+| Operation | Responsibility |
+| --- | --- |
+| Ingest | Capture live traffic or import PCAP and structured packet data |
+| Enrich | Add organization, ASN, DNS, labels, and researcher annotations |
+| Profile | Convert evidence into analytical entities and feature representations |
+| Compare | Establish peer, historical, or researcher-defined reference populations |
+| Rank | Apply one or more scoring and ranking strategies |
+| Inspect | Trace ranked observations back to flows and packets |
+| Evaluate | Compare rankings against labels, controls, baselines, and prior experiments |
 
-1. Freeze the current detector as Benchmark 0.
-2. Separate ingestion, enrichment, representation, comparison, ranking, explanation, storage, and evaluation behind typed Python APIs.
-3. Introduce immutable experiment specifications, results, and provenance.
-4. Compare rankers through a shared benchmark and reward-vector format.
-5. Rebuild the Neo4j, analysis, capture, GPU, and MCP container boundaries for reproducibility and least privilege.
-6. Make CLI and MCP thin adapters over the same core.
-7. Explore an optional sandboxed research agent only after the experiment and evaluation foundations exist.
+Typed Python services define these operations. The CLI, MCP server, benchmark runner, and optional agent laboratory are adapters over the same deterministic core. Storage, representation, comparison, ranking, explanation, evaluation, and artifact management remain separable so researchers can add a feature family or ranker without rewriting the pipeline.
+
+Neo4j stores packet evidence, relationships, capture history, and endpoint profiles. Immutable experiment specifications and result artifacts record analytical provenance. Versioned database, sensor, analysis, GPU, and MCP containers separate packet-capture privileges from analysis and agent execution.
+
+The agent laboratory implements the **Orient → Hypothesize → Experiment → Observe** loop as an optional orchestration layer. Agent-generated hypotheses are proposals; deterministic code executes experiments and calculates rewards.
 
 ## Setup
 
@@ -174,7 +180,7 @@ OpenAI embeddings are the CLI default. To run locally, pass `--api transformers`
 
 ### 4. Start Neo4j
 
-The repository currently includes an experimental Neo4j image in `harbor/`:
+The repository includes a Neo4j development image in `harbor/`:
 
 ```bash
 cd harbor
@@ -191,7 +197,7 @@ docker run --name captures \
 cd ..
 ```
 
-The current `harbor/` and `ocean/` images predate the planned container refactor: their base images are not fully pinned, and the compute image accepts credentials as build arguments. Treat them as development aids, not reproducible or hardened deployments. A local Python installation plus a separately managed Neo4j instance is the recommended research setup for now.
+The legacy `harbor/` and `ocean/` images use unpinned base images, and the compute image accepts credentials as build arguments. Treat these images as development aids rather than reproducible or hardened deployments. A local Python installation plus a separately managed Neo4j instance is the recommended setup when using this branch.
 
 ### 5. Run the pipeline
 
