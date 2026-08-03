@@ -35,7 +35,6 @@ from .benchmark_contract import (
     DEFAULT_BASELINE,
     DEFAULT_SUBJECT_REVISION,
     REPO_ROOT,
-    SAFE_ENVIRONMENT_NAMES,
     SECRET_PATTERNS,
     ContractViolation,
     _git_file,
@@ -1363,40 +1362,11 @@ def validate_compatibility_directory(directory: Path | str) -> None:
         raise ContractViolation("compatibility collector source digest is invalid")
 
 
-def _compatibility_command(
-    subject_revision: str, collector_revision: str
-) -> dict[str, Any]:
-    return {
-        "command_id": "collect-compatibility",
-        "argv": [
-            "python",
-            "-m",
-            "harness.compatibility_contract",
-            "collect",
-            "--subject-revision",
-            subject_revision,
-            "--collector-revision",
-            collector_revision,
-        ],
-        "cwd": ".",
-        "environment": [
-            {"name": name, "state": "unset"} for name in SAFE_ENVIRONMENT_NAMES
-        ],
-    }
-
-
-def _extend_manifest(
-    bundle: Path, subject_revision: str, collector_revision: str
-) -> None:
+def _extend_manifest(bundle: Path, subject_revision: str) -> None:
     manifest_path = bundle / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest["subject"]["revision"] != subject_revision:
         raise ContractViolation("compatibility subject differs from Benchmark 0 subject")
-    if any(row["command_id"] == "collect-compatibility" for row in manifest["commands"]):
-        raise ContractViolation("Benchmark 0 already declares compatibility collection")
-    manifest["commands"].append(
-        _compatibility_command(subject_revision, collector_revision)
-    )
     declared = {row["path"] for row in manifest["artifacts"]}
     for path, media_type in COMPATIBILITY_ARTIFACTS:
         if path in declared:
@@ -1459,7 +1429,7 @@ def collect_canonical_compatibility(
     (directory / "README.md").write_text(
         render_compatibility_readme(cli_document, graph_document), encoding="utf-8"
     )
-    _extend_manifest(bundle, subject_revision, collector_revision)
+    _extend_manifest(bundle, subject_revision)
     write_checksums(bundle)
     validate_compatibility_directory(directory)
     validate_bundle(bundle)
