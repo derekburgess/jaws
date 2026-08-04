@@ -2,8 +2,6 @@ import os
 import argparse
 import socket
 from datetime import datetime, timezone
-import psutil
-import pyshark
 from rich.console import Group
 from jaws.config import CONSOLE, DATABASE
 from jaws.jaws_utils import (
@@ -13,6 +11,7 @@ from jaws.jaws_utils import (
     render_info_panel,
     render_activity_panel
 )
+from jaws.optional_dependencies import require_module
 
 
 def get_local_ip():
@@ -27,6 +26,7 @@ def get_local_ip():
     
 
 def list_interfaces():
+    psutil = require_module("psutil", "capture", "Network interface discovery")
     interfaces = psutil.net_if_addrs()
     interface_stats = psutil.net_io_counters(pernic=True)
     interface_list = []
@@ -150,7 +150,11 @@ def main():
     # Listing interfaces is a purely local operation — resolve it before touching
     # Neo4j so it works (e.g. as the MCP's step 1) even when the database is down.
     if args.list:
-        interfaces = list_interfaces()
+        try:
+            interfaces = list_interfaces()
+        except ModuleNotFoundError as e:
+            reporter.error("ERROR", str(e))
+            return
         reporter.result({"interfaces": interfaces}, summary="\n".join(interfaces))
         return
 
@@ -195,6 +199,7 @@ def main():
                 return
 
         source = args.capture_file if args.capture_file else args.interface
+        pyshark = require_module("pyshark", "capture", "Packet capture and import")
         capture_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         register_capture(driver, args.database, capture_id, source)
 
@@ -241,6 +246,10 @@ def main():
             {"database": args.database, "source": source, "capture_id": capture_id, "packets_captured": len(packets)},
             summary=f"Packets({len(packets)}) added to: '{args.database}' as session '{capture_id}'",
         )
+        return
+
+    except ModuleNotFoundError as e:
+        reporter.error("ERROR", str(e))
         return
 
     finally:

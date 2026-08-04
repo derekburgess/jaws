@@ -8,8 +8,6 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from kneed import KneeLocator
-import matplotlib.pyplot as plt
-import plotille
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
 from jaws.jaws_utils import (
     dbms_connection,
@@ -18,6 +16,22 @@ from jaws.jaws_utils import (
     NON_CONVERSATIONAL_TYPES,
     MIN_TIMING_PACKETS
 )
+from jaws.optional_dependencies import require_module
+
+
+plt = None
+plotille = None
+
+
+def _load_plotting():
+    """Load plotting libraries only for rendering paths, never numeric imports."""
+
+    global plt, plotille
+    if plt is None:
+        plt = require_module("matplotlib.pyplot", "plotting", "Plot rendering")
+    if plotille is None:
+        plotille = require_module("plotille", "plotting", "Terminal plot rendering")
+    return plt, plotille
 
 
 # Behavioral features blended with the text embedding so volume/fan-out anomalies
@@ -523,6 +537,7 @@ def _whole_number_formatter(val, chars, delta, left=False):
 
 
 def new_plotille_figure():
+    _load_plotting()
     fig = plotille.Figure()
     fig.register_label_formatter(float, _whole_number_formatter)
     return fig
@@ -806,6 +821,7 @@ def add_outlier_to_database(scored_list, flagged_list, driver, database, scope=N
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
+    _load_plotting()
     plt.figure(num='Packet Size over Ports', figsize=(6, 4))
     for item in plot_data:
         plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
@@ -837,6 +853,7 @@ def plot_size_over_ports(plot_data, jaws_finder_endpoint):
 
 
 def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
+    _load_plotting()
     plt.figure(num='Sorted K-Distance', figsize=(6, 2))
     plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
     plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
@@ -1018,6 +1035,13 @@ def main():
             result,
             summary=f"Ablation over {result['endpoints']} endpoints: text-only vs numeric-only vs blended (no DB writes).",
         )
+        driver.close()
+        return
+
+    try:
+        _load_plotting()
+    except ModuleNotFoundError as e:
+        reporter.error("ERROR", str(e))
         driver.close()
         return
 

@@ -2,8 +2,8 @@ import os
 import sys
 from functools import lru_cache
 from rich.console import Console
-from openai import OpenAI
-from neo4j import GraphDatabase
+
+from jaws.optional_dependencies import require_module
 
 
 # Used for the message panels below.
@@ -43,12 +43,16 @@ def get_neo4j_driver():
             "NEO4J_PASSWORD is not set. Export it in the environment, or pass it "
             "through your MCP client's env block (see jaws_mcp/mcp-local.json)."
         )
-    return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+    neo4j = require_module("neo4j", "neo4j", "Neo4j storage")
+    return neo4j.GraphDatabase.driver(
+        NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD)
+    )
 
 
 @lru_cache(maxsize=1)
 def get_openai_client():
-    return OpenAI()
+    openai = require_module("openai", "openai-embeddings", "OpenAI embeddings")
+    return openai.OpenAI()
 
 
 IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")

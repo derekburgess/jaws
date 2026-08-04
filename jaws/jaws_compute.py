@@ -2,8 +2,6 @@ import argparse
 from rich.console import Group
 import numpy as np
 import pandas as pd
-import torch
-from sentence_transformers import SentenceTransformer
 from jaws.config import (
     CONSOLE,
     DATABASE,
@@ -20,6 +18,7 @@ from jaws.jaws_utils import (
     classify_endpoint,
     MIN_TIMING_PACKETS
 )
+from jaws.optional_dependencies import require_module
 
 
 def fetch_packets(driver, database, capture_id=None):
@@ -305,7 +304,17 @@ def add_endpoint_to_database(profile, embedding, session_scope, driver, database
                     interval_cv=profile.get("interval_cv"))
 
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+def _local_embedding_runtime():
+    """Load the local model stack only for ``--api transformers``."""
+
+    torch = require_module("torch", "local-embeddings", "Local embeddings")
+    sentence_transformers = require_module(
+        "sentence_transformers", "local-embeddings", "Local embeddings"
+    )
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return torch, sentence_transformers.SentenceTransformer, device
+
+
 def compute_transformer_embeddings(descriptions, embedder):
     # sentence-transformers reads each model's own pooling config and applies it; with
     # normalize_embeddings it L2-normalizes for calibrated cosine geometry downstream.
@@ -346,6 +355,15 @@ def main():
     parser.add_argument("--retain-profiles", type=int, default=PROFILE_RETENTION_SESSIONS, help=f"How many computed profile sets (sessions) to keep in the graph; older ones are pruned after this run (default: {PROFILE_RETENTION_SESSIONS}). Profiles accumulate per session so jaws-finder can baseline an endpoint against its own history. 0 disables pruning. Raw PACKET/CAPTURE history is never pruned.")
     args = parser.parse_args()
     reporter = Reporter()
+    torch_runtime = None
+    sentence_transformer = None
+    device = None
+    if args.api == "transformers":
+        try:
+            torch_runtime, sentence_transformer, device = _local_embedding_runtime()
+        except ModuleNotFoundError as e:
+            reporter.error("ERROR", str(e))
+            return
     driver = dbms_connection(args.database, reporter)
     if driver is None:
         return
@@ -381,7 +399,9 @@ def main():
 
     try:
         if args.api == "transformers":
-            embedder = SentenceTransformer(model_name, device=device, trust_remote_code=True)
+            embedder = sentence_transformer(
+                model_name, device=device, trust_remote_code=True
+            )
 
         # Embed every profile in one batched pass (the panels then narrate the DB
         # writes). reporter.info first so a human sees progress during a long encode.
@@ -434,8 +454,8 @@ def main():
     finally:
         if embedder is not None:
             del embedder
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        if torch_runtime is not None and torch_runtime.cuda.is_available():
+            torch_runtime.cuda.empty_cache()
         driver.close()
 
 if __name__ == "__main__":

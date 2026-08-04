@@ -1,6 +1,6 @@
-"""JAWS MCP Server — exposes the full JAWS network-analysis pipeline via FastMCP."""
+"""JAWS MCP Server — exposes the full JAWS network-analysis pipeline via MCPServer."""
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 import subprocess
 import sys
 import os
@@ -63,7 +63,7 @@ Notes:
     aborts them early, raise its per-tool-call timeout (e.g. Claude Code's MCP_TOOL_TIMEOUT).
   - All tools operate on the single '%s' database.""" % DATABASE
 
-mcp = FastMCP("JAWS - Wireshark MCP with Network Analysis Tools", instructions=INSTRUCTIONS)
+mcp = MCPServer("JAWS - Wireshark MCP with Network Analysis Tools", instructions=INSTRUCTIONS)
 
 
 def _try_json(text: str) -> Any:
@@ -82,7 +82,7 @@ def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
     {"ok": bool, ...} envelope — ok=True merged with the result fields on success,
     {"ok": false, "error": ...} on failure. We parse that here and return the dict
     so the MCP payload arrives already-structured: returning a `dict[str, Any]`
-    makes FastMCP emit it as structuredContent verbatim, instead of wrapping a JSON
+    makes MCPServer emit it as structuredContent verbatim, instead of wrapping a JSON
     string inside another JSON string ({"result": "{...}"}, the double-encoding the
     client otherwise has to parse twice).
 
@@ -385,7 +385,7 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
     except Exception as e:
         return {"ok": False, "error": f"could not fetch endpoints ({e})"}
     # Round-trip through json with default=str to coerce Neo4j DateTime values into
-    # JSON-native strings, so FastMCP can serialize the returned dict cleanly.
+    # JSON-native strings, so MCPServer can serialize the returned dict cleanly.
     endpoints = json.loads(json.dumps(data, default=str))
     for endpoint in endpoints:
         endpoint["cloud_hosted"] = is_cloud_hosted(endpoint.get("org"))
@@ -611,7 +611,7 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
         "packets_returned": len(packet_rows),
     }
     # Coerce Neo4j DateTime values (in profile.timestamp and each packet) to strings so
-    # FastMCP can serialize the dict cleanly, matching fetch_traffic.
+    # MCPServer can serialize the dict cleanly, matching fetch_traffic.
     payload = json.loads(json.dumps(payload, default=str))
     return {"ok": True, **payload}
 
@@ -627,9 +627,7 @@ def main():
     if args.stdio:
         mcp.run(transport="stdio")
     else:
-        mcp.settings.host = args.host
-        mcp.settings.port = args.port
-        mcp.run(transport="sse")
+        mcp.run(transport="sse", host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

@@ -19,11 +19,12 @@ the research-workbench rollout.
 | [0005](0005-evidence-store-and-portable-experiment-records.md) | Accepted | Use Neo4j for evidence and portable bundles for experiment records |
 | [0006](0006-deterministic-core-and-adapter-boundaries.md) | Accepted | Keep the deterministic core independent of interfaces, storage, and agents |
 | [0007](0007-freeze-benchmark-zero-before-detector-refactoring.md) | Accepted | Freeze Benchmark 0 before detector refactoring |
+| [0008](0008-capability-extras-and-direct-constraints.md) | Accepted | Use capability extras and reviewed direct constraints |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In
-particular, these initial ADRs do not prematurely choose a schema library, ID
-format, artifact encoding, container image, MCP job protocol, or agent framework.
+particular, these ADRs do not prematurely choose a schema library, ID format,
+artifact encoding, container image, MCP job protocol, or agent framework.
 
 ## Status values
 

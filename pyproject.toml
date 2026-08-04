@@ -5,23 +5,80 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "JAWS"
 version = "2.0.0"
-description = "Packet capture and anomaly detection system with MCP server"
+description = "Open research workbench for reproducible network-behavior anomaly experiments"
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
 license = "GPL-2.0-only"
-keywords = ["networking", "analysis", "visualization", "mcp"]
+keywords = [
+    "anomaly-detection",
+    "network-security",
+    "network-traffic",
+    "research",
+    "reproducibility",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Security",
 ]
-# Dependencies stay in requirements.txt (the single source of truth); see
-# [tool.setuptools.dynamic] below.
-dynamic = ["dependencies"]
+dependencies = [
+    "kneed>=0.8,<1",
+    "numpy>=2.3,<3",
+    "pandas>=2.2,<4",
+    "rich>=14,<16",
+    "scikit-learn>=1.8,<2",
+]
 
 [project.optional-dependencies]
+neo4j = [
+    "neo4j>=6,<7",
+]
+capture = [
+    "psutil>=7,<8",
+    "pyshark>=0.6,<1",
+]
+enrichment = [
+    "ipinfo>=5,<6",
+]
+openai-embeddings = [
+    "openai>=2,<3",
+]
+local-embeddings = [
+    "sentence-transformers>=5,<6",
+    "torch>=2.13,<3",
+]
+plotting = [
+    "matplotlib>=3.10,<4",
+    "plotille>=6,<7",
+]
+mcp = [
+    "mcp>=2,<3",
+]
+# Milestone 9 owns agent-framework selection. Declaring the boundary now prevents
+# an orchestration framework from becoming an accidental core dependency.
+agent-lab = []
+# Compatibility convenience profile. New deployments should select only the
+# capability extras they use; requirements.txt installs this complete runtime set.
+all = [
+    "ipinfo>=5,<6",
+    "matplotlib>=3.10,<4",
+    "mcp>=2,<3",
+    "neo4j>=6,<7",
+    "openai>=2,<3",
+    "plotille>=6,<7",
+    "psutil>=7,<8",
+    "pyshark>=0.6,<1",
+    "sentence-transformers>=5,<6",
+    "torch>=2.13,<3",
+]
 dev = [
     "jsonschema>=4,<5",
+    "packaging>=26,<27",
+    "psutil>=7,<8",
     "pytest>=8,<9",
 ]
 
@@ -39,9 +96,6 @@ jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
 packages = ["jaws", "jaws_mcp"]
-
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,15 +1,4 @@
-neo4j
-pyshark
-psutil
-pandas
-numpy
-scikit-learn
-kneed
-torch
-sentence-transformers
-openai>=2,<3
-matplotlib
-rich
-plotille
-ipinfo
-mcp
+# Backward-compatible complete runtime install. Prefer selecting only the extras
+# needed by a deployment; see docs/dependencies.md.
+-c constraints/py312-direct.txt
+.[all]

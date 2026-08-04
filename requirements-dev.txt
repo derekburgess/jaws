@@ -1,0 +1,3 @@
+# Reproducible lightweight development and correctness-test environment.
+-c constraints/py312-direct.txt
+-e .[dev]

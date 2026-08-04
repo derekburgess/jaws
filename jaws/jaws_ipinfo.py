@@ -1,5 +1,4 @@
 import argparse
-import ipinfo
 from rich.console import Group
 from jaws.config import CONSOLE, DATABASE, IPINFO_API_KEY
 from jaws.jaws_utils import (
@@ -9,6 +8,7 @@ from jaws.jaws_utils import (
     render_activity_panel,
     classify_endpoint
 )
+from jaws.optional_dependencies import require_module
 
 
 def get_ipinfo(handler, ip_address, reporter):
@@ -148,6 +148,7 @@ def main():
     try:
         # One handler for the whole run — it caches lookups internally, which a
         # per-IP handler would defeat.
+        ipinfo = require_module("ipinfo", "enrichment", "IPinfo enrichment")
         handler = ipinfo.getHandler(IPINFO_API_KEY)
         with reporter.activity(render) as update:
             for ip_address in ip_addresses:

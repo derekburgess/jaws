@@ -133,11 +133,15 @@ The agent laboratory implements the **Orient → Hypothesize → Experiment → 
 ### Requirements
 
 - Python 3.12
-- Neo4j
-- Wireshark's `tshark`/`dumpcap` for live capture or PCAP import
-- An OpenAI API key **or** sufficient local compute for sentence-transformer embeddings
-- An IPinfo API key for organization and ASN enrichment
+- Neo4j only for the current graph-backed pipeline
+- Wireshark's `tshark`/`dumpcap` only for live capture or PCAP import
+- An OpenAI API key or sufficient local compute only when creating embeddings
+- An IPinfo API key only for organization and ASN enrichment
 - Optional: an NVIDIA GPU and CUDA for faster local embeddings
+
+The numerical research core installs independently of every integration above. See the
+[dependency and installation profiles](docs/dependencies.md) for the complete capability
+matrix and version policy.
 
 ### 1. Install system dependencies
 
@@ -155,7 +159,7 @@ Install Neo4j locally, use Neo4j Desktop, or run the database container describe
 
 ### 2. Install JAWS
 
-For ordinary use:
+For numeric-only research and the synthetic benchmark:
 
 ```bash
 git clone https://github.com/derekburgess/jaws.git
@@ -163,14 +167,25 @@ cd jaws
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install .
+python -m pip install --constraint constraints/py312-direct.txt --editable .
 ```
 
-For development, this single command creates the supported Python 3.12 environment
-and installs JAWS with its declared test dependencies:
+For the current OpenAI-backed pipeline and MCP interface, select only those capabilities:
 
 ```bash
-python3.12 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install --editable ".[dev]"
+python -m pip install --constraint constraints/py312-direct.txt \
+  --editable ".[neo4j,capture,enrichment,openai-embeddings,plotting,mcp]"
+```
+
+Replace `openai-embeddings` with `local-embeddings` for the local Torch/
+sentence-transformer path. `python -m pip install --requirement requirements.txt`
+retains the legacy complete-runtime installation.
+
+For development, this single command creates the supported lightweight Python 3.12
+environment and installs JAWS with its declared correctness-test dependencies:
+
+```bash
+python3.12 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install --requirement requirements-dev.txt
 ```
 
 The commands below use `.venv/bin/python` directly, so activating the environment is

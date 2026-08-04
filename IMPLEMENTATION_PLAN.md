@@ -33,7 +33,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | Milestone | Outcome | Status | Depends on |
 | --- | --- | --- | --- |
 | 0 | Research contract and Benchmark 0 | Complete | — |
-| 1 | Project foundation and typed contracts | Not started | 0 |
+| 1 | Project foundation and typed contracts | In progress | 0 |
 | 2 | Versioned evidence storage and migrations | Not started | 1 |
 | 3 | Ingest, enrichment, and profiling services | Not started | 2 |
 | 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
@@ -410,12 +410,12 @@ Introduce lightweight, versioned domain contracts and a maintainable project fou
 
 #### Package and dependency design
 
-- [ ] Split dependencies into the smallest practical groups: core, Neo4j, capture, enrichment, OpenAI embeddings, local embeddings, plotting, MCP, agent lab, and development.
-- [ ] Pin direct dependencies through a reviewed constraints/lock strategy while preserving supported platform flexibility.
-- [ ] Ensure a numeric-only benchmark does not install or import Torch/sentence-transformers.
-- [ ] Ensure an OpenAI-only installation does not require CUDA/local-model packages.
-- [ ] Keep Python 3.12 as the declared baseline and document the policy for adding later versions.
-- [ ] Add package metadata for research/security audiences and the unified project description.
+- [x] Split dependencies into the smallest practical groups: core, Neo4j, capture, enrichment, OpenAI embeddings, local embeddings, plotting, MCP, agent lab, and development ([profiles](docs/dependencies.md)).
+- [x] Pin direct dependencies through a reviewed constraints/lock strategy while preserving supported platform flexibility ([ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md)).
+- [x] Ensure a numeric-only benchmark does not install or import Torch/sentence-transformers.
+- [x] Ensure an OpenAI-only installation does not require CUDA/local-model packages.
+- [x] Keep Python 3.12 as the declared baseline and document the policy for adding later versions.
+- [x] Add package metadata for research/security audiences and the unified project description.
 
 #### Quality automation
 
@@ -1188,7 +1188,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 | Decision | Due | Default pending ADR |
 | --- | --- | --- |
 | Canonical schema/validation library for external specs | M1 | Validated, versioned models with canonical JSON support |
-| Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Direct constraints plus reproducible environment files per runtime profile |
+| Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Accepted in [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md): compatible metadata ranges, exact direct constraints, and complete run-environment inventories |
 | Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
 | Neo4j migration mechanism and schema-version storage | M2 | Ordered idempotent migrations with an applied-version record |
 | Experiment artifact formats | M5 | Canonical JSON/JSONL; optional Parquet for large tables |
@@ -1218,11 +1218,41 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-The next active work is Milestone 1. Begin with dependency/package boundaries, then add
-quality automation and the typed domain, result-envelope, settings, error, and service
+Milestone 1 dependency/package boundaries are complete. The next active work is quality
+automation, followed by the typed domain, result-envelope, settings, error, and service
 port contracts while continuously comparing CLI behavior and rankings with Benchmark 0.
 
 ## Change log
+
+### 2026-08-03 — Milestone 1 dependency and packaging boundaries
+
+- Replaced the monolithic mandatory dependency list with a five-package numerical core
+  and explicit Neo4j, capture, enrichment, OpenAI, local-model, plotting, MCP,
+  agent-lab, development, and compatibility extras.
+- Accepted [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md):
+  supported ranges live in package metadata, exact Python 3.12 direct pins live in the
+  reviewed constraints file, and benchmark/experiment runs retain complete transitive
+  environment inventories.
+- Added constrained complete-runtime and lightweight-development entry points plus a
+  disposable clean-environment checker for every installation profile.
+- Made database, provider, capture, enrichment, local-model, and plotting imports lazy.
+  The synthetic numeric benchmark now executes with every optional integration import
+  actively blocked, and the OpenAI profile contains no Torch, sentence-transformers,
+  CUDA, or local-model packages.
+- Migrated the MCP adapter from the removed SDK v1 `FastMCP` path to the pinned SDK v2
+  `MCPServer` API after the clean profile exposed the incompatibility; tool decorators
+  and stdio/SSE intent remain unchanged.
+- Verification evidence: 60 correctness cases pass in the constrained lightweight
+  development environment. All eleven declared profiles—including local-model and the
+  complete compatibility runtime—pass fresh Python 3.12 installation, `pip check`, and
+  import probes; the two heavy profiles reused one isolated wheel cache while retaining
+  separate environments.
+- Benchmark 0 parity remains exact: all five detection scenarios retain Recall@3, the
+  same three benign counterexamples remain named failures, and Neo4j/real-PCAP tiers
+  skip explicitly when their external resources are unavailable. No feature, score,
+  threshold, reason, label, or ranking order changed.
+- Marked Milestone 1 in progress. Its next task is quality automation: formatting,
+  linting, type checking, and CI foundations.
 
 ### 2026-08-03 — Milestone 0 compatibility closeout
 

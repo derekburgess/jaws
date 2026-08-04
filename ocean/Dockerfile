@@ -27,7 +27,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /jaws
 
 RUN git clone https://github.com/derekburgess/jaws.git .
-# pyproject.toml reads requirements.txt, so this single install pulls all dependencies.
-RUN pip install .
+# This legacy GPU image needs the complete compatibility runtime. Milestone 7 owns
+# replacement with pinned Python/platform-specific CPU and GPU images.
+RUN pip install -r requirements.txt
 
 CMD ["tail", "-f", "/dev/null"]

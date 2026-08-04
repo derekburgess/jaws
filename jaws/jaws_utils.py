@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from rich.text import Text
 from rich.panel import Panel
 from rich.live import Live
-from sentence_transformers import SentenceTransformer
 from jaws.config import (
     CONSOLE,
     AGENT_MODE,
@@ -14,6 +13,7 @@ from jaws.config import (
     PACKET_MODELS,
     get_neo4j_driver,
 )
+from jaws.optional_dependencies import require_module
 
 
 # Address-scope classification shared by compute (tags each profile), finder (excludes
@@ -158,7 +158,10 @@ class Reporter:
 def download_model(model, reporter):
     try:
         reporter.info("INFO", f"Downloading: {model}")
-        SentenceTransformer(model, trust_remote_code=True)
+        sentence_transformers = require_module(
+            "sentence_transformers", "local-embeddings", "Local model downloads"
+        )
+        sentence_transformers.SentenceTransformer(model, trust_remote_code=True)
         reporter.result({"downloaded": model}, summary=f"Downloaded: {model}")
     except Exception as e:
         reporter.error("ERROR", f"{model}\n\n{str(e)}")

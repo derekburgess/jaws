@@ -23,6 +23,7 @@ import sys
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable, Iterable
 from unittest.mock import patch
 
@@ -292,7 +293,6 @@ def _compute_success_case() -> dict[str, Any]:
             patch.object(compute, "add_endpoint_to_database", return_value=None),
             patch.object(compute, "prune_profile_sessions", return_value=(0, [])),
             patch.object(compute, "count_profile_sessions", return_value=2),
-            patch.object(compute.torch.cuda, "is_available", return_value=False),
         ),
     )
 
@@ -476,6 +476,22 @@ def _rank_success_case() -> dict[str, Any]:
         [[-1.0, -1.0], [-0.3, -0.2], [0.3, 0.2], [1.0, 1.0]], dtype=float
     )
     no_op = lambda *args, **kwargs: None
+    fake_plt = SimpleNamespace(
+        **{
+            name: no_op
+            for name in (
+                "figure",
+                "scatter",
+                "annotate",
+                "grid",
+                "xticks",
+                "yticks",
+                "tight_layout",
+                "savefig",
+                "show",
+            )
+        }
+    )
     patchers = [
         patch.object(finder, "Reporter", _agent_reporter),
         patch.object(finder, "dbms_connection", return_value=driver),
@@ -500,6 +516,8 @@ def _rank_success_case() -> dict[str, Any]:
         ),
         patch.object(finder, "NearestNeighbors", _FakeNearestNeighbors),
         patch.object(finder, "DBSCAN", _FakeDBSCAN),
+        patch.object(finder, "plt", fake_plt),
+        patch.object(finder, "_load_plotting", return_value=(fake_plt, None)),
         patch.object(finder, "new_plotille_figure", return_value=_FakePlotilleFigure()),
         patch.object(finder, "fetch_endpoint_history", return_value={}),
         patch.object(finder, "score_endpoints", return_value=_ranked_endpoints()),
@@ -511,18 +529,6 @@ def _rank_success_case() -> dict[str, Any]:
         ),
         patch.object(finder, "score_host_outbound", return_value=_host_ranked()),
     ]
-    for name in (
-        "figure",
-        "scatter",
-        "annotate",
-        "grid",
-        "xticks",
-        "yticks",
-        "tight_layout",
-        "savefig",
-        "show",
-    ):
-        patchers.append(patch.object(finder.plt, name, no_op))
     return _invoke_main(
         case_id="rank-success",
         entry_point="jaws-finder",
