@@ -98,6 +98,13 @@ def test_ci_workflow_covers_every_change_and_required_signals():
     assert "python scripts/benchmark_smoke.py" in commands
     assert "pytest -m recall" not in commands
 
+    correctness_checkout = next(
+        step
+        for step in workflow["jobs"]["correctness"]["steps"]
+        if step.get("uses") == "actions/checkout@v7"
+    )
+    assert correctness_checkout["with"]["fetch-depth"] == "0"
+
 
 def test_integration_workflow_is_optional_and_resource_specific():
     workflow = _workflow(INTEGRATION_PATH)

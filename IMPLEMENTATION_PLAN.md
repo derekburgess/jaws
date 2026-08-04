@@ -1235,7 +1235,9 @@ Benchmark 0.
   shrink; new Milestone 1 contract modules must enter it in the same change.
 - Added push, pull-request, and manual CI jobs for quality checks, offline correctness,
   and synthetic benchmark reporting. Correctness JUnit and benchmark JSON/Markdown are
-  retained as workflow artifacts and the benchmark also renders a step summary.
+  retained as workflow artifacts and the benchmark also renders a step summary. The
+  correctness checkout retains full history so compatibility tests can resolve the
+  frozen Benchmark 0 subject revision.
 - Added scheduled/manual Neo4j and capture-tooling jobs. The former uses the exact
   Neo4j 5.26.28 community image; the latter installs and probes `tshark` without
   initiating a live capture.

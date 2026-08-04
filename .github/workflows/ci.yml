@@ -46,6 +46,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Compatibility tests resolve the frozen Benchmark 0 subject revision.
+          fetch-depth: 0
       - name: Set up Python 3.12
         uses: actions/setup-python@v7
         with:

@@ -64,6 +64,10 @@ be started manually. Its independent jobs are:
 | `correctness` | Offline correctness or compatibility contract fails | JUnit artifact |
 | `benchmark-smoke` | Harness execution or report structure fails | JSON metrics, Markdown artifact, and step summary |
 
+The correctness job checks out complete Git history because the compatibility contract
+must resolve the frozen Benchmark 0 subject revision rather than silently testing only
+the current branch tip.
+
 The benchmark job deliberately does not run the assertion-based `pytest -m recall` tier.
 [`scripts/benchmark_smoke.py`](../scripts/benchmark_smoke.py) executes the same eight
 synthetic scenarios and records ranks, scores, reasons, Recall@3, and benign top-three
