@@ -10,8 +10,8 @@ Set JAWS_RECALL_SOURCE to ``synthetic`` or ``pcap`` to run those quality tiers
 independently. In ``all`` mode, real-capture scenarios are included automatically when
 JAWS_PCAP_DIR points at a directory holding the samples named in harness/pcap.py.
 """
-import pytest
 
+import pytest
 from harness import all_scenarios, evaluate, recall_source, report
 
 SOURCE = recall_source()
@@ -19,14 +19,16 @@ SCENARIOS = all_scenarios(SOURCE)
 
 pytestmark = [pytest.mark.recall]
 if not SCENARIOS:
-    pytestmark.append(pytest.mark.skip(
-        reason=(
-            "No real-PCAP scenarios are available. Set JAWS_PCAP_DIR to a directory "
-            "containing the documented capture fixtures."
-            if SOURCE == "pcap"
-            else f"No recall scenarios are available for source {SOURCE!r}."
+    pytestmark.append(
+        pytest.mark.skip(
+            reason=(
+                "No real-PCAP scenarios are available. Set JAWS_PCAP_DIR to a directory "
+                "containing the documented capture fixtures."
+                if SOURCE == "pcap"
+                else f"No recall scenarios are available for source {SOURCE!r}."
+            )
         )
-    ))
+    )
 
 DETECT = [s for s in SCENARIOS if s.expect == "detect"]
 REJECT = [s for s in SCENARIOS if s.expect == "reject"]
@@ -47,7 +49,8 @@ def test_planted_threat_is_ranked(scenario):
     assert r["rank"] is not None, f"{scenario.name}: planted endpoint absent from ranking"
     assert r["rank"] < 3, (
         f"{scenario.name}: rank {r['rank'] + 1}/{r['total']} "
-        f"(score {r['score']}, reasons {r['reasons']}) - {scenario.note}")
+        f"(score {r['score']}, reasons {r['reasons']}) - {scenario.note}"
+    )
 
 
 @pytest.mark.parametrize("scenario", REJECT, ids=lambda s: s.name)
@@ -56,4 +59,5 @@ def test_benign_traffic_is_not_ranked(scenario):
     assert r["rank"] is not None, f"{scenario.name}: planted endpoint absent from ranking"
     assert r["rank"] >= 3, (
         f"{scenario.name}: false positive at rank {r['rank'] + 1}/{r['total']} "
-        f"(score {r['score']}, reasons {r['reasons']}) - {scenario.note}")
+        f"(score {r['score']}, reasons {r['reasons']}) - {scenario.note}"
+    )

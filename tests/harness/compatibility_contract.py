@@ -43,12 +43,10 @@ from .benchmark_contract import (
     _tree_digest,
     _tree_digest_at_revision,
     _worktree_changes,
-    canonical_json_bytes,
     sha256_bytes,
     validate_bundle,
     write_checksums,
 )
-
 
 COMPATIBILITY_SCHEMA_VERSION = "1.0.0"
 COMPATIBILITY_DIR = DEFAULT_BASELINE / "compatibility"
@@ -76,13 +74,16 @@ COMPATIBILITY_ARTIFACTS = (
 
 
 def _json_document(value: Any) -> str:
-    return json.dumps(
-        value,
-        indent=2,
-        sort_keys=True,
-        ensure_ascii=False,
-        allow_nan=False,
-    ) + "\n"
+    return (
+        json.dumps(
+            value,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    )
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -98,9 +99,7 @@ def _source_records(revision: str, paths: Iterable[str]) -> list[dict[str, str]]
     return [_source_record(revision, path) for path in paths]
 
 
-def _validate_source_records(
-    records: Any, revision: str, paths: Iterable[str], name: str
-) -> None:
+def _validate_source_records(records: Any, revision: str, paths: Iterable[str], name: str) -> None:
     expected = _source_records(revision, paths)
     if records != expected:
         raise ContractViolation(f"{name} source-file inventory drifted")
@@ -128,9 +127,7 @@ def _collector_record(revision: str) -> dict[str, Any]:
     return {
         "revision": revision,
         "working_tree_dirty": False,
-        "source_sha256": _tree_digest_at_revision(
-            revision, list(COLLECTOR_SOURCE_PATHS)
-        ),
+        "source_sha256": _tree_digest_at_revision(revision, list(COLLECTOR_SOURCE_PATHS)),
         "source_paths": list(COLLECTOR_SOURCE_PATHS),
     }
 
@@ -472,10 +469,11 @@ def _rank_success_case() -> dict[str, Any]:
     driver = _FakeDriver()
     data = _rank_data()
     embeddings = [np.array([float(i), float(i + 1)]) for i in range(4)]
-    features = np.array(
-        [[-1.0, -1.0], [-0.3, -0.2], [0.3, 0.2], [1.0, 1.0]], dtype=float
-    )
-    no_op = lambda *args, **kwargs: None
+    features = np.array([[-1.0, -1.0], [-0.3, -0.2], [0.3, 0.2], [1.0, 1.0]], dtype=float)
+
+    def no_op(*args, **kwargs):
+        return None
+
     fake_plt = SimpleNamespace(
         **{
             name: no_op
@@ -543,8 +541,7 @@ def _rank_success_case() -> dict[str, Any]:
         ],
         category="success",
         description=(
-            "Rank endpoint and host-outbound surfaces and emit the complete success "
-            "envelope."
+            "Rank endpoint and host-outbound surfaces and emit the complete success envelope."
         ),
         main=finder.main,
         patchers=patchers,
@@ -666,9 +663,7 @@ def collect_cli_contract(
         "collector": _collector_record(collector_revision),
         "surface": {
             "mode": "agent",
-            "selection": (
-                "Reporter(agent=True), matching non-TTY subprocess capture used by MCP"
-            ),
+            "selection": ("Reporter(agent=True), matching non-TTY subprocess capture used by MCP"),
             "invocation": (
                 "Each entry-point main() is called with deterministic patched network, "
                 "database, model, plotting, and packet boundaries; stdout, stderr, and "
@@ -753,9 +748,7 @@ def validate_cli_contract(document: dict[str, Any]) -> None:
     revision = subject.get("revision")
     if not revision:
         raise ContractViolation("CLI compatibility artifact lacks a subject revision")
-    _validate_source_records(
-        subject.get("source_files"), revision, CLI_SUBJECT_PATHS, "CLI"
-    )
+    _validate_source_records(subject.get("source_files"), revision, CLI_SUBJECT_PATHS, "CLI")
     cases = document.get("cases")
     if not isinstance(cases, list):
         raise ContractViolation("CLI compatibility cases must be a list")
@@ -791,9 +784,7 @@ def validate_cli_contract(document: dict[str, Any]) -> None:
                 raise ContractViolation(f"{row['case_id']}: success envelope is not ok")
             if row["category"] == "handled_error":
                 if parsed.get("ok") is not False or not isinstance(parsed.get("error"), str):
-                    raise ContractViolation(
-                        f"{row['case_id']}: handled error envelope is invalid"
-                    )
+                    raise ContractViolation(f"{row['case_id']}: handled error envelope is invalid")
                 if row["exit_code"] != 0:
                     raise ContractViolation(
                         f"{row['case_id']}: Benchmark 0 handled-error exit changed"
@@ -810,9 +801,7 @@ def validate_cli_contract(document: dict[str, Any]) -> None:
         raise ContractViolation("argparse compatibility behavior drifted")
     rank = next(row for row in cases if row["case_id"] == "rank-success")
     payload = rank["parsed_stdout"]
-    if not payload.get("endpoints") or not payload.get("host_outbound", {}).get(
-        "destinations"
-    ):
+    if not payload.get("endpoints") or not payload.get("host_outbound", {}).get("destinations"):
         raise ContractViolation("rank contract lacks an endpoint or host-outbound surface")
 
 
@@ -820,12 +809,8 @@ QUERY_START = re.compile(
     r"\b(?:MATCH|MERGE|CREATE|CALL)\s*\(|CREATE\s+(?:INDEX|CONSTRAINT)\b|DETACH\s+DELETE",
     re.IGNORECASE,
 )
-NODE_PATTERN = re.compile(
-    r"\(\s*([A-Za-z_]\w*)?\s*:\s*([A-Z][A-Z0-9_]*)\s*(?:\{([^}]*)\})?"
-)
-RELATIONSHIP_PATTERN = re.compile(
-    r"\[\s*(?:[A-Za-z_]\w*)?\s*:\s*([A-Z][A-Z0-9_]*)"
-)
+NODE_PATTERN = re.compile(r"\(\s*([A-Za-z_]\w*)?\s*:\s*([A-Z][A-Z0-9_]*)\s*(?:\{([^}]*)\})?")
+RELATIONSHIP_PATTERN = re.compile(r"\[\s*(?:[A-Za-z_]\w*)?\s*:\s*([A-Z][A-Z0-9_]*)")
 
 
 @dataclass(frozen=True)
@@ -911,15 +896,11 @@ def _observed_schema(subject_revision: str) -> tuple[dict[str, set[str]], set[st
             aliases[alias] = label
             labels.setdefault(label, set())
             if properties:
-                labels[label].update(
-                    re.findall(r"\b([A-Z][A-Z0-9_]*)\s*:", properties)
-                )
+                labels[label].update(re.findall(r"\b([A-Z][A-Z0-9_]*)\s*:", properties))
         for alias, label in aliases.items():
             if alias:
                 labels[label].update(
-                    re.findall(
-                        rf"\b{re.escape(alias)}\.([A-Z][A-Z0-9_]*)\b", query.text
-                    )
+                    re.findall(rf"\b{re.escape(alias)}\.([A-Z][A-Z0-9_]*)\b", query.text)
                 )
         relationships.update(RELATIONSHIP_PATTERN.findall(query.text))
     return labels, relationships
@@ -1042,9 +1023,7 @@ def _node_records() -> list[dict[str, Any]]:
             "logical_identity": NODE_DEFINITIONS[label]["identity"],
             "properties": [
                 {"name": name, "observed_type": type_name}
-                for name, type_name in sorted(
-                    NODE_DEFINITIONS[label]["properties"].items()
-                )
+                for name, type_name in sorted(NODE_DEFINITIONS[label]["properties"].items())
             ],
         }
         for label in sorted(NODE_DEFINITIONS)
@@ -1224,8 +1203,7 @@ def collect_graph_schema_inventory(
             "labels": sorted(observed_nodes),
             "relationships": sorted(observed_relationships),
             "properties_by_label": {
-                label: sorted(properties)
-                for label, properties in sorted(observed_nodes.items())
+                label: sorted(properties) for label, properties in sorted(observed_nodes.items())
             },
         },
     }
@@ -1249,8 +1227,7 @@ def validate_graph_schema_inventory(document: dict[str, Any]) -> None:
     )
     observed_nodes, observed_relationships = _observed_schema(subject_revision)
     expected_properties = {
-        label: set(definition["properties"])
-        for label, definition in NODE_DEFINITIONS.items()
+        label: set(definition["properties"]) for label, definition in NODE_DEFINITIONS.items()
     }
     if observed_nodes != expected_properties:
         raise ContractViolation(
@@ -1361,9 +1338,7 @@ def validate_compatibility_directory(directory: Path | str) -> None:
     if cli_document["collector"] != graph_document["collector"]:
         raise ContractViolation("compatibility collector records differ")
     collector = cli_document["collector"]
-    expected_digest = _tree_digest_at_revision(
-        collector["revision"], list(COLLECTOR_SOURCE_PATHS)
-    )
+    expected_digest = _tree_digest_at_revision(collector["revision"], list(COLLECTOR_SOURCE_PATHS))
     if collector["source_sha256"] != expected_digest:
         raise ContractViolation("compatibility collector source digest is invalid")
 
@@ -1385,9 +1360,7 @@ def _extend_manifest(bundle: Path, subject_revision: str) -> None:
                 "required": True,
             }
         )
-    manifest["artifacts"] = sorted(
-        manifest["artifacts"], key=lambda row: row["path"]
-    )
+    manifest["artifacts"] = sorted(manifest["artifacts"], key=lambda row: row["path"])
     _write_json(manifest_path, manifest)
 
 
@@ -1417,9 +1390,7 @@ def collect_canonical_compatibility(
         subject_revision, sorted(set(CLI_SUBJECT_PATHS) | set(GRAPH_SOURCE_PATHS))
     )
     current_digest = _tree_digest(list(COLLECTOR_SOURCE_PATHS))
-    committed_digest = _tree_digest_at_revision(
-        collector_revision, list(COLLECTOR_SOURCE_PATHS)
-    )
+    committed_digest = _tree_digest_at_revision(collector_revision, list(COLLECTOR_SOURCE_PATHS))
     if current_digest != committed_digest:
         raise ContractViolation("compatibility collector differs from named revision")
     directory = bundle / "compatibility"
@@ -1427,9 +1398,7 @@ def collect_canonical_compatibility(
         raise ContractViolation(f"refusing to overwrite compatibility inventory: {directory}")
     directory.mkdir()
     cli_document = collect_cli_contract(subject_revision, collector_revision)
-    graph_document = collect_graph_schema_inventory(
-        subject_revision, collector_revision
-    )
+    graph_document = collect_graph_schema_inventory(subject_revision, collector_revision)
     _write_json(directory / "cli-contract.json", cli_document)
     _write_json(directory / "neo4j-schema.json", graph_document)
     (directory / "README.md").write_text(

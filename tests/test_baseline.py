@@ -8,21 +8,33 @@ invariant directly rather than the output that happens to follow from it:
   - BASELINE_SCALE_FLOOR keeps magnitude meaningful when a population is degenerate
   - cadence (interval_mean/interval_cv) is NEVER baselined
 """
+
 import numpy as np
 import pytest
+from conftest import (
+    ep,
+    hist,
+    history_from,
+    no_clusters,
+    rank_of,
+    row_of,
+    score_of,
+)
 
 from jaws.jaws_finder import (
-    NUMERIC_FEATURE_NAMES, BASELINE_EXEMPT_FEATURES, MIN_BASELINE_SESSIONS,
-    build_numeric_features, build_baseline_centers, robust_z_scores,
-    baselined_z_scores, score_endpoints,
+    BASELINE_EXEMPT_FEATURES,
+    MIN_BASELINE_SESSIONS,
+    NUMERIC_FEATURE_NAMES,
+    baselined_z_scores,
+    build_baseline_centers,
+    build_numeric_features,
+    robust_z_scores,
+    score_endpoints,
 )
-from conftest import (
-    ep, hist, history_from, jitter, no_clusters, score_of, row_of, rank_of,
-)
-
 
 # --------------------------------------------------------------- 1. regression
 # With no history the score must be bit-identical to the pre-baseline behavior.
+
 
 def test_no_history_leaves_scoring_unchanged(pack):
     raw = build_numeric_features(pack)
@@ -30,10 +42,10 @@ def test_no_history_leaves_scoring_unchanged(pack):
     centers, sessions = build_baseline_centers(pack, {}, NUMERIC_FEATURE_NAMES, raw)
 
     assert not sessions.any()
-    assert np.allclose(
-        centers, np.tile(np.median(np.log1p(raw), axis=0), (len(pack), 1)))
+    assert np.allclose(centers, np.tile(np.median(np.log1p(raw), axis=0), (len(pack), 1)))
     assert np.array_equal(
-        baselined_z_scores(raw, centers, sessions > 0, NUMERIC_FEATURE_NAMES), z_old)
+        baselined_z_scores(raw, centers, sessions > 0, NUMERIC_FEATURE_NAMES), z_old
+    )
 
 
 def test_none_and_empty_history_agree(pack):
@@ -57,6 +69,7 @@ def test_separate_frames_leave_unbaselined_rows_untouched(pack):
 
 
 # ----------------------------------------------- 2/3. demotion and genuine change
+
 
 def test_persistent_heavy_endpoint_is_demoted_by_its_own_history(pack, heavy, heavy_history):
     current = pack + [heavy]
@@ -90,21 +103,45 @@ def test_departure_outscores_steady_state(pack, heavy, heavy_history):
 
 # ------------------------------------------- 4. population-wide shifts cancel out
 
+
 def test_uniform_population_shift_raises_no_reasons(pack, pack_history):
     """Every endpoint 4x busier — a 120s capture after 30s ones. Nothing should light up."""
-    scaled = [ep(p["ip_address"], p["bytes_out"] * 4, p["bytes_in"] * 4,
-                 p["packets_out"] * 4, p["packets_in"] * 4) for p in pack]
+    scaled = [
+        ep(
+            p["ip_address"],
+            p["bytes_out"] * 4,
+            p["bytes_in"] * 4,
+            p["packets_out"] * 4,
+            p["packets_in"] * 4,
+        )
+        for p in pack
+    ]
     ranked = score_endpoints(scaled, no_clusters(len(scaled)), pack_history)
 
     assert sum(len(e["reasons"]) for e in ranked) == 0
 
 
 def test_endpoint_exceeding_the_population_shift_still_surfaces(pack, pack_history):
-    scaled = [ep(p["ip_address"], p["bytes_out"] * 4, p["bytes_in"] * 4,
-                 p["packets_out"] * 4, p["packets_in"] * 4) for p in pack[:-1]]
+    scaled = [
+        ep(
+            p["ip_address"],
+            p["bytes_out"] * 4,
+            p["bytes_in"] * 4,
+            p["packets_out"] * 4,
+            p["packets_in"] * 4,
+        )
+        for p in pack[:-1]
+    ]
     last = pack[-1]
-    scaled.append(ep(last["ip_address"], last["bytes_out"] * 64, last["bytes_in"] * 4,
-                     last["packets_out"] * 64, last["packets_in"] * 4))
+    scaled.append(
+        ep(
+            last["ip_address"],
+            last["bytes_out"] * 64,
+            last["bytes_in"] * 4,
+            last["packets_out"] * 64,
+            last["packets_in"] * 4,
+        )
+    )
     ranked = score_endpoints(scaled, no_clusters(len(scaled)), pack_history)
 
     assert ranked[0]["ip_address"] == last["ip_address"]
@@ -113,10 +150,13 @@ def test_endpoint_exceeding_the_population_shift_still_surfaces(pack, pack_histo
 
 # ------------------------------------------------- 5. cadence is NEVER baselined
 
+
 @pytest.fixture
 def beacon_population():
-    pack = [ep(f"10.1.0.{i}", 5000, 6000, 30, 30, im=0.4 + i * 0.05, icv=0.9 + i * 0.02)
-            for i in range(12)]
+    pack = [
+        ep(f"10.1.0.{i}", 5000, 6000, 30, 30, im=0.4 + i * 0.05, icv=0.9 + i * 0.02)
+        for i in range(12)
+    ]
     beacon = ep("10.1.0.99", 5000, 6000, 30, 30, im=60.0, icv=0.001)
     return pack + [beacon]
 
@@ -125,8 +165,7 @@ def test_persistent_beacon_stays_flagged_despite_identical_history(beacon_popula
     """A beacon looks the same every session, so baselining its cadence would let its
     own history declare it normal — silencing the strongest signal the tool has."""
     history = history_from([beacon_population for _ in range(3)])
-    ranked = score_endpoints(
-        beacon_population, no_clusters(len(beacon_population)), history)
+    ranked = score_endpoints(beacon_population, no_clusters(len(beacon_population)), history)
     row = row_of(ranked, "10.1.0.99")
 
     cv = next((r for r in row["reasons"] if r["feature"] == "interval_cv"), None)
@@ -142,8 +181,7 @@ def test_timing_features_are_declared_exempt():
 def test_exempt_feature_centers_stay_at_the_column_median(beacon_population):
     history = history_from([beacon_population for _ in range(3)])
     raw = build_numeric_features(beacon_population)
-    centers, _ = build_baseline_centers(
-        beacon_population, history, NUMERIC_FEATURE_NAMES, raw)
+    centers, _ = build_baseline_centers(beacon_population, history, NUMERIC_FEATURE_NAMES, raw)
     column_median = np.median(np.log1p(raw), axis=0)
 
     for feature in BASELINE_EXEMPT_FEATURES:
@@ -152,6 +190,7 @@ def test_exempt_feature_centers_stay_at_the_column_median(beacon_population):
 
 
 # ------------------------------------------------------ 6. first_seen / novelty
+
 
 def test_first_seen_marks_novel_endpoints(pack, pack_history):
     brand_new = ep("10.0.0.250", 3000, 3000, 25, 25)
@@ -175,6 +214,7 @@ def test_first_seen_is_none_without_any_history(pack):
 
 # --------------------------------------- 7. insufficient history -> peer-relative
 
+
 def test_history_below_min_sessions_is_not_used(pack, heavy):
     current = pack + [heavy]
     raw = build_numeric_features(current)
@@ -182,34 +222,33 @@ def test_history_below_min_sessions_is_not_used(pack, heavy):
     centers, sessions = build_baseline_centers(current, thin, NUMERIC_FEATURE_NAMES, raw)
 
     assert not sessions.any()
-    assert np.allclose(
-        centers, np.tile(np.median(np.log1p(raw), axis=0), (len(current), 1)))
+    assert np.allclose(centers, np.tile(np.median(np.log1p(raw), axis=0), (len(current), 1)))
 
     peer = score_endpoints(current, no_clusters(len(current)), None)
     ranked_thin = score_endpoints(current, no_clusters(len(current)), thin)
-    assert ([e["ip_address"] for e in ranked_thin]
-            == [e["ip_address"] for e in peer])
+    assert [e["ip_address"] for e in ranked_thin] == [e["ip_address"] for e in peer]
 
 
 # ----------------------------------------- 8. missing / degenerate baseline input
 
+
 def test_none_and_nan_baselines_fall_back_to_the_column_median(pack, heavy):
     current = pack + [heavy]
-    medians = {n: 1.0 for n in NUMERIC_FEATURE_NAMES
-               if n not in ("bytes_out", "packets_out")}
+    medians = {n: 1.0 for n in NUMERIC_FEATURE_NAMES if n not in ("bytes_out", "packets_out")}
     medians.update(bytes_out=None, packets_out=float("nan"))
     partial = {"10.0.0.99": {"sessions": 3, "medians": medians}}
 
     centers, _ = build_baseline_centers(
-        current, partial, NUMERIC_FEATURE_NAMES, build_numeric_features(current))
+        current, partial, NUMERIC_FEATURE_NAMES, build_numeric_features(current)
+    )
     assert np.all(np.isfinite(centers))
 
 
 def test_all_zero_baseline_is_finite(pack, heavy):
     current = pack + [heavy]
     centers, _ = build_baseline_centers(
-        current, {"10.0.0.99": hist(3)}, NUMERIC_FEATURE_NAMES,
-        build_numeric_features(current))
+        current, {"10.0.0.99": hist(3)}, NUMERIC_FEATURE_NAMES, build_numeric_features(current)
+    )
     assert np.all(np.isfinite(centers))
 
 
@@ -222,14 +261,29 @@ def test_single_endpoint_set_does_not_crash(pack, pack_history):
 # Without BASELINE_SCALE_FLOOR the one changed endpoint sets the scale itself and its
 # z goes magnitude-invariant — a 20x change scoring the same as a 1% one.
 
+
 @pytest.fixture
 def degenerate(pack):
     stable = history_from([pack, pack, pack])
     last = pack[-1]
-    small = pack[:-1] + [ep(last["ip_address"], int(last["bytes_out"] * 1.01),
-                            last["bytes_in"], last["packets_out"], last["packets_in"])]
-    big = pack[:-1] + [ep(last["ip_address"], last["bytes_out"] * 20,
-                          last["bytes_in"], last["packets_out"], last["packets_in"])]
+    small = pack[:-1] + [
+        ep(
+            last["ip_address"],
+            int(last["bytes_out"] * 1.01),
+            last["bytes_in"],
+            last["packets_out"],
+            last["packets_in"],
+        )
+    ]
+    big = pack[:-1] + [
+        ep(
+            last["ip_address"],
+            last["bytes_out"] * 20,
+            last["bytes_in"],
+            last["packets_out"],
+            last["packets_in"],
+        )
+    ]
     return stable, small, big, last["ip_address"]
 
 

@@ -21,11 +21,13 @@ def require_module(module_name: str, extra: str, purpose: str) -> ModuleType:
         # as absent.  The capability hint applies only when the requested import (or
         # its top-level package) is what could not be found.
         missing = exc.name or ""
-        if missing != package and missing != module_name and not module_name.startswith(
-            f"{missing}."
+        if (
+            missing != package
+            and missing != module_name
+            and not module_name.startswith(f"{missing}.")
         ):
             raise
         raise ModuleNotFoundError(
             f"{purpose} requires the optional '{package}' package. "
-            f"Install the JAWS capability with: python -m pip install \"JAWS[{extra}]\""
+            f'Install the JAWS capability with: python -m pip install "JAWS[{extra}]"'
         ) from exc

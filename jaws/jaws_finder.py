@@ -1,23 +1,24 @@
-import os
 import argparse
+import os
 import tempfile
+
 import numpy as np
-from sklearn.decomposition import PCA
+from kneed import KneeLocator
 from sklearn.cluster import DBSCAN
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score
-from kneed import KneeLocator
+
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
 from jaws.jaws_utils import (
-    dbms_connection,
+    MIN_TIMING_PACKETS,
+    NON_CONVERSATIONAL_TYPES,
     Reporter,
     classify_endpoint,
-    NON_CONVERSATIONAL_TYPES,
-    MIN_TIMING_PACKETS
+    dbms_connection,
 )
 from jaws.optional_dependencies import require_module
-
 
 plt = None
 plotille = None
@@ -47,7 +48,9 @@ BASE_FEATURES = ["bytes_out", "bytes_in", "packets_out", "packets_in", "out_peer
 RATIO_FEATURES = {
     "bytes_out_in_ratio": lambda d: d["bytes_out"] / (d["bytes_in"] + 1.0),
     "packets_out_in_ratio": lambda d: d["packets_out"] / (d["packets_in"] + 1.0),
-    "bytes_per_packet": lambda d: (d["bytes_out"] + d["bytes_in"]) / (d["packets_out"] + d["packets_in"] + 1.0),
+    "bytes_per_packet": lambda d: (
+        (d["bytes_out"] + d["bytes_in"]) / (d["packets_out"] + d["packets_in"] + 1.0)
+    ),
     "bytes_per_peer": lambda d: d["bytes_out"] / (d["out_peers"] + 1.0),
 }
 
@@ -193,12 +196,13 @@ def deviation_score(z, feature_names):
     is_capped_low = (z < 0) & ~low_signal
     weighted = np.abs(z)
     weighted[is_capped_low] = np.minimum(
-        weighted[is_capped_low] * LOW_DIRECTION_WEIGHT, LOW_DIRECTION_CAP)
+        weighted[is_capped_low] * LOW_DIRECTION_WEIGHT, LOW_DIRECTION_CAP
+    )
     saturating = np.array([name in SATURATING_FEATURES for name in feature_names])
     weighted[:, saturating] = np.minimum(weighted[:, saturating], LOW_DIRECTION_CAP)
     k = min(SCORE_TOP_K, weighted.shape[1])
     top = np.sort(weighted, axis=1)[:, -k:]
-    return np.sqrt(np.sum(top ** 2, axis=1))
+    return np.sqrt(np.sum(top**2, axis=1))
 
 
 # The capture host's own IP is owned by this synthetic org (see initialize_schema).
@@ -218,11 +222,11 @@ LOCAL_ORG = "YOU ARE HERE"
 # (its perspective IS the host's). Keyed by flow: "out" = endpoint-as-source, "in" = -as-dest.
 HOST_FRAME_REMOTE = {
     "out": "remote → host: traffic the capture host downloaded (NOT host exfil)",
-    "in":  "host → remote: traffic the capture host sent to this IP (outbound-from-host signal)",
+    "in": "host → remote: traffic the capture host sent to this IP (outbound-from-host signal)",
 }
 HOST_FRAME_LOCAL = {
     "out": "host → network: traffic the capture host sent out (outbound-from-host signal)",
-    "in":  "network → host: traffic the capture host received (download)",
+    "in": "network → host: traffic the capture host received (download)",
 }
 
 # Which directional flow each feature belongs to, for host-frame glossing. "out" features
@@ -230,9 +234,12 @@ HOST_FRAME_LOCAL = {
 # are out-dominant when high. Features absent here (bytes_per_packet, peers, timing) carry
 # no host-relative direction and get no gloss.
 FEATURE_FLOW = {
-    "bytes_out": "out", "packets_out": "out",
-    "bytes_in": "in", "packets_in": "in",
-    "bytes_out_in_ratio": "out", "packets_out_in_ratio": "out",
+    "bytes_out": "out",
+    "packets_out": "out",
+    "bytes_in": "in",
+    "packets_in": "in",
+    "bytes_out_in_ratio": "out",
+    "packets_out_in_ratio": "out",
     "bytes_per_peer": "out",
 }
 
@@ -330,8 +337,7 @@ def baselined_z_scores(raw, centers, baselined, feature_names):
     z = robust_z_scores(raw)
     if not baselined.any():
         return z
-    columns = [j for j, name in enumerate(feature_names)
-               if name not in BASELINE_EXEMPT_FEATURES]
+    columns = [j for j, name in enumerate(feature_names) if name not in BASELINE_EXEMPT_FEATURES]
     if not columns:
         return z
 
@@ -365,11 +371,15 @@ def score_endpoints(data, clusters, history=None):
     """
     raw = build_numeric_features(data)
     centers, baseline_sessions = build_baseline_centers(
-        data, history or {}, NUMERIC_FEATURE_NAMES, raw)
+        data, history or {}, NUMERIC_FEATURE_NAMES, raw
+    )
     baselined_rows = baseline_sessions >= MIN_BASELINE_SESSIONS
     baselined = bool(history) and bool(baselined_rows.any())
-    z = (baselined_z_scores(raw, centers, baselined_rows, NUMERIC_FEATURE_NAMES)
-         if baselined else robust_z_scores(raw))
+    z = (
+        baselined_z_scores(raw, centers, baselined_rows, NUMERIC_FEATURE_NAMES)
+        if baselined
+        else robust_z_scores(raw)
+    )
 
     # Timing z-scores are only meaningful with enough intervals behind them: profiles
     # computed under the old MIN_TIMING_PACKETS gate (3) carry an interval_cv from a
@@ -411,7 +421,8 @@ def score_endpoints(data, clusters, history=None):
                 }
                 if against_history:
                     reason["baseline"] = round(
-                        float(history[item["ip_address"]]["medians"][name]), 4)
+                        float(history[item["ip_address"]]["medians"][name]), 4
+                    )
                     reason["baseline_sessions"] = int(baseline_sessions[i])
                 # Defender-frame disambiguation so "bytes_out high" on a remote IP reads as
                 # a host download, not exfil (omitted for non-directional features).
@@ -420,34 +431,35 @@ def score_endpoints(data, clusters, history=None):
                     reason["host_relative"] = gloss
                 reasons.append(reason)
         reasons.sort(key=lambda r: abs(r["robust_z"]), reverse=True)
-        ranked.append({
-            "ip_address": item["ip_address"],
-            "endpoint_type": item.get("endpoint_type"),
-            "org": item["org"],
-            # Hosting/CDN ASNs label the infrastructure provider, not the actual
-            # service — keep "org: Google LLC" on a GCP customer VM from reading as
-            # Google's own reputation.
-            "cloud_hosted": is_cloud_hosted(item["org"]),
-            "hostname": item["hostname"],
-            "location": item["location"],
-            "bytes_out": item["bytes_out"],
-            "packets_out": item["packets_out"],
-            "bytes_in": item["bytes_in"],
-            "packets_in": item["packets_in"],
-            "interval_mean": item["interval_mean"],
-            "interval_cv": item["interval_cv"],
-            "anomaly_score": round(float(scores[i]), 4),
-            "is_outlier": bool(clusters[i] == -1),
-            # How many earlier sessions this IP was profiled in, and whether this session
-            # is the first time it has ever been seen. A never-before-seen endpoint is a
-            # finding in its own right that no per-feature z can express — the features
-            # only describe what it did, not that it is new. None when there is no prior
-            # history at all (nothing is "new" against an empty graph).
-            "baseline_sessions": int(baseline_sessions[i]),
-            "first_seen": (None if not history
-                           else item["ip_address"] not in history),
-            "reasons": reasons,
-        })
+        ranked.append(
+            {
+                "ip_address": item["ip_address"],
+                "endpoint_type": item.get("endpoint_type"),
+                "org": item["org"],
+                # Hosting/CDN ASNs label the infrastructure provider, not the actual
+                # service — keep "org: Google LLC" on a GCP customer VM from reading as
+                # Google's own reputation.
+                "cloud_hosted": is_cloud_hosted(item["org"]),
+                "hostname": item["hostname"],
+                "location": item["location"],
+                "bytes_out": item["bytes_out"],
+                "packets_out": item["packets_out"],
+                "bytes_in": item["bytes_in"],
+                "packets_in": item["packets_in"],
+                "interval_mean": item["interval_mean"],
+                "interval_cv": item["interval_cv"],
+                "anomaly_score": round(float(scores[i]), 4),
+                "is_outlier": bool(clusters[i] == -1),
+                # How many earlier sessions this IP was profiled in, and whether this session
+                # is the first time it has ever been seen. A never-before-seen endpoint is a
+                # finding in its own right that no per-feature z can express — the features
+                # only describe what it did, not that it is new. None when there is no prior
+                # history at all (nothing is "new" against an empty graph).
+                "baseline_sessions": int(baseline_sessions[i]),
+                "first_seen": (None if not history else item["ip_address"] not in history),
+                "reasons": reasons,
+            }
+        )
     ranked.sort(key=lambda e: e["anomaly_score"], reverse=True)
     return ranked
 
@@ -499,32 +511,36 @@ def score_host_outbound(rows):
         for j, name in enumerate(HOST_OUTBOUND_FEATURES):
             zj = float(z[i, j])
             if abs(zj) >= REASON_Z_THRESHOLD:
-                reasons.append({
-                    "feature": name,
-                    "value": round(float(raw[i, j]), 4),
-                    "unit": HOST_OUTBOUND_UNITS[name],
-                    "robust_z": round(zj, 2),
-                    "direction": "high" if zj > 0 else "low",
-                    "host_relative": HOST_OUTBOUND_GLOSS[name],
-                })
+                reasons.append(
+                    {
+                        "feature": name,
+                        "value": round(float(raw[i, j]), 4),
+                        "unit": HOST_OUTBOUND_UNITS[name],
+                        "robust_z": round(zj, 2),
+                        "direction": "high" if zj > 0 else "low",
+                        "host_relative": HOST_OUTBOUND_GLOSS[name],
+                    }
+                )
         reasons.sort(key=lambda x: abs(x["robust_z"]), reverse=True)
-        ranked.append({
-            "ip_address": r["ip_address"],
-            "org": r["org"],
-            "cloud_hosted": is_cloud_hosted(r["org"]),
-            "hostname": r["hostname"],
-            "location": r["location"],
-            "upload_bytes": r["upload_bytes"],
-            "upload_packets": r["upload_packets"],
-            "download_bytes": r["download_bytes"],
-            "download_packets": r["download_packets"],
-            "upload_download_ratio": round(float(r["upload_download_ratio"]), 4),
-            "outbound_score": round(float(scores[i]), 4),
-            # Explicit per-row verdict (a reason cleared REASON_Z_THRESHOLD), so the
-            # top-level `flagged` count is joinable without inferring from `reasons`.
-            "is_flagged": bool(reasons),
-            "reasons": reasons,
-        })
+        ranked.append(
+            {
+                "ip_address": r["ip_address"],
+                "org": r["org"],
+                "cloud_hosted": is_cloud_hosted(r["org"]),
+                "hostname": r["hostname"],
+                "location": r["location"],
+                "upload_bytes": r["upload_bytes"],
+                "upload_packets": r["upload_packets"],
+                "download_bytes": r["download_bytes"],
+                "download_packets": r["download_packets"],
+                "upload_download_ratio": round(float(r["upload_download_ratio"]), 4),
+                "outbound_score": round(float(scores[i]), 4),
+                # Explicit per-row verdict (a reason cleared REASON_Z_THRESHOLD), so the
+                # top-level `flagged` count is joinable without inferring from `reasons`.
+                "is_flagged": bool(reasons),
+                "reasons": reasons,
+            }
+        )
     ranked.sort(key=lambda e: e["outbound_score"], reverse=True)
     return ranked
 
@@ -598,7 +614,8 @@ def resolve_profile_scope(driver, database, session_arg):
     if session_arg not in available:
         raise ValueError(
             f"no endpoint profiles for session '{session_arg}'; profiled sessions: {available}. "
-            f"Run jaws-compute --session {session_arg} first.")
+            f"Run jaws-compute --session {session_arg} first."
+        )
     return session_arg, available
 
 
@@ -637,8 +654,10 @@ def fetch_endpoint_history(driver, database, scope):
     if scope is None:
         return {}
     with driver.session(database=database) as session:
-        rows = [record.data() for record in
-                session.run(_HISTORY_QUERY, scope=scope, pooled=POOLED_SCOPE)]
+        rows = [
+            record.data()
+            for record in session.run(_HISTORY_QUERY, scope=scope, pooled=POOLED_SCOPE)
+        ]
     if not rows:
         return {}
 
@@ -655,8 +674,10 @@ def fetch_endpoint_history(driver, database, scope):
         stacked = np.vstack(vectors)
         history[ip] = {
             "sessions": len(vectors),
-            "medians": {name: float(np.median(stacked[:, j]))
-                        for j, name in enumerate(NUMERIC_FEATURE_NAMES)},
+            "medians": {
+                name: float(np.median(stacked[:, j]))
+                for j, name in enumerate(NUMERIC_FEATURE_NAMES)
+            },
         }
     return history
 
@@ -692,11 +713,11 @@ def fetch_data_for_dbscan(driver, database, include_local=False, scope=None):
         excluded_local = 0
         excluded_non_conversational = []
         for record in result:
-            if record['embedding'] is not None:  # Only process endpoints with embeddings
-                if not include_local and record['org'] == LOCAL_ORG:
+            if record["embedding"] is not None:  # Only process endpoints with embeddings
+                if not include_local and record["org"] == LOCAL_ORG:
                     excluded_local += 1
                     continue
-                ip_address = record['ip_address'] or 'Unknown'
+                ip_address = record["ip_address"] or "Unknown"
                 # Multicast/broadcast destinations never reply, so their profiles are
                 # one-way protocol chatter (SSDP/mDNS) whose out/in shape reads as
                 # exfil. They stay in the graph (tagged, inspectable) but are not
@@ -706,29 +727,32 @@ def fetch_data_for_dbscan(driver, database, include_local=False, scope=None):
                 endpoint_type = classify_endpoint(ip_address)
                 if endpoint_type in NON_CONVERSATIONAL_TYPES:
                     excluded_non_conversational.append(
-                        {"ip_address": ip_address, "endpoint_type": endpoint_type})
+                        {"ip_address": ip_address, "endpoint_type": endpoint_type}
+                    )
                     continue
-                embeddings.append(np.array(record['embedding']))
-                data.append({
-                    'ip_address': ip_address,
-                    'endpoint_type': endpoint_type,
-                    # Session scope this profile was computed from ('all', a concrete
-                    # CAPTURE_ID, or None on graphs computed before sessions existed).
-                    'capture_id': record['capture_id'],
-                    'org': record['org'] or 'Unknown',
-                    'hostname': record['hostname'] or 'Unknown',
-                    'location': record['location'] or 'Unknown',
-                    'bytes_out': record['bytes_out'] or 0,
-                    'packets_out': record['packets_out'] or 0,
-                    'out_peers': record['out_peers'] or 0,
-                    'bytes_in': record['bytes_in'] or 0,
-                    'packets_in': record['packets_in'] or 0,
-                    'in_peers': record['in_peers'] or 0,
-                    # None when the endpoint had too few packets to time — kept as
-                    # None so build_numeric_features median-imputes it.
-                    'interval_mean': record['interval_mean'],
-                    'interval_cv': record['interval_cv'],
-                })
+                embeddings.append(np.array(record["embedding"]))
+                data.append(
+                    {
+                        "ip_address": ip_address,
+                        "endpoint_type": endpoint_type,
+                        # Session scope this profile was computed from ('all', a concrete
+                        # CAPTURE_ID, or None on graphs computed before sessions existed).
+                        "capture_id": record["capture_id"],
+                        "org": record["org"] or "Unknown",
+                        "hostname": record["hostname"] or "Unknown",
+                        "location": record["location"] or "Unknown",
+                        "bytes_out": record["bytes_out"] or 0,
+                        "packets_out": record["packets_out"] or 0,
+                        "out_peers": record["out_peers"] or 0,
+                        "bytes_in": record["bytes_in"] or 0,
+                        "packets_in": record["packets_in"] or 0,
+                        "in_peers": record["in_peers"] or 0,
+                        # None when the endpoint had too few packets to time — kept as
+                        # None so build_numeric_features median-imputes it.
+                        "interval_mean": record["interval_mean"],
+                        "interval_cv": record["interval_cv"],
+                    }
+                )
         return embeddings, data, excluded_local, excluded_non_conversational
 
 
@@ -739,8 +763,10 @@ def fetch_data_for_portsize(driver, database):
     """
     with driver.session(database=database) as session:
         result = session.run(query)
-        plot_data = [{'size': record['size'], 'src_port': record['src_port'], 'dst_port': record['dst_port']}
-                     for record in result]
+        plot_data = [
+            {"size": record["size"], "src_port": record["src_port"], "dst_port": record["dst_port"]}
+            for record in result
+        ]
     return plot_data
 
 
@@ -789,8 +815,12 @@ def fetch_host_outbound(driver, database, capture_id=None):
         local_ips = session.run(local_query, {"local_org": LOCAL_ORG}).single()["local_ips"]
         if not local_ips:
             return [], []
-        rows = [record.data() for record in
-                session.run(peer_query, {"local_ips": local_ips, "capture_id": capture_id})]
+        rows = [
+            record.data()
+            for record in session.run(
+                peer_query, {"local_ips": local_ips, "capture_id": capture_id}
+            )
+        ]
     return local_ips, rows
 
 
@@ -816,59 +846,79 @@ def add_outlier_to_database(scored_list, flagged_list, driver, database, scope=N
     SET endpoint.OUTLIER = true
     """
     with driver.session(database=database) as session:
-        session.run(reset_query, {'scored': [e['ip_address'] for e in scored_list], 'scope': scope})
-        session.run(flag_query, {'outliers': flagged_list, 'scope': scope})
+        session.run(reset_query, {"scored": [e["ip_address"] for e in scored_list], "scope": scope})
+        session.run(flag_query, {"outliers": flagged_list, "scope": scope})
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
     _load_plotting()
-    plt.figure(num='Packet Size over Ports', figsize=(6, 4))
+    plt.figure(num="Packet Size over Ports", figsize=(6, 4))
     for item in plot_data:
-        plt.scatter(item['size'], item['src_port'], c=item['size'], cmap='winter', marker='^', s=50, alpha=0.1, zorder=10)
-        plt.scatter(item['size'], item['dst_port'], c=item['size'], cmap='ocean', marker='^', s=50, alpha=0.1, zorder=10)
+        plt.scatter(
+            item["size"],
+            item["src_port"],
+            c=item["size"],
+            cmap="winter",
+            marker="^",
+            s=50,
+            alpha=0.1,
+            zorder=10,
+        )
+        plt.scatter(
+            item["size"],
+            item["dst_port"],
+            c=item["size"],
+            cmap="ocean",
+            marker="^",
+            s=50,
+            alpha=0.1,
+            zorder=10,
+        )
 
-    plt.xlabel('SIZE', fontsize=8, color='#666666')
-    plt.ylabel('PORT', fontsize=8, color='#666666')
-    plt.legend(['SRC_PORT', 'DST_PORT'], loc='upper right', fontsize=8)
+    plt.xlabel("SIZE", fontsize=8, color="#666666")
+    plt.ylabel("PORT", fontsize=8, color="#666666")
+    plt.legend(["SRC_PORT", "DST_PORT"], loc="upper right", fontsize=8)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
-    plt.grid(True, linewidth=0.5, color='#BEBEBE', alpha=0.5)
+    plt.grid(True, linewidth=0.5, color="#BEBEBE", alpha=0.5)
     plt.tight_layout()
-    save_portsize = os.path.join(jaws_finder_endpoint, 'size_over_port.png')
+    save_portsize = os.path.join(jaws_finder_endpoint, "size_over_port.png")
     plt.savefig(save_portsize, dpi=90)
 
     portsize_plotille = new_plotille_figure()
-    portsize_plotille.x_label = 'SIZE'
-    portsize_plotille.y_label = 'PORT'
-    portsize_plotille.color_mode = 'byte'
+    portsize_plotille.x_label = "SIZE"
+    portsize_plotille.y_label = "PORT"
+    portsize_plotille.color_mode = "byte"
     portsize_plotille.width = 80
     portsize_plotille.height = 20
     portsize_plotille.set_x_limits(min_=0)
     portsize_plotille.set_y_limits(min_=0)
     for item in plot_data:
-        portsize_plotille.scatter([item['size']], [item['src_port']], marker=">")
-        portsize_plotille.scatter([item['size']], [item['dst_port']], marker="<")
+        portsize_plotille.scatter([item["size"]], [item["src_port"]], marker=">")
+        portsize_plotille.scatter([item["size"]], [item["dst_port"]], marker="<")
     display_portsize = portsize_plotille.show(legend=False)
     print(display_portsize)
 
 
 def plot_k_distances(sorted_k_distances, jaws_finder_endpoint):
     _load_plotting()
-    plt.figure(num='Sorted K-Distance', figsize=(6, 2))
-    plt.plot(sorted_k_distances, color='seagreen', marker='o', linestyle='-', linewidth=0.5, alpha=0.8)
-    plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
-    plt.xlabel('INDEX', fontsize=8, color='#666666')
-    plt.ylabel('K-DISTANCE', fontsize=8, color='#666666')
+    plt.figure(num="Sorted K-Distance", figsize=(6, 2))
+    plt.plot(
+        sorted_k_distances, color="seagreen", marker="o", linestyle="-", linewidth=0.5, alpha=0.8
+    )
+    plt.grid(color="#BEBEBE", linestyle="-", linewidth=0.25, alpha=0.5)
+    plt.xlabel("INDEX", fontsize=8, color="#666666")
+    plt.ylabel("K-DISTANCE", fontsize=8, color="#666666")
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_kdistance = os.path.join(jaws_finder_endpoint, 'sorted_k_distance.png')
+    save_kdistance = os.path.join(jaws_finder_endpoint, "sorted_k_distance.png")
     plt.savefig(save_kdistance, dpi=90)
 
     kdistance_plotille = new_plotille_figure()
-    kdistance_plotille.x_label = 'INDEX'
-    kdistance_plotille.y_label = 'K-DISTANCE'
-    kdistance_plotille.color_mode = 'byte'
+    kdistance_plotille.x_label = "INDEX"
+    kdistance_plotille.y_label = "K-DISTANCE"
+    kdistance_plotille.color_mode = "byte"
     kdistance_plotille.width = 80
     kdistance_plotille.height = 20
     kdistance_plotille.set_x_limits(min_=0)
@@ -890,8 +940,9 @@ def recommend_eps(features, min_samples):
     nearest_neighbors.fit(features)
     distances, _ = nearest_neighbors.kneighbors(features)
     sorted_k_distances = np.sort(distances[:, min_samples - 1])
-    kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances,
-                          curve='convex', direction='increasing')
+    kneedle = KneeLocator(
+        range(len(sorted_k_distances)), sorted_k_distances, curve="convex", direction="increasing"
+    )
     if kneedle.knee is not None:
         return float(sorted_k_distances[int(kneedle.knee)])
     return float(np.median(sorted_k_distances))
@@ -913,8 +964,9 @@ def run_ablation(embeddings, data, components, whiten, feature_weight):
     """
     text_only, _ = build_feature_matrix(embeddings, data, components, whiten, 0.0)
     numeric_only = StandardScaler().fit_transform(np.log1p(build_numeric_features(data)))
-    blended, _ = build_feature_matrix(embeddings, data, components, whiten,
-                                      feature_weight if feature_weight > 0 else 1.0)
+    blended, _ = build_feature_matrix(
+        embeddings, data, components, whiten, feature_weight if feature_weight > 0 else 1.0
+    )
     conditions = {"text-only": text_only, "numeric-only": numeric_only, "blended": blended}
 
     min_samples = 2 * components
@@ -950,7 +1002,9 @@ def run_ablation(embeddings, data, components, whiten, feature_weight):
         for j in range(i + 1, len(names)):
             a, b = outlier_sets[names[i]], outlier_sets[names[j]]
             union = a | b
-            jaccard[f"{names[i]} vs {names[j]}"] = round(len(a & b) / len(union), 4) if union else 1.0
+            jaccard[f"{names[i]} vs {names[j]}"] = (
+                round(len(a & b) / len(union), 4) if union else 1.0
+            )
 
     return {
         "endpoints": len(data),
@@ -963,11 +1017,15 @@ def run_ablation(embeddings, data, components, whiten, feature_weight):
 
 def format_ablation_table(result):
     """Render the ablation result as a fixed-width text table for the reporter."""
-    header = f"{'CONDITION':<13}{'DIMS':>5}{'EPS':>9}{'CLUSTERS':>10}{'OUTLIERS':>10}{'SILHOUETTE':>12}"
+    header = (
+        f"{'CONDITION':<13}{'DIMS':>5}{'EPS':>9}{'CLUSTERS':>10}{'OUTLIERS':>10}{'SILHOUETTE':>12}"
+    )
     rows = [header]
     for name, s in result["conditions"].items():
         sil = "n/a" if s["silhouette"] is None else f"{s['silhouette']:.4f}"
-        rows.append(f"{name:<13}{s['dims']:>5}{s['eps']:>9.4f}{s['clusters']:>10}{s['outliers']:>10}{sil:>12}")
+        rows.append(
+            f"{name:<13}{s['dims']:>5}{s['eps']:>9.4f}{s['clusters']:>10}{s['outliers']:>10}{sil:>12}"
+        )
     rows.append("")
     rows.append("Outlier-set agreement (Jaccard):")
     for pair, jac in result["outlier_jaccard"].items():
@@ -976,16 +1034,58 @@ def format_ablation_table(result):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perform DBSCAN clustering on embeddings fetched from the database.")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
-    parser.add_argument("--components", type=int, default=2, help="Number of PCA components to retain for clustering. The first 2 are always used for plotting, so values below 2 are clamped (default: 2).")
-    parser.add_argument("--whiten", action="store_true", help="Whiten the PCA components (scale each to unit variance). Improves geometry with few strong components, but amplifies noise when retaining many low-variance components (default: off).")
-    parser.add_argument("--eps", type=float, default=None, help="DBSCAN epsilon. When omitted, it is auto-recommended from the k-distance knee. The knee tends to overshoot on small/homogeneous datasets (folding everything into one cluster, 0 outliers) — pass a smaller value to surface more outliers.")
-    parser.add_argument("--feature-weight", type=float, default=1.0, help="Influence of the behavioral numeric features (bytes/packets/peers, in & out) on clustering. The numeric block is standardized to unit variance and scaled by this weight; the text embedding keeps its natural scale. 0 = embedding-only (text/org/protocol structure), higher = more volume/fan-out influence to surface behavioral anomalies. Default 1.0.")
-    parser.add_argument("--include-local", action="store_true", help="Include the capture host ('YOU ARE HERE') in the clustered set. Off by default — it is a structural hub that dominates clustering. Its outbound traffic still appears as each remote endpoint's inbound, so outbound anomalies are detectable without it.")
-    parser.add_argument("--session", default="latest", help="Which stored profile set to analyze: 'latest' (default — the most recently computed), or a specific CAPTURE_ID that jaws-compute has profiled. Profile sets accumulate one per capture session.")
-    parser.add_argument("--no-baseline", action="store_true", help="Disable historical baselining and score every endpoint purely against its current peers. By default, an endpoint with at least %d prior profiled sessions is measured against its OWN history (volume and shape features only — cadence stays peer-relative so a persistent beacon can't normalize itself), which stops endpoints that are always heavy from dominating the ranking every run." % MIN_BASELINE_SESSIONS)
-    parser.add_argument("--ablate", action="store_true", help="Ablation mode: cluster the same endpoints three ways — text-only (embedding alone), numeric-only (behavioral features alone), and blended — and report cluster quality (silhouette) and outlier-set agreement (Jaccard) to quantify how much the embedding contributes. Reuses stored embeddings, writes nothing, generates no plots.")
+    parser = argparse.ArgumentParser(
+        description="Perform DBSCAN clustering on embeddings fetched from the database."
+    )
+    parser.add_argument(
+        "--database",
+        default=DATABASE,
+        help=f"Specify the database to connect to (default: '{DATABASE}').",
+    )
+    parser.add_argument(
+        "--components",
+        type=int,
+        default=2,
+        help="Number of PCA components to retain for clustering. The first 2 are always used for plotting, so values below 2 are clamped (default: 2).",
+    )
+    parser.add_argument(
+        "--whiten",
+        action="store_true",
+        help="Whiten the PCA components (scale each to unit variance). Improves geometry with few strong components, but amplifies noise when retaining many low-variance components (default: off).",
+    )
+    parser.add_argument(
+        "--eps",
+        type=float,
+        default=None,
+        help="DBSCAN epsilon. When omitted, it is auto-recommended from the k-distance knee. The knee tends to overshoot on small/homogeneous datasets (folding everything into one cluster, 0 outliers) — pass a smaller value to surface more outliers.",
+    )
+    parser.add_argument(
+        "--feature-weight",
+        type=float,
+        default=1.0,
+        help="Influence of the behavioral numeric features (bytes/packets/peers, in & out) on clustering. The numeric block is standardized to unit variance and scaled by this weight; the text embedding keeps its natural scale. 0 = embedding-only (text/org/protocol structure), higher = more volume/fan-out influence to surface behavioral anomalies. Default 1.0.",
+    )
+    parser.add_argument(
+        "--include-local",
+        action="store_true",
+        help="Include the capture host ('YOU ARE HERE') in the clustered set. Off by default — it is a structural hub that dominates clustering. Its outbound traffic still appears as each remote endpoint's inbound, so outbound anomalies are detectable without it.",
+    )
+    parser.add_argument(
+        "--session",
+        default="latest",
+        help="Which stored profile set to analyze: 'latest' (default — the most recently computed), or a specific CAPTURE_ID that jaws-compute has profiled. Profile sets accumulate one per capture session.",
+    )
+    parser.add_argument(
+        "--no-baseline",
+        action="store_true",
+        help="Disable historical baselining and score every endpoint purely against its current peers. By default, an endpoint with at least %d prior profiled sessions is measured against its OWN history (volume and shape features only — cadence stays peer-relative so a persistent beacon can't normalize itself), which stops endpoints that are always heavy from dominating the ranking every run."
+        % MIN_BASELINE_SESSIONS,
+    )
+    parser.add_argument(
+        "--ablate",
+        action="store_true",
+        help="Ablation mode: cluster the same endpoints three ways — text-only (embedding alone), numeric-only (behavioral features alone), and blended — and report cluster quality (silhouette) and outlier-set agreement (Jaccard) to quantify how much the embedding contributes. Reuses stored embeddings, writes nothing, generates no plots.",
+    )
     args = parser.parse_args()
     reporter = Reporter()
     if args.components < 2:
@@ -1008,23 +1108,39 @@ def main():
         driver.close()
         return
     if scope is not None:
-        reporter.info("CONFIG", f"Analyzing profile session: {scope} ({len(profiled_scopes)} profiled session(s) in graph)")
+        reporter.info(
+            "CONFIG",
+            f"Analyzing profile session: {scope} ({len(profiled_scopes)} profiled session(s) in graph)",
+        )
 
     embeddings, data, excluded_local, excluded_nc = fetch_data_for_dbscan(
-        driver, args.database, args.include_local, scope)
+        driver, args.database, args.include_local, scope
+    )
     if excluded_local:
-        reporter.info("CONFIG", f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.")
+        reporter.info(
+            "CONFIG",
+            f"Excluding the local host ('{LOCAL_ORG}') from clustering. Pass --include-local to include it.",
+        )
     if excluded_nc:
-        reporter.info("CONFIG", f"Excluding {len(excluded_nc)} non-conversational endpoint(s) (multicast/broadcast) from clustering and ranking: {', '.join(e['ip_address'] for e in excluded_nc)}")
+        reporter.info(
+            "CONFIG",
+            f"Excluding {len(excluded_nc)} non-conversational endpoint(s) (multicast/broadcast) from clustering and ranking: {', '.join(e['ip_address'] for e in excluded_nc)}",
+        )
 
     # Clustering (and ablation) needs at least min_samples endpoints — below that PCA/
     # NearestNeighbors raise. Catch it here with an actionable message instead.
     min_samples = 2 * args.components
     if len(data) < min_samples:
         if not data:
-            reporter.error("ERROR", "No embedded endpoints found. Run jaws-capture, jaws-ipinfo, and jaws-compute first.")
+            reporter.error(
+                "ERROR",
+                "No embedded endpoints found. Run jaws-capture, jaws-ipinfo, and jaws-compute first.",
+            )
         else:
-            reporter.error("ERROR", f"Clustering needs at least {min_samples} embedded endpoints (have {len(data)}). Capture more traffic or lower --components.")
+            reporter.error(
+                "ERROR",
+                f"Clustering needs at least {min_samples} embedded endpoints (have {len(data)}). Capture more traffic or lower --components.",
+            )
         driver.close()
         return
 
@@ -1053,16 +1169,21 @@ def main():
 
     feature_info_message = (
         f"Reducing {len(embeddings)} endpoint embeddings to {args.components} PCA dimensions"
-        + (f", blended with {NUMERIC_FEATURE_COUNT} behavioral features "
-           f"(counts, shape ratios & timing; weight {args.feature_weight})."
-           if args.feature_weight > 0 else " (behavioral features disabled).")
+        + (
+            f", blended with {NUMERIC_FEATURE_COUNT} behavioral features "
+            f"(counts, shape ratios & timing; weight {args.feature_weight})."
+            if args.feature_weight > 0
+            else " (behavioral features disabled)."
+        )
     )
     reporter.info("INFO", feature_info_message)
 
     # Clustering runs on `features` (standardized text PCA components, optionally blended
     # with standardized behavioral features). `plot_xy` is a 2D projection of that same
     # space, so the scatter plot reflects what was actually clustered.
-    features, pca = build_feature_matrix(embeddings, data, args.components, args.whiten, args.feature_weight)
+    features, pca = build_feature_matrix(
+        embeddings, data, args.components, args.whiten, args.feature_weight
+    )
     plot_xy = PCA(n_components=2).fit_transform(features) if features.shape[1] > 2 else features
 
     explained = pca.explained_variance_ratio_
@@ -1073,7 +1194,9 @@ def main():
     )
     reporter.info("INFO", explained_variance_message)
 
-    kdistance_info_message = "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN."
+    kdistance_info_message = (
+        "Measuring K-Distance. This is used to determine the optimal epsilon value\nfor DBSCAN."
+    )
     reporter.info("INFO", kdistance_info_message)
 
     nearest_neighbors = NearestNeighbors(n_neighbors=min_samples)
@@ -1095,7 +1218,12 @@ def main():
         reporter.info("CONFIG", f"Using provided EPS: {eps_value}")
     else:
         eps_source = "auto"
-        kneedle = KneeLocator(range(len(sorted_k_distances)), sorted_k_distances, curve='convex', direction='increasing')
+        kneedle = KneeLocator(
+            range(len(sorted_k_distances)),
+            sorted_k_distances,
+            curve="convex",
+            direction="increasing",
+        )
         knee_index = int(kneedle.knee) if kneedle.knee is not None else None
         if knee_index is not None:
             eps_value = sorted_k_distances[knee_index]
@@ -1105,7 +1233,9 @@ def main():
             eps_value = np.median(sorted_k_distances)
 
         if not reporter.agent:
-            user_input = input(f"[RECOMMENDED EPS] {eps_value:.2f} | Press ENTER to accept, or provide a value: ")
+            user_input = input(
+                f"[RECOMMENDED EPS] {eps_value:.2f} | Press ENTER to accept, or provide a value: "
+            )
             if user_input:
                 try:
                     eps_value = float(user_input)
@@ -1121,61 +1251,92 @@ def main():
     # Cluster count and sizes distinguish "one tight benign cluster" from "a generous
     # eps absorbed everything" when reading outliers_flagged == 0.
     cluster_sizes = sorted(
-        (int(n) for n in np.unique(clusters[clusters != -1], return_counts=True)[1]),
-        reverse=True)
+        (int(n) for n in np.unique(clusters[clusters != -1], return_counts=True)[1]), reverse=True
+    )
 
     if not reporter.agent:
-        reporter.info("INFO", "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.")
+        reporter.info(
+            "INFO",
+            "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.",
+        )
 
-    plt.figure(num=f'PCA/DBSCAN Outliers from Embeddings | n_components: {args.components}, min_samples: {min_samples}, eps: {eps_value}', figsize=(8, 7))
+    plt.figure(
+        num=f"PCA/DBSCAN Outliers from Embeddings | n_components: {args.components}, min_samples: {min_samples}, eps: {eps_value}",
+        figsize=(8, 7),
+    )
     clustered_indices = clusters != -1
-    plt.scatter(plot_xy[clustered_indices, 0], plot_xy[clustered_indices, 1], 
-                c=clusters[clustered_indices], cmap='winter', edgecolors='none', marker='^', s=50, alpha=0.1, zorder=2)
+    plt.scatter(
+        plot_xy[clustered_indices, 0],
+        plot_xy[clustered_indices, 1],
+        c=clusters[clustered_indices],
+        cmap="winter",
+        edgecolors="none",
+        marker="^",
+        s=50,
+        alpha=0.1,
+        zorder=2,
+    )
 
     outlier_indices = clusters == -1
-    plt.scatter(plot_xy[outlier_indices, 0], plot_xy[outlier_indices, 1], 
-                color='red', marker='o', s=50, label='Outliers', alpha=0.8, zorder=10)
+    plt.scatter(
+        plot_xy[outlier_indices, 0],
+        plot_xy[outlier_indices, 1],
+        color="red",
+        marker="o",
+        s=50,
+        label="Outliers",
+        alpha=0.8,
+        zorder=10,
+    )
 
     for i, item in enumerate(data):
         annotation_text = f"{item['ip_address']}\n{item['org']}\n{item['hostname']}\n{item['location']}\nout {item['bytes_out']}B/{item['packets_out']}p | in {item['bytes_in']}B/{item['packets_in']}p"
         if clusters[i] == -1:
             # Outlier
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#333333', edgecolor='none', alpha=0.9)
-            plt.annotate(annotation_text, 
-                        (plot_xy[i, 0], plot_xy[i, 1]), 
-                        fontsize=6,
-                        color='white', 
-                        bbox=bbox_style,
-                        horizontalalignment='center',
-                        verticalalignment='bottom',
-                        xytext=(0,10),
-                        textcoords='offset points',
-                        alpha=0.9,
-                        zorder=10)
+            bbox_style = dict(
+                boxstyle="round,pad=0.2", facecolor="#333333", edgecolor="none", alpha=0.9
+            )
+            plt.annotate(
+                annotation_text,
+                (plot_xy[i, 0], plot_xy[i, 1]),
+                fontsize=6,
+                color="white",
+                bbox=bbox_style,
+                horizontalalignment="center",
+                verticalalignment="bottom",
+                xytext=(0, 10),
+                textcoords="offset points",
+                alpha=0.9,
+                zorder=10,
+            )
         else:
             # Non-Outlier
-            bbox_style = dict(boxstyle="round,pad=0.2", facecolor='#BEBEBE', edgecolor='none', alpha=0.5)
-            plt.annotate(annotation_text, 
-                        (plot_xy[i, 0], plot_xy[i, 1]), 
-                        fontsize=6,
-                        color='#666666',
-                        bbox=bbox_style,
-                        horizontalalignment='center',
-                        verticalalignment='bottom',
-                        xytext=(0,10),
-                        textcoords='offset points',
-                        alpha=0.8,
-                        zorder=1)
+            bbox_style = dict(
+                boxstyle="round,pad=0.2", facecolor="#BEBEBE", edgecolor="none", alpha=0.5
+            )
+            plt.annotate(
+                annotation_text,
+                (plot_xy[i, 0], plot_xy[i, 1]),
+                fontsize=6,
+                color="#666666",
+                bbox=bbox_style,
+                horizontalalignment="center",
+                verticalalignment="bottom",
+                xytext=(0, 10),
+                textcoords="offset points",
+                alpha=0.8,
+                zorder=1,
+            )
 
-    plt.grid(color='#BEBEBE', linestyle='-', linewidth=0.25, alpha=0.5)
+    plt.grid(color="#BEBEBE", linestyle="-", linewidth=0.25, alpha=0.5)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.tight_layout()
-    save_outliers = os.path.join(endpoint, 'pca_dbscan_outliers.png')
+    save_outliers = os.path.join(endpoint, "pca_dbscan_outliers.png")
     plt.savefig(save_outliers, dpi=90)
 
     outlier_plotille = new_plotille_figure()
-    outlier_plotille.color_mode = 'byte'
+    outlier_plotille.color_mode = "byte"
     outlier_plotille.width = 80
     outlier_plotille.height = 20
     clustered_indices_pc1 = plot_xy[clustered_indices, 0]
@@ -1201,32 +1362,47 @@ def main():
     # so the reported depth matches what was actually available to baseline against. The
     # pooled scope has no position in the sequence, so nothing is prior to it.
     baselineable = scope is not None and scope != POOLED_SCOPE and not args.no_baseline
-    prior_scopes = ([s for s in profiled_scopes
-                     if s not in (scope, POOLED_SCOPE, None) and s < scope]
-                    if baselineable else [])
+    prior_scopes = (
+        [s for s in profiled_scopes if s not in (scope, POOLED_SCOPE, None) and s < scope]
+        if baselineable
+        else []
+    )
     history = {}
     if args.no_baseline:
         skipped_because = "disabled with --no-baseline"
-        reporter.info("CONFIG", "Historical baselining disabled (--no-baseline): scoring against current peers only.")
+        reporter.info(
+            "CONFIG",
+            "Historical baselining disabled (--no-baseline): scoring against current peers only.",
+        )
     elif scope == POOLED_SCOPE:
-        skipped_because = (f"the pooled '{POOLED_SCOPE}' scope re-aggregates every session at once, so it "
-                           "overlaps all of them and has no prior session to compare against")
-        reporter.info("CONFIG", f"Historical baselining skipped: the pooled '{POOLED_SCOPE}' scope re-aggregates every session, so it has no prior sessions to baseline against.")
+        skipped_because = (
+            f"the pooled '{POOLED_SCOPE}' scope re-aggregates every session at once, so it "
+            "overlaps all of them and has no prior session to compare against"
+        )
+        reporter.info(
+            "CONFIG",
+            f"Historical baselining skipped: the pooled '{POOLED_SCOPE}' scope re-aggregates every session, so it has no prior sessions to baseline against.",
+        )
     elif scope is None:
-        skipped_because = "these profiles predate capture-session stamping, so they carry no session to order by"
+        skipped_because = (
+            "these profiles predate capture-session stamping, so they carry no session to order by"
+        )
     else:
         skipped_because = None
         history = fetch_endpoint_history(driver, args.database, scope)
 
     ranked_endpoints = score_endpoints(data, clusters, history)
     flagged = [e for e in ranked_endpoints if e["is_outlier"]]
-    baselined_endpoints = [e for e in ranked_endpoints
-                           if e["baseline_sessions"] >= MIN_BASELINE_SESSIONS]
+    baselined_endpoints = [
+        e for e in ranked_endpoints if e["baseline_sessions"] >= MIN_BASELINE_SESSIONS
+    ]
     new_endpoints = [e for e in ranked_endpoints if e["first_seen"]]
     if history:
-        reporter.info("BASELINE",
-                      f"{len(baselined_endpoints)} of {len(ranked_endpoints)} endpoint(s) scored against their own history "
-                      f"(>= {MIN_BASELINE_SESSIONS} prior sessions); {len(new_endpoints)} never seen in a prior session.")
+        reporter.info(
+            "BASELINE",
+            f"{len(baselined_endpoints)} of {len(ranked_endpoints)} endpoint(s) scored against their own history "
+            f"(>= {MIN_BASELINE_SESSIONS} prior sessions); {len(new_endpoints)} never seen in a prior session.",
+        )
 
     add_outlier_to_database(ranked_endpoints, flagged, driver, args.database, scope)
 
@@ -1243,17 +1419,20 @@ def main():
     # Multicast/broadcast "destinations" (SSDP/mDNS announcements) never reply, so
     # their upload_download_ratio is structurally huge — drop them before ranking
     # rather than let protocol chatter read as exfil-shaped.
-    conversational_rows = [r for r in host_rows
-                           if classify_endpoint(r["ip_address"]) not in NON_CONVERSATIONAL_TYPES]
+    conversational_rows = [
+        r for r in host_rows if classify_endpoint(r["ip_address"]) not in NON_CONVERSATIONAL_TYPES
+    ]
     host_excluded_nc = len(host_rows) - len(conversational_rows)
     host_destinations = score_host_outbound(conversational_rows)
     host_flagged = [d for d in host_destinations if d["is_flagged"]]
     if not reporter.agent and host_destinations:
         top = host_destinations[0]
-        reporter.info("HOST OUTBOUND",
-                      f"Top outbound destination from the host: {top['ip_address']} ({top['org']}) "
-                      f"— {top['upload_bytes']} bytes up / {top['download_bytes']} down "
-                      f"(score {top['outbound_score']}). {len(host_flagged)} destination(s) flagged.")
+        reporter.info(
+            "HOST OUTBOUND",
+            f"Top outbound destination from the host: {top['ip_address']} ({top['org']}) "
+            f"— {top['upload_bytes']} bytes up / {top['download_bytes']} down "
+            f"(score {top['outbound_score']}). {len(host_flagged)} destination(s) flagged.",
+        )
 
     # Structured result with the clustering diagnostics folded in (so the caller gets
     # the useful numbers as fields, not prose). `endpoints` is the full ranked list;
@@ -1292,10 +1471,10 @@ def main():
                 "was measured against. exempt_features are never baselined — a beacon's regularity "
                 "is identical in every session, so its own history would declare it normal; cadence "
                 "stays peer-relative. Population-wide shifts (e.g. a longer capture) cancel out."
-                if baselined_endpoints else
-                f"Not applied — every score here is peer-relative — because {skipped_because}."
-                if skipped_because else
-                f"Not applied — every score here is peer-relative. {len(prior_scopes)} profiled "
+                if baselined_endpoints
+                else f"Not applied — every score here is peer-relative — because {skipped_because}."
+                if skipped_because
+                else f"Not applied — every score here is peer-relative. {len(prior_scopes)} profiled "
                 f"session(s) precede this one, and no endpoint appeared in the {MIN_BASELINE_SESSIONS} "
                 "required to form a baseline. Run more capture -> compute -> detect cycles: once the "
                 "same IPs recur, they are scored against their own history instead."
@@ -1369,9 +1548,13 @@ def main():
     if not reporter.agent:
         plt.show()
 
-    reporter.result(result, summary=f"Clustered {len(data)} endpoints (per IP); {len(flagged)} outlier(s) flagged, all ranked by anomaly_score; {len(host_flagged)} host-outbound destination(s) flagged. Plots saved to: {endpoint}")
+    reporter.result(
+        result,
+        summary=f"Clustered {len(data)} endpoints (per IP); {len(flagged)} outlier(s) flagged, all ranked by anomaly_score; {len(host_flagged)} host-outbound destination(s) flagged. Plots saved to: {endpoint}",
+    )
 
     driver.close()
+
 
 if __name__ == "__main__":
     main()

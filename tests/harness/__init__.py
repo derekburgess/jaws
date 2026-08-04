@@ -13,20 +13,30 @@ Two tiers of ground truth:
 
 Nothing here emits traffic. A "packet" is a dict.
 """
+
 import os
 import tempfile
 
 # Importing the legacy finder pulls in Matplotlib even when the harness does not plot.
-os.environ.setdefault(
-    "MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
 
-from .scenarios import HOST, SCENARIOS, Scenario, background_packets
+from .pcap import NJRAT, documented_pcap_scenarios, pcap_scenarios
 from .recall import evaluate, report
-from .pcap import documented_pcap_scenarios, pcap_scenarios, NJRAT
+from .scenarios import HOST, SCENARIOS, Scenario, background_packets
 
-__all__ = ["HOST", "SCENARIOS", "Scenario", "background_packets", "evaluate", "report",
-           "documented_pcap_scenarios", "pcap_scenarios", "NJRAT",
-           "all_scenarios", "recall_source"]
+__all__ = [
+    "HOST",
+    "SCENARIOS",
+    "Scenario",
+    "background_packets",
+    "evaluate",
+    "report",
+    "documented_pcap_scenarios",
+    "pcap_scenarios",
+    "NJRAT",
+    "all_scenarios",
+    "recall_source",
+]
 
 RECALL_SOURCES = {"all", "synthetic", "pcap"}
 
@@ -36,8 +46,7 @@ def recall_source():
     source = os.environ.get("JAWS_RECALL_SOURCE", "all").strip().lower()
     if source not in RECALL_SOURCES:
         choices = ", ".join(sorted(RECALL_SOURCES))
-        raise ValueError(
-            f"JAWS_RECALL_SOURCE must be one of {choices}; received {source!r}")
+        raise ValueError(f"JAWS_RECALL_SOURCE must be one of {choices}; received {source!r}")
     return source
 
 

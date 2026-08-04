@@ -3,13 +3,13 @@
 Everything here constructs the plain dicts/arrays the scoring path already consumes,
 so the detection tests need no Neo4j, no capture, and no embedding model.
 """
+
 import os
 import tempfile
 
 # Matplotlib is imported by the legacy finder module even when tests do not render
 # plots. Give containerized/read-only home directories a deterministic writable cache.
-os.environ.setdefault(
-    "MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
 
 import numpy as np
 import pytest
@@ -19,10 +19,21 @@ from jaws.jaws_finder import NUMERIC_FEATURE_NAMES, build_numeric_features
 
 def ep(ip, bo, bi, po, pi, op=3, ip_=3, im=None, icv=None, org="Acme"):
     """One endpoint profile, in the shape build_endpoint_profiles emits."""
-    return {"ip_address": ip, "org": org, "hostname": "h", "location": "l",
-            "endpoint_type": "public",
-            "bytes_out": bo, "bytes_in": bi, "packets_out": po, "packets_in": pi,
-            "out_peers": op, "in_peers": ip_, "interval_mean": im, "interval_cv": icv}
+    return {
+        "ip_address": ip,
+        "org": org,
+        "hostname": "h",
+        "location": "l",
+        "endpoint_type": "public",
+        "bytes_out": bo,
+        "bytes_in": bi,
+        "packets_out": po,
+        "packets_in": pi,
+        "out_peers": op,
+        "in_peers": ip_,
+        "interval_mean": im,
+        "interval_cv": icv,
+    }
 
 
 def hist(sessions, **medians):
@@ -39,10 +50,15 @@ def history_from(profiles_per_session):
         feats = build_numeric_features(profiles)
         for p, v in zip(profiles, feats):
             by_ip.setdefault(p["ip_address"], []).append(v)
-    return {ip: {"sessions": len(v),
-                 "medians": {n: float(np.median(np.vstack(v)[:, j]))
-                             for j, n in enumerate(NUMERIC_FEATURE_NAMES)}}
-            for ip, v in by_ip.items()}
+    return {
+        ip: {
+            "sessions": len(v),
+            "medians": {
+                n: float(np.median(np.vstack(v)[:, j])) for j, n in enumerate(NUMERIC_FEATURE_NAMES)
+            },
+        }
+        for ip, v in by_ip.items()
+    }
 
 
 def jitter(profiles, k):
@@ -51,9 +67,19 @@ def jitter(profiles, k):
     out = []
     for p in profiles:
         f = rng.uniform(0.75, 1.35, size=4)
-        out.append(ep(p["ip_address"], int(p["bytes_out"] * f[0]), int(p["bytes_in"] * f[1]),
-                      int(p["packets_out"] * f[2]), int(p["packets_in"] * f[3]),
-                      p["out_peers"], p["in_peers"], p["interval_mean"], p["interval_cv"]))
+        out.append(
+            ep(
+                p["ip_address"],
+                int(p["bytes_out"] * f[0]),
+                int(p["bytes_in"] * f[1]),
+                int(p["packets_out"] * f[2]),
+                int(p["packets_in"] * f[3]),
+                p["out_peers"],
+                p["in_peers"],
+                p["interval_mean"],
+                p["interval_cv"],
+            )
+        )
     return out
 
 
@@ -96,4 +122,5 @@ def pack_history(pack):
 def heavy_history(pack):
     """Three prior sessions of the pack plus a consistently heavy endpoint."""
     return history_from(
-        [jitter(pack + [ep("10.0.0.99", 495_000, 4000, 398, 40)], k) for k in range(3)])
+        [jitter(pack + [ep("10.0.0.99", 495_000, 4000, 398, 40)], k) for k in range(3)]
+    )

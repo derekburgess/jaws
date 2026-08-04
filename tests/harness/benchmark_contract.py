@@ -35,8 +35,7 @@ import psutil
 from jsonschema import Draft202012Validator, FormatChecker
 
 # The legacy finder imports Matplotlib even though this collector never renders plots.
-os.environ.setdefault(
-    "MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(tempfile.gettempdir(), "jaws-matplotlib"))
 
 from jaws.jaws_finder import (
     MIN_BASELINE_SESSIONS,
@@ -51,7 +50,6 @@ from jaws.jaws_finder import (
 from .pcap import NJRAT, available, documented_pcap_scenarios, pcap_dir
 from .recall import _history, _host_outbound_rows, _profiles, report
 from .scenarios import CAPTURE, HOST, SCENARIOS, WINDOW, background_packets
-
 
 SCHEMA_VERSION = "1.0.0"
 BENCHMARK_ID = "baseline-0"
@@ -96,8 +94,10 @@ SAFE_ENVIRONMENT_NAMES = (
 SECRET_PATTERNS = (
     re.compile(r"\bsk-[A-Za-z0-9_-]{12,}\b"),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    re.compile(r"(?i)\b(?:password|api[_-]?key|access[_-]?token)\s*[:=]\s*"
-               r"[\"']?(?!redacted\b|unset\b)[^\s,\"']{8,}"),
+    re.compile(
+        r"(?i)\b(?:password|api[_-]?key|access[_-]?token)\s*[:=]\s*"
+        r"[\"']?(?!redacted\b|unset\b)[^\s,\"']{8,}"
+    ),
     re.compile(r"(?i)\b(?:neo4j|bolt|https?)://[^/\s:@]+:[^@\s/]+@"),
 )
 
@@ -193,10 +193,12 @@ def sha256_file(path: Path) -> str:
 def _tree_digest(paths: Iterable[Path]) -> str:
     entries = []
     for path in sorted({Path(p).resolve() for p in paths}):
-        entries.append({
-            "path": path.relative_to(REPO_ROOT).as_posix(),
-            "sha256": sha256_file(path),
-        })
+        entries.append(
+            {
+                "path": path.relative_to(REPO_ROOT).as_posix(),
+                "sha256": sha256_file(path),
+            }
+        )
     return sha256_bytes(canonical_json_bytes(entries))
 
 
@@ -209,8 +211,7 @@ def _git_file(revision: str, relative: str) -> bytes:
             check=True,
         )
     except (OSError, subprocess.CalledProcessError) as exc:
-        raise ContractViolation(
-            f"cannot read {relative} at revision {revision}") from exc
+        raise ContractViolation(f"cannot read {relative} at revision {revision}") from exc
     return result.stdout
 
 
@@ -227,8 +228,7 @@ def _resolve_commit(revision: str) -> str:
         raise ContractViolation(f"cannot resolve git revision {revision!r}") from exc
     resolved = result.stdout.strip()
     if not re.fullmatch(r"[0-9a-f]{40}", resolved):
-        raise ContractViolation(
-            f"git revision {revision!r} did not resolve to a full commit SHA")
+        raise ContractViolation(f"git revision {revision!r} did not resolve to a full commit SHA")
     return resolved
 
 
@@ -236,10 +236,12 @@ def _tree_digest_at_revision(revision: str, paths: Iterable[Path]) -> str:
     entries = []
     for path in sorted({Path(p).resolve() for p in paths}):
         relative = path.relative_to(REPO_ROOT).as_posix()
-        entries.append({
-            "path": relative,
-            "sha256": sha256_bytes(_git_file(revision, relative)),
-        })
+        entries.append(
+            {
+                "path": relative,
+                "sha256": sha256_bytes(_git_file(revision, relative)),
+            }
+        )
     return sha256_bytes(canonical_json_bytes(entries))
 
 
@@ -271,8 +273,7 @@ def _collector_source_paths() -> list[Path]:
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
-        + "\n",
+        json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n",
         encoding="utf-8",
     )
 
@@ -301,8 +302,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
                 try:
                     rows.append(json.loads(line))
                 except json.JSONDecodeError as exc:
-                    raise ContractViolation(
-                        f"{path}:{line_number}: invalid JSON: {exc}") from exc
+                    raise ContractViolation(f"{path}:{line_number}: invalid JSON: {exc}") from exc
     except OSError as exc:
         raise ContractViolation(f"{path}: cannot read JSONL: {exc}") from exc
     return rows
@@ -327,7 +327,8 @@ def _load_bundle_schemas(bundle: Path) -> dict[str, dict[str, Any]]:
             raise ContractViolation(f"canonical schema is missing: {canonical_path}")
         if sha256_file(schema_path) != sha256_file(canonical_path):
             raise ContractViolation(
-                f"{schema_path}: bundled schema differs from the repository schema")
+                f"{schema_path}: bundled schema differs from the repository schema"
+            )
         schemas[kind] = schema
     return schemas
 
@@ -343,14 +344,8 @@ def _validate_instance(instance: Any, schema: dict[str, Any], label: str) -> Non
 def write_checksums(bundle: Path) -> None:
     """Write a complete sha256sum-compatible inventory, excluding itself."""
     checksum_path = bundle / "checksums.sha256"
-    paths = sorted(
-        path for path in bundle.rglob("*")
-        if path.is_file() and path != checksum_path
-    )
-    lines = [
-        f"{sha256_file(path)}  {path.relative_to(bundle).as_posix()}"
-        for path in paths
-    ]
+    paths = sorted(path for path in bundle.rglob("*") if path.is_file() and path != checksum_path)
+    lines = [f"{sha256_file(path)}  {path.relative_to(bundle).as_posix()}" for path in paths]
     checksum_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -382,13 +377,13 @@ def _validate_checksums(bundle: Path) -> None:
     if set(declared) != set(actual_paths):
         missing = sorted(set(actual_paths) - set(declared))
         extra = sorted(set(declared) - set(actual_paths))
-        raise ContractViolation(
-            f"checksum inventory mismatch; missing={missing}, extra={extra}")
+        raise ContractViolation(f"checksum inventory mismatch; missing={missing}, extra={extra}")
     for relative, path in actual_paths.items():
         actual = sha256_file(path)
         if actual != declared[relative]:
             raise ContractViolation(
-                f"checksum mismatch for {relative}: expected {declared[relative]}, got {actual}")
+                f"checksum mismatch for {relative}: expected {declared[relative]}, got {actual}"
+            )
 
 
 def _scan_for_secrets(bundle: Path) -> None:
@@ -403,7 +398,8 @@ def _scan_for_secrets(bundle: Path) -> None:
             if pattern.search(text):
                 raise ContractViolation(
                     f"potential secret material in {path.relative_to(bundle)}: "
-                    f"matched {pattern.pattern!r}")
+                    f"matched {pattern.pattern!r}"
+                )
 
 
 def _assert_unique(values: Iterable[str], label: str) -> None:
@@ -450,20 +446,23 @@ def build_evaluation(
         ranking = ranking_map[scenario_id]
         execution = ranking["execution_status"]
         if execution != "completed":
-            per_scenario.append({
-                "scenario_id": scenario_id,
-                "execution_status": execution,
-                "quality_outcome": "not_evaluated",
-                "expectation": scenario["expectation"],
-                "evaluation_surface": scenario["evaluation_surface"],
-                "target_rank": None,
-                "candidate_count": None,
-                "passed": None,
-                "known_failure_id": None,
-                "metrics": [],
-                "rationale": ranking["skip_reason"] or ranking["error"]
-                or "Execution did not complete.",
-            })
+            per_scenario.append(
+                {
+                    "scenario_id": scenario_id,
+                    "execution_status": execution,
+                    "quality_outcome": "not_evaluated",
+                    "expectation": scenario["expectation"],
+                    "evaluation_surface": scenario["evaluation_surface"],
+                    "target_rank": None,
+                    "candidate_count": None,
+                    "passed": None,
+                    "known_failure_id": None,
+                    "metrics": [],
+                    "rationale": ranking["skip_reason"]
+                    or ranking["error"]
+                    or "Execution did not complete.",
+                }
+            )
             continue
 
         rank = ranking["target"]["rank"]
@@ -471,43 +470,47 @@ def build_evaluation(
         known = known_by_scenario.get(scenario_id)
         quality = "passed" if passed else ("failed_known" if known else "failed_unexpected")
         reciprocal = round(1.0 / rank, 6)
-        per_scenario.append({
-            "scenario_id": scenario_id,
-            "execution_status": execution,
-            "quality_outcome": quality,
-            "expectation": scenario["expectation"],
-            "evaluation_surface": scenario["evaluation_surface"],
-            "target_rank": rank,
-            "candidate_count": len(ranking["findings"]),
-            "passed": passed,
-            "known_failure_id": known["failure_id"] if quality == "failed_known" else None,
-            "metrics": [
-                {
-                    "name": "target_rank",
-                    "value": rank,
-                    "unit": "one-based-rank",
-                    "preferred_direction": (
-                        "lower" if scenario["expectation"] == "detect" else "higher"),
-                },
-                {
-                    "name": "reciprocal_rank",
-                    "value": reciprocal,
-                    "unit": "ratio",
-                    "preferred_direction": (
-                        "higher" if scenario["expectation"] == "detect" else "lower"),
-                },
-                {
-                    "name": "runtime_ms",
-                    "value": ranking["duration_ms"],
-                    "unit": "milliseconds",
-                    "preferred_direction": "lower",
-                },
-            ],
-            "rationale": (
-                f"Target rank {rank} {'satisfies' if passed else 'violates'} "
-                f"{scenario['success_rule']['operator']} {cutoff}."
-            ),
-        })
+        per_scenario.append(
+            {
+                "scenario_id": scenario_id,
+                "execution_status": execution,
+                "quality_outcome": quality,
+                "expectation": scenario["expectation"],
+                "evaluation_surface": scenario["evaluation_surface"],
+                "target_rank": rank,
+                "candidate_count": len(ranking["findings"]),
+                "passed": passed,
+                "known_failure_id": known["failure_id"] if quality == "failed_known" else None,
+                "metrics": [
+                    {
+                        "name": "target_rank",
+                        "value": rank,
+                        "unit": "one-based-rank",
+                        "preferred_direction": (
+                            "lower" if scenario["expectation"] == "detect" else "higher"
+                        ),
+                    },
+                    {
+                        "name": "reciprocal_rank",
+                        "value": reciprocal,
+                        "unit": "ratio",
+                        "preferred_direction": (
+                            "higher" if scenario["expectation"] == "detect" else "lower"
+                        ),
+                    },
+                    {
+                        "name": "runtime_ms",
+                        "value": ranking["duration_ms"],
+                        "unit": "milliseconds",
+                        "preferred_direction": "lower",
+                    },
+                ],
+                "rationale": (
+                    f"Target rank {rank} {'satisfies' if passed else 'violates'} "
+                    f"{scenario['success_rule']['operator']} {cutoff}."
+                ),
+            }
+        )
 
     completed = [row for row in per_scenario if row["execution_status"] == "completed"]
     detects = [row for row in completed if row["expectation"] == "detect"]
@@ -516,14 +519,13 @@ def build_evaluation(
     false_positives = sum(not bool(row["passed"]) for row in rejects)
     mrr = (
         round(sum(1.0 / row["target_rank"] for row in detects) / len(detects), 6)
-        if detects else None
+        if detects
+        else None
     )
     recall = round(hits / len(detects), 6) if detects else None
     coverage = round(len(completed) / len(per_scenario), 6) if per_scenario else None
     known_reproduced = sorted(
-        row["known_failure_id"]
-        for row in completed
-        if row["quality_outcome"] == "failed_known"
+        row["known_failure_id"] for row in completed if row["quality_outcome"] == "failed_known"
     )
 
     return {
@@ -539,10 +541,10 @@ def build_evaluation(
         "aggregate": {
             "scenario_count": len(per_scenario),
             "completed_count": len(completed),
-            "skipped_count": sum(
-                row["execution_status"] == "skipped" for row in per_scenario),
+            "skipped_count": sum(row["execution_status"] == "skipped" for row in per_scenario),
             "failed_execution_count": sum(
-                row["execution_status"] == "failed" for row in per_scenario),
+                row["execution_status"] == "failed" for row in per_scenario
+            ),
             "detect": {
                 "completed": len(detects),
                 "hits_at_cutoff": hits,
@@ -578,10 +580,9 @@ def build_evaluation(
                 },
                 {
                     "name": "total_scenario_runtime_ms",
-                    "value": round(sum(
-                        ranking_map[row["scenario_id"]]["duration_ms"]
-                        for row in completed
-                    ), 3),
+                    "value": round(
+                        sum(ranking_map[row["scenario_id"]]["duration_ms"] for row in completed), 3
+                    ),
                     "unit": "milliseconds",
                     "preferred_direction": "lower",
                 },
@@ -601,37 +602,28 @@ def _validate_provenance(
     subject_revision = manifest["subject"]["revision"]
     collector_revision = manifest["collector"]["revision"]
     if not re.fullmatch(r"[0-9a-f]{40}", subject_revision):
-        raise ContractViolation(
-            "canonical subject revision must be a full commit SHA")
+        raise ContractViolation("canonical subject revision must be a full commit SHA")
     if not re.fullmatch(r"[0-9a-f]{40}", collector_revision):
-        raise ContractViolation(
-            "canonical collector revision must be a full commit SHA")
+        raise ContractViolation("canonical collector revision must be a full commit SHA")
     if manifest["collector"]["working_tree_dirty"]:
-        raise ContractViolation(
-            "canonical collector cannot have a dirty working tree")
+        raise ContractViolation("canonical collector cannot have a dirty working tree")
     expected_subject = _resolve_commit(DEFAULT_SUBJECT_REVISION)
     if subject_revision != expected_subject:
-        raise ContractViolation(
-            "canonical Benchmark 0 identifies the wrong detector subject")
+        raise ContractViolation("canonical Benchmark 0 identifies the wrong detector subject")
     for record in manifest["subject"]["detector_files"]:
         expected = sha256_bytes(_git_file(subject_revision, record["path"]))
         if record["sha256"] != expected:
-            raise ContractViolation(
-                f"canonical subject digest differs for {record['path']}")
-    expected_collector = _tree_digest_at_revision(
-        collector_revision, _collector_source_paths())
+            raise ContractViolation(f"canonical subject digest differs for {record['path']}")
+    expected_collector = _tree_digest_at_revision(collector_revision, _collector_source_paths())
     if manifest["collector"]["source_sha256"] != expected_collector:
-        raise ContractViolation(
-            "canonical collector digest differs from its revision")
+        raise ContractViolation("canonical collector digest differs from its revision")
     command_ids = [row["command_id"] for row in manifest["commands"]]
     if command_ids != ["collect-baseline"]:
-        raise ContractViolation(
-            "canonical manifest must record the collect-baseline command")
+        raise ContractViolation("canonical manifest must record the collect-baseline command")
     if run["run_id"] != "baseline-0-canonical":
         raise ContractViolation("canonical run has the wrong run_id")
     if "collect-baseline" not in run["invocation"]["argv"]:
-        raise ContractViolation(
-            "canonical run invocation does not name collect-baseline")
+        raise ContractViolation("canonical run invocation does not name collect-baseline")
 
 
 def _validate_cross_records(
@@ -666,26 +658,26 @@ def _validate_cross_records(
             raise ContractViolation(
                 f"{label} do not cover the scenario catalog; "
                 f"missing={sorted(scenario_set - set(ids))}, "
-                f"extra={sorted(set(ids) - scenario_set)}")
+                f"extra={sorted(set(ids) - scenario_set)}"
+            )
     if any(row["dataset_id"] not in dataset_ids for row in scenarios["scenarios"]):
         raise ContractViolation("a scenario references an unknown dataset")
     dataset_map = {row["dataset_id"]: row for row in datasets["datasets"]}
     for scenario in scenarios["scenarios"]:
         history = scenario["history"]
         expected_count = history["prior_sessions"]
-        if (
-            len(history["scales"]) != expected_count
-            or len(history["sessions"]) != expected_count
-        ):
+        if len(history["scales"]) != expected_count or len(history["sessions"]) != expected_count:
             raise ContractViolation(
-                f"{scenario['scenario_id']}: history count, scales, and sessions disagree")
+                f"{scenario['scenario_id']}: history count, scales, and sessions disagree"
+            )
         expected_operator = "<=" if scenario["expectation"] == "detect" else ">"
         if (
             scenario["success_rule"]["operator"] != expected_operator
             or scenario["success_rule"]["threshold"] != evaluation["cutoff"]
         ):
             raise ContractViolation(
-                f"{scenario['scenario_id']}: success rule and evaluator cutoff disagree")
+                f"{scenario['scenario_id']}: success rule and evaluator cutoff disagree"
+            )
 
     scenario_map = {row["scenario_id"]: row for row in scenarios["scenarios"]}
     run_map = {row["scenario_id"]: row for row in run["scenario_statuses"]}
@@ -702,12 +694,10 @@ def _validate_cross_records(
         raise ContractViolation("a known failure references an unknown scenario")
     for failure in known_failures["failures"]:
         for scenario_id in failure["scenario_ids"]:
-            if (
-                failure["evaluation_surface"]
-                != scenario_map[scenario_id]["evaluation_surface"]
-            ):
+            if failure["evaluation_surface"] != scenario_map[scenario_id]["evaluation_surface"]:
                 raise ContractViolation(
-                    f"{failure['failure_id']}: surface differs from {scenario_id}")
+                    f"{failure['failure_id']}: surface differs from {scenario_id}"
+                )
 
     for ranking in rankings:
         scenario = scenario_map[ranking["scenario_id"]]
@@ -717,29 +707,27 @@ def _validate_cross_records(
             values = {ranking[field], status[field], observed[field]}
             if len(values) != 1:
                 raise ContractViolation(
-                    f"{ranking['scenario_id']}: inconsistent {field}: {sorted(values)}")
+                    f"{ranking['scenario_id']}: inconsistent {field}: {sorted(values)}"
+                )
         if ranking["duration_ms"] != status["duration_ms"]:
-            raise ContractViolation(
-                f"{ranking['scenario_id']}: run and ranking durations disagree")
+            raise ContractViolation(f"{ranking['scenario_id']}: run and ranking durations disagree")
         if ranking["evaluation_surface"] != scenario["evaluation_surface"]:
             raise ContractViolation(
-                f"{ranking['scenario_id']}: ranking surface differs from scenario")
+                f"{ranking['scenario_id']}: ranking surface differs from scenario"
+            )
         if ranking["expected_behavior"] != scenario["expectation"]:
-            raise ContractViolation(
-                f"{ranking['scenario_id']}: expectation differs from scenario")
+            raise ContractViolation(f"{ranking['scenario_id']}: expectation differs from scenario")
         if ranking["evidence"]["packet_rows_sha256"] != scenario["packet_rows_sha256"]:
             raise ContractViolation(
-                f"{ranking['scenario_id']}: evidence digest differs from scenario")
+                f"{ranking['scenario_id']}: evidence digest differs from scenario"
+            )
         if ranking["evidence"]["packet_count"] != scenario["packet_count"]:
-            raise ContractViolation(
-                f"{ranking['scenario_id']}: packet count differs from scenario")
+            raise ContractViolation(f"{ranking['scenario_id']}: packet count differs from scenario")
         dataset = dataset_map[ranking["dataset_id"]]
-        if (
-            dataset["availability"] != "available"
-            and ranking["execution_status"] == "completed"
-        ):
+        if dataset["availability"] != "available" and ranking["execution_status"] == "completed":
             raise ContractViolation(
-                f"{ranking['scenario_id']}: completed against unavailable evidence")
+                f"{ranking['scenario_id']}: completed against unavailable evidence"
+            )
 
         if ranking["execution_status"] != "completed":
             continue
@@ -748,44 +736,50 @@ def _validate_cross_records(
         positions = [row["emitted_position"] for row in findings]
         if ranks != list(range(1, len(findings) + 1)):
             raise ContractViolation(
-                f"{ranking['scenario_id']}: ranks must be contiguous and one-based")
+                f"{ranking['scenario_id']}: ranks must be contiguous and one-based"
+            )
         if positions != list(range(len(findings))):
             raise ContractViolation(
-                f"{ranking['scenario_id']}: emitted positions must be contiguous and zero-based")
+                f"{ranking['scenario_id']}: emitted positions must be contiguous and zero-based"
+            )
         scores = [row["score"]["value"] for row in findings]
         if any(left < right for left, right in zip(scores, scores[1:])):
             raise ContractViolation(
-                f"{ranking['scenario_id']}: scores are not in detector emission order")
+                f"{ranking['scenario_id']}: scores are not in detector emission order"
+            )
         entities = [row["entity"]["entity_id"] for row in findings]
         _assert_unique(entities, f"{ranking['scenario_id']} finding entities")
         target_id = ranking["target"]["entity"]["entity_id"]
         if target_id not in entities:
             raise ContractViolation(
-                f"{ranking['scenario_id']}: target is absent from a completed ranking")
+                f"{ranking['scenario_id']}: target is absent from a completed ranking"
+            )
         target = findings[entities.index(target_id)]
         if ranking["target"]["rank"] != target["rank"]:
-            raise ContractViolation(
-                f"{ranking['scenario_id']}: target rank does not match finding")
+            raise ContractViolation(f"{ranking['scenario_id']}: target rank does not match finding")
         if ranking["target"]["score"] != target["score"]:
             raise ContractViolation(
-                f"{ranking['scenario_id']}: target score does not match finding")
+                f"{ranking['scenario_id']}: target score does not match finding"
+            )
         if observed["target_rank"] != target["rank"]:
             raise ContractViolation(
-                f"{ranking['scenario_id']}: evaluation target rank does not match ranking")
+                f"{ranking['scenario_id']}: evaluation target rank does not match ranking"
+            )
         for finding in findings:
             evidence = finding["evidence"]
             if (
                 evidence["scenario_id"] != ranking["scenario_id"]
                 or evidence["dataset_id"] != ranking["dataset_id"]
-                or evidence["packet_rows_sha256"]
-                != ranking["evidence"]["packet_rows_sha256"]
+                or evidence["packet_rows_sha256"] != ranking["evidence"]["packet_rows_sha256"]
             ):
                 raise ContractViolation(
-                    f"{ranking['scenario_id']}: finding evidence pointer is inconsistent")
+                    f"{ranking['scenario_id']}: finding evidence pointer is inconsistent"
+                )
             expected_score_field = ranking["score_semantics"]["field"]
             if finding["score"]["name"] != expected_score_field:
                 raise ContractViolation(
-                    f"{ranking['scenario_id']}: finding score field is inconsistent")
+                    f"{ranking['scenario_id']}: finding score field is inconsistent"
+                )
             attributes = finding["attributes"]
             for reason in finding["reasons"]:
                 if ranking["evaluation_surface"] == "endpoints":
@@ -795,38 +789,40 @@ def _validate_cross_records(
                 if abs(raw_value - reason["value"]) > 0.0001:
                     raise ContractViolation(
                         f"{ranking['scenario_id']}: reason value does not match retained "
-                        f"feature {reason['feature']}")
+                        f"feature {reason['feature']}"
+                    )
         if observed["quality_outcome"] == "failed_known":
             failure_id = observed["known_failure_id"]
             if failure_id not in known_by_id:
                 raise ContractViolation(
-                    f"{ranking['scenario_id']}: unknown failure ID {failure_id}")
+                    f"{ranking['scenario_id']}: unknown failure ID {failure_id}"
+                )
             if known_by_scenario.get(ranking["scenario_id"]) != known_by_id[failure_id]:
                 raise ContractViolation(
-                    f"{ranking['scenario_id']}: known failure does not name scenario")
+                    f"{ranking['scenario_id']}: known failure does not name scenario"
+                )
 
     expected_evaluation = build_evaluation(
-        scenarios, rankings, known_failures, evaluation["cutoff"])
+        scenarios, rankings, known_failures, evaluation["cutoff"]
+    )
     if canonical_json_bytes(evaluation) != canonical_json_bytes(expected_evaluation):
         raise ContractViolation(
-            "evaluation.json is not the deterministic evaluation of retained rankings")
+            "evaluation.json is not the deterministic evaluation of retained rankings"
+        )
 
     declared_artifacts = [row["path"] for row in manifest["artifacts"]]
     _assert_unique(declared_artifacts, "manifest artifact paths")
     actual_artifacts = sorted(
-        path.relative_to(bundle).as_posix()
-        for path in bundle.rglob("*")
-        if path.is_file()
+        path.relative_to(bundle).as_posix() for path in bundle.rglob("*") if path.is_file()
     )
     if sorted(declared_artifacts) != actual_artifacts:
         raise ContractViolation(
             "manifest artifact inventory differs from bundle contents; "
             f"declared_only={sorted(set(declared_artifacts) - set(actual_artifacts))}, "
-            f"actual_only={sorted(set(actual_artifacts) - set(declared_artifacts))}")
+            f"actual_only={sorted(set(actual_artifacts) - set(declared_artifacts))}"
+        )
 
-    schema_catalog = {
-        row["artifact_kind"]: row for row in manifest["schema_catalog"]
-    }
+    schema_catalog = {row["artifact_kind"]: row for row in manifest["schema_catalog"]}
     if set(schema_catalog) != set(SCHEMA_FILES):
         raise ContractViolation("manifest schema catalog is incomplete")
     for kind, filename in SCHEMA_FILES.items():
@@ -840,10 +836,7 @@ def validate_bundle(bundle: Path | str) -> None:
     if not bundle.is_dir():
         raise ContractViolation(f"bundle directory does not exist: {bundle}")
     schemas = _load_bundle_schemas(bundle)
-    documents = {
-        kind: _read_json(bundle / filename)
-        for kind, filename in DOCUMENT_FILES.items()
-    }
+    documents = {kind: _read_json(bundle / filename) for kind, filename in DOCUMENT_FILES.items()}
     rankings = _read_jsonl(bundle / "rankings.jsonl")
     for kind, document in documents.items():
         _validate_instance(document, schemas[kind], DOCUMENT_FILES[kind])
@@ -863,7 +856,8 @@ def validate_bundle(bundle: Path | str) -> None:
     actual_report = (bundle / "report.md").read_text(encoding="utf-8")
     if actual_report != expected_report:
         raise ContractViolation(
-            "report.md is not the deterministic rendering of machine-readable records")
+            "report.md is not the deterministic rendering of machine-readable records"
+        )
     _scan_for_secrets(bundle)
     _validate_checksums(bundle)
 
@@ -894,7 +888,8 @@ def _scenario_catalog_record(
     packet_rows: list[dict[str, Any]] | None,
 ) -> dict[str, Any]:
     packet_digest = (
-        sha256_bytes(canonical_json_bytes(packet_rows)) if packet_rows is not None else None)
+        sha256_bytes(canonical_json_bytes(packet_rows)) if packet_rows is not None else None
+    )
     if source_type == "synthetic":
         parameters = {
             "t0": 0.0,
@@ -915,7 +910,8 @@ def _scenario_catalog_record(
         "source_type": source_type,
         "generator": {
             "qualified_name": (
-                f"{scenario.generator.__module__}.{scenario.generator.__qualname__}"),
+                f"{scenario.generator.__module__}.{scenario.generator.__qualname__}"
+            ),
             "source_sha256": _source_digest(scenario.generator),
             "parameters": parameters,
         },
@@ -939,14 +935,14 @@ def _scenario_catalog_record(
         "seeds": {
             "background": DEFAULT_SEED if source_type == "synthetic" else None,
             "scenario": (
-                _generator_seed(scenario.generator) if source_type == "synthetic" else None),
+                _generator_seed(scenario.generator) if source_type == "synthetic" else None
+            ),
         },
         "history": {
             "prior_sessions": len(scenario.prior_scales),
             "scales": list(scenario.prior_scales),
             "background_seed_rule": (
-                "seed + zero-based prior-session index"
-                if scenario.prior_scales else None
+                "seed + zero-based prior-session index" if scenario.prior_scales else None
             ),
             "sessions": _prior_history_records(scenario),
         },
@@ -969,14 +965,16 @@ def _prior_history_records(scenario: Any) -> list[dict[str, Any]]:
         capture_id = f"PRIOR{index}"
         for row in rows:
             row["capture_id"] = capture_id
-        records.append({
-            "capture_id": capture_id,
-            "start_offset_seconds": t0,
-            "scale": float(scale),
-            "background_seed": DEFAULT_SEED + index,
-            "packet_count": len(rows),
-            "packet_rows_sha256": sha256_bytes(canonical_json_bytes(rows)),
-        })
+        records.append(
+            {
+                "capture_id": capture_id,
+                "start_offset_seconds": t0,
+                "scale": float(scale),
+                "background_seed": DEFAULT_SEED + index,
+                "packet_count": len(rows),
+                "packet_rows_sha256": sha256_bytes(canonical_json_bytes(rows)),
+            }
+        )
     return records
 
 
@@ -988,11 +986,12 @@ def _normalize_reason(reason: dict[str, Any]) -> dict[str, Any]:
         "robust_z": float(reason["robust_z"]),
         "direction": reason["direction"],
         "compared_to": reason.get("compared_to"),
-        "baseline": (
-            float(reason["baseline"]) if reason.get("baseline") is not None else None),
+        "baseline": (float(reason["baseline"]) if reason.get("baseline") is not None else None),
         "baseline_sessions": (
             int(reason["baseline_sessions"])
-            if reason.get("baseline_sessions") is not None else None),
+            if reason.get("baseline_sessions") is not None
+            else None
+        ),
         "host_relative": reason.get("host_relative"),
     }
 
@@ -1024,16 +1023,15 @@ def _normalize_finding(
             "in_ports": [int(port) for port in profile["in_ports"]],
             "protocols": [str(protocol) for protocol in profile["protocols"]],
             "interval_mean": (
-                float(finding["interval_mean"])
-                if finding["interval_mean"] is not None else None),
+                float(finding["interval_mean"]) if finding["interval_mean"] is not None else None
+            ),
             "interval_cv": (
-                float(finding["interval_cv"])
-                if finding["interval_cv"] is not None else None),
+                float(finding["interval_cv"]) if finding["interval_cv"] is not None else None
+            ),
             "baseline_sessions": int(finding["baseline_sessions"]),
             "first_seen": finding["first_seen"],
             "numeric_features": {
-                name: float(context["numeric_features"][name])
-                for name in NUMERIC_FEATURE_NAMES
+                name: float(context["numeric_features"][name]) for name in NUMERIC_FEATURE_NAMES
             },
         }
         verdict = {"name": "is_outlier", "value": bool(finding["is_outlier"])}
@@ -1104,18 +1102,15 @@ def _completed_ranking(
         score_field = "anomaly_score"
 
     findings = [
-        _normalize_finding(
-            row, position, scenario_record, score_field, endpoint_context)
+        _normalize_finding(row, position, scenario_record, score_field, endpoint_context)
         for position, row in enumerate(detector_rows)
     ]
     target = next(
-        (row for row in findings
-         if row["entity"]["entity_id"] == scenario.planted_ip),
+        (row for row in findings if row["entity"]["entity_id"] == scenario.planted_ip),
         None,
     )
     if target is None:
-        raise ContractViolation(
-            f"{scenario.name}: planted entity is absent from detector ranking")
+        raise ContractViolation(f"{scenario.name}: planted entity is absent from detector ranking")
     passed = _passed(scenario.expect, target["rank"])
     known = next(
         (row for row in KNOWN_FAILURES if scenario.name in row["scenario_ids"]),
@@ -1160,13 +1155,14 @@ def _completed_ranking(
             },
             "historical_baseline": {
                 "state": (
-                    "used" if scenario.prior_scales else
-                    "not_used" if scenario.surface == "endpoints" else
-                    "not_applicable"
+                    "used"
+                    if scenario.prior_scales
+                    else "not_used"
+                    if scenario.surface == "endpoints"
+                    else "not_applicable"
                 ),
                 "minimum_sessions": (
-                    MIN_BASELINE_SESSIONS
-                    if scenario.surface == "endpoints" else None
+                    MIN_BASELINE_SESSIONS if scenario.surface == "endpoints" else None
                 ),
                 "prior_sessions": len(scenario.prior_scales),
             },
@@ -1194,8 +1190,7 @@ def _skipped_ranking(
     scenario_record: dict[str, Any],
     reason: str,
 ) -> dict[str, Any]:
-    score_field = (
-        "anomaly_score" if scenario.surface == "endpoints" else "outbound_score")
+    score_field = "anomaly_score" if scenario.surface == "endpoints" else "outbound_score"
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "ranking",
@@ -1232,12 +1227,10 @@ def _skipped_ranking(
                 "value": None,
             },
             "historical_baseline": {
-                "state": (
-                    "not_used" if scenario.surface == "endpoints"
-                    else "not_applicable"),
+                "state": ("not_used" if scenario.surface == "endpoints" else "not_applicable"),
                 "minimum_sessions": (
-                    MIN_BASELINE_SESSIONS
-                    if scenario.surface == "endpoints" else None),
+                    MIN_BASELINE_SESSIONS if scenario.surface == "endpoints" else None
+                ),
                 "prior_sessions": len(scenario.prior_scales),
             },
             "reason_z_threshold": REASON_Z_THRESHOLD,
@@ -1256,10 +1249,7 @@ def _package_inventory() -> list[dict[str, str]]:
         name = distribution.metadata.get("Name")
         if name:
             versions[name.lower()] = distribution.version
-    return [
-        {"name": name, "version": versions[name]}
-        for name in sorted(versions)
-    ]
+    return [{"name": name, "version": versions[name]} for name in sorted(versions)]
 
 
 def _tool_version(command: str) -> str | None:
@@ -1358,8 +1348,7 @@ def _environment_record() -> dict[str, Any]:
         "environment_variables": [
             {
                 "name": name,
-                "state": (
-                    "set-with-value-redacted" if os.environ.get(name) else "unset"),
+                "state": ("set-with-value-redacted" if os.environ.get(name) else "unset"),
             }
             for name in SAFE_ENVIRONMENT_NAMES
         ],
@@ -1372,7 +1361,8 @@ def _git_subject_file(revision: str, relative: str) -> dict[str, str]:
     if current != subject:
         raise ContractViolation(
             f"{relative} differs from subject revision {revision}; "
-            "Benchmark 0 collection would measure changed detector code")
+            "Benchmark 0 collection would measure changed detector code"
+        )
     return {
         "path": relative,
         "sha256": sha256_bytes(subject),
@@ -1416,8 +1406,8 @@ def _manifest(
     description = (
         "Canonical observational freeze of JAWS detector behavior, complete rankings, "
         "known quality failures, unavailable evidence, and execution provenance."
-        if canonical else
-        "Noncanonical validation fixture proving that the Benchmark 0 contract can "
+        if canonical
+        else "Noncanonical validation fixture proving that the Benchmark 0 contract can "
         "retain complete current rankings and explicit unavailable-data states."
     )
     return {
@@ -1442,9 +1432,9 @@ def _manifest(
             "revision": collector_revision,
             "working_tree_dirty": collector_dirty,
             "source_sha256": (
-                _tree_digest_at_revision(
-                    collector_revision, _collector_source_paths())
-                if canonical else _tree_digest(_collector_source_paths())
+                _tree_digest_at_revision(collector_revision, _collector_source_paths())
+                if canonical
+                else _tree_digest(_collector_source_paths())
             ),
         },
         "commands": [
@@ -1464,9 +1454,7 @@ def _manifest(
                 "environment": [
                     {
                         "name": name,
-                        "state": (
-                            "set-with-value-redacted"
-                            if os.environ.get(name) else "unset"),
+                        "state": ("set-with-value-redacted" if os.environ.get(name) else "unset"),
                     }
                     for name in SAFE_ENVIRONMENT_NAMES
                 ],
@@ -1503,17 +1491,18 @@ def _datasets(
     synthetic_records: list[dict[str, Any]],
     pcap_is_available: bool,
 ) -> dict[str, Any]:
-    synthetic_digest = sha256_bytes(canonical_json_bytes([
-        {
-            "scenario_id": row["scenario_id"],
-            "packet_rows_sha256": row["packet_rows_sha256"],
-        }
-        for row in synthetic_records
-    ]))
-    pcap_digest = (
-        sha256_file(Path(pcap_dir()) / NJRAT.filename)
-        if pcap_is_available else None
+    synthetic_digest = sha256_bytes(
+        canonical_json_bytes(
+            [
+                {
+                    "scenario_id": row["scenario_id"],
+                    "packet_rows_sha256": row["packet_rows_sha256"],
+                }
+                for row in synthetic_records
+            ]
+        )
     )
+    pcap_digest = sha256_file(Path(pcap_dir()) / NJRAT.filename) if pcap_is_available else None
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "dataset_catalog",
@@ -1535,10 +1524,12 @@ def _datasets(
                     "expected_filename": None,
                     "generator": {
                         "qualified_name": "harness.scenarios.SCENARIOS",
-                        "source_sha256": _tree_digest([
-                            Path(__file__).with_name("scenarios.py"),
-                            Path(__file__).with_name("recall.py"),
-                        ]),
+                        "source_sha256": _tree_digest(
+                            [
+                                Path(__file__).with_name("scenarios.py"),
+                                Path(__file__).with_name("recall.py"),
+                            ]
+                        ),
                     },
                 },
                 "labels": {
@@ -1575,8 +1566,9 @@ def _datasets(
                     ),
                 },
                 "unavailable_reason": (
-                    None if pcap_is_available else
-                    "dataset_unavailable: JAWS_PCAP_DIR does not contain the documented file"
+                    None
+                    if pcap_is_available
+                    else "dataset_unavailable: JAWS_PCAP_DIR does not contain the documented file"
                 ),
             },
         ],
@@ -1600,17 +1592,18 @@ def _run_record(
         command,
     ]
     if canonical:
-        argv.extend([
-            "--subject-revision",
-            subject_revision,
-            "--collector-revision",
-            collector_revision,
-        ])
+        argv.extend(
+            [
+                "--subject-revision",
+                subject_revision,
+                "--collector-revision",
+                collector_revision,
+            ]
+        )
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "run",
-        "run_id": (
-            "baseline-0-canonical" if canonical else "baseline-0-contract-example"),
+        "run_id": ("baseline-0-canonical" if canonical else "baseline-0-contract-example"),
         "benchmark_id": BENCHMARK_ID,
         "lifecycle": {
             "status": "completed",
@@ -1655,11 +1648,12 @@ def _run_record(
             },
             {
                 "name": "pcap-fixture",
-                "state": (
-                    "used" if available(NJRAT.filename) else "unavailable"),
+                "state": ("used" if available(NJRAT.filename) else "unavailable"),
                 "detail": (
-                    NJRAT.filename if available(NJRAT.filename)
-                    else "JAWS_PCAP_DIR sample is absent; scenarios are explicit skips"),
+                    NJRAT.filename
+                    if available(NJRAT.filename)
+                    else "JAWS_PCAP_DIR sample is absent; scenarios are explicit skips"
+                ),
             },
         ],
         "scenario_statuses": [
@@ -1682,9 +1676,7 @@ def render_report(bundle: Path | str) -> str:
     manifest = _read_json(bundle / "manifest.json")
     evaluation = _read_json(bundle / "evaluation.json")
     known = _read_json(bundle / "known-failures.json")
-    rankings = {
-        row["scenario_id"]: row for row in _read_jsonl(bundle / "rankings.jsonl")
-    }
+    rankings = {row["scenario_id"]: row for row in _read_jsonl(bundle / "rankings.jsonl")}
     aggregate = evaluation["aggregate"]
     metrics = {row["name"]: row["value"] for row in aggregate["metrics"]}
     canonical = manifest["benchmark"]["canonical"]
@@ -1696,15 +1688,14 @@ def render_report(bundle: Path | str) -> str:
         "# JAWS Benchmark 0" if canonical else "# JAWS Benchmark 0 contract example",
         "",
         "> This is a canonical Benchmark 0 result."
-        if canonical else
-        "> This is a noncanonical contract-validation fixture, not Benchmark 0.",
+        if canonical
+        else "> This is a noncanonical contract-validation fixture, not Benchmark 0.",
         "",
         f"- Detector subject: {tick}{manifest['subject']['revision']}{tick}",
         f"- Collector: {tick}{manifest['collector']['revision']}{tick} "
         f"(dirty: {tick}"
         f"{str(manifest['collector']['working_tree_dirty']).lower()}{tick})",
-        f"- Completed scenarios: {aggregate['completed_count']}/"
-        f"{aggregate['scenario_count']}",
+        f"- Completed scenarios: {aggregate['completed_count']}/{aggregate['scenario_count']}",
         f"- Recall@{cutoff}: {recall_metric:.3f}",
         f"- Mean reciprocal rank: {metrics['mean_reciprocal_rank']:.3f}",
         f"- Benign top-{cutoff} burden: {burden_metric}",
@@ -1717,12 +1708,8 @@ def render_report(bundle: Path | str) -> str:
     for row in evaluation["per_scenario"]:
         ranking = rankings[row["scenario_id"]]
         target = ranking["target"]
-        rank = (
-            f"{target['rank']}/{len(ranking['findings'])}"
-            if target["rank"] is not None else "—")
-        score = (
-            f"{target['score']['value']:.4f}"
-            if target["score"] is not None else "—")
+        rank = f"{target['rank']}/{len(ranking['findings'])}" if target["rank"] is not None else "—"
+        score = f"{target['score']['value']:.4f}" if target["score"] is not None else "—"
         lines.append(
             f"| {row['scenario_id']} | {row['expectation']} | "
             f"{row['evaluation_surface']} | {row['execution_status']} | "
@@ -1743,8 +1730,7 @@ def render_report(bundle: Path | str) -> str:
             )
     else:
         lines.append("- None.")
-    skipped = [
-        row for row in rankings.values() if row["execution_status"] == "skipped"]
+    skipped = [row for row in rankings.values() if row["execution_status"] == "skipped"]
     lines += [
         "",
         "## Unavailable evidence",
@@ -1752,8 +1738,7 @@ def render_report(bundle: Path | str) -> str:
     ]
     if skipped:
         for row in skipped:
-            lines.append(
-                f"- {tick}{row['scenario_id']}{tick}: {row['skip_reason']}")
+            lines.append(f"- {tick}{row['scenario_id']}{tick}: {row['skip_reason']}")
     else:
         lines.append("- None.")
     lines += [
@@ -1778,8 +1763,7 @@ def _collect_bundle(
 ) -> Path:
     output = Path(output).resolve()
     if output.exists() and any(output.iterdir()):
-        raise ContractViolation(
-            f"refusing to overwrite non-empty bundle directory: {output}")
+        raise ContractViolation(f"refusing to overwrite non-empty bundle directory: {output}")
     output.mkdir(parents=True, exist_ok=True)
     (output / "logs").mkdir()
     (output / "schemas").mkdir()
@@ -1795,7 +1779,8 @@ def _collect_bundle(
     for scenario in SCENARIOS:
         packet_rows = background_packets(seed=DEFAULT_SEED) + scenario.packets()
         scenario_record = _scenario_catalog_record(
-            scenario, "jaws-synthetic-v0", "synthetic", packet_rows)
+            scenario, "jaws-synthetic-v0", "synthetic", packet_rows
+        )
         ranking, legacy = _completed_ranking(scenario, scenario_record, packet_rows)
         scenario_records.append(scenario_record)
         rankings.append(ranking)
@@ -1806,18 +1791,18 @@ def _collect_bundle(
         if pcap_is_available:
             packet_rows = background_packets(seed=DEFAULT_SEED) + scenario.packets()
             scenario_record = _scenario_catalog_record(
-                scenario, "mta-2026-01-29-njrat", "pcap", packet_rows)
-            ranking, legacy = _completed_ranking(
-                scenario, scenario_record, packet_rows)
+                scenario, "mta-2026-01-29-njrat", "pcap", packet_rows
+            )
+            ranking, legacy = _completed_ranking(scenario, scenario_record, packet_rows)
             legacy_results.append(legacy)
         else:
             scenario_record = _scenario_catalog_record(
-                scenario, "mta-2026-01-29-njrat", "pcap", None)
+                scenario, "mta-2026-01-29-njrat", "pcap", None
+            )
             ranking = _skipped_ranking(
                 scenario,
                 scenario_record,
-                "dataset_unavailable: JAWS_PCAP_DIR does not contain "
-                f"{NJRAT.filename}",
+                f"dataset_unavailable: JAWS_PCAP_DIR does not contain {NJRAT.filename}",
             )
         scenario_records.append(scenario_record)
         rankings.append(ranking)
@@ -1838,8 +1823,7 @@ def _collect_bundle(
         [row for row in scenario_records if row["source_type"] == "synthetic"],
         pcap_is_available,
     )
-    evaluation_document = build_evaluation(
-        scenarios_document, rankings, known_document)
+    evaluation_document = build_evaluation(scenarios_document, rankings, known_document)
     run_document = _run_record(
         started_at,
         ended_at,
@@ -1866,7 +1850,8 @@ def _collect_bundle(
     _write_json(output / "evaluation.json", evaluation_document)
     _write_json(output / "known-failures.json", known_document)
     (output / "logs" / "collector.stdout.log").write_text(
-        report(legacy_results) + "\n", encoding="utf-8")
+        report(legacy_results) + "\n", encoding="utf-8"
+    )
     (output / "logs" / "collector.stderr.log").write_text("", encoding="utf-8")
     (output / "report.md").write_text(render_report(output), encoding="utf-8")
     write_checksums(output)
@@ -1896,30 +1881,29 @@ def collect_baseline_bundle(
     """Collect canonical Benchmark 0 from a committed, clean collector revision."""
     if not collector_revision or collector_revision == "worktree":
         raise ContractViolation(
-            "canonical collection requires --collector-revision naming a commit")
+            "canonical collection requires --collector-revision naming a commit"
+        )
     output = Path(output).resolve()
     if output.exists() and any(output.iterdir()):
-        raise ContractViolation(
-            f"refusing to overwrite non-empty bundle directory: {output}")
+        raise ContractViolation(f"refusing to overwrite non-empty bundle directory: {output}")
     changes = _worktree_changes()
     if changes:
         preview = ", ".join(changes[:5])
         raise ContractViolation(
-            "canonical collection requires a clean working tree; "
-            f"found {preview}")
+            f"canonical collection requires a clean working tree; found {preview}"
+        )
     resolved_subject = _resolve_commit(subject_revision)
     resolved_collector = _resolve_commit(collector_revision)
     expected_subject = _resolve_commit(DEFAULT_SUBJECT_REVISION)
     if resolved_subject != expected_subject:
         raise ContractViolation(
             "canonical Benchmark 0 must measure subject revision "
-            f"{expected_subject}, got {resolved_subject}")
-    committed_digest = _tree_digest_at_revision(
-        resolved_collector, _collector_source_paths())
+            f"{expected_subject}, got {resolved_subject}"
+        )
+    committed_digest = _tree_digest_at_revision(resolved_collector, _collector_source_paths())
     working_digest = _tree_digest(_collector_source_paths())
     if working_digest != committed_digest:
-        raise ContractViolation(
-            "collector sources differ from --collector-revision")
+        raise ContractViolation("collector sources differ from --collector-revision")
     return _collect_bundle(
         output,
         resolved_subject,
@@ -1930,21 +1914,20 @@ def collect_baseline_bundle(
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Collect, validate, and render the JAWS Benchmark 0 contract.")
+        description="Collect, validate, and render the JAWS Benchmark 0 contract."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     collect = subparsers.add_parser(
-        "collect-example", help="collect the noncanonical contract fixture")
+        "collect-example", help="collect the noncanonical contract fixture"
+    )
     collect.add_argument("--output", type=Path, default=DEFAULT_EXAMPLE)
-    collect.add_argument(
-        "--subject-revision", default=DEFAULT_SUBJECT_REVISION)
+    collect.add_argument("--subject-revision", default=DEFAULT_SUBJECT_REVISION)
     collect.add_argument("--collector-revision", default="worktree")
 
-    baseline = subparsers.add_parser(
-        "collect-baseline", help="collect canonical Benchmark 0")
+    baseline = subparsers.add_parser("collect-baseline", help="collect canonical Benchmark 0")
     baseline.add_argument("--output", type=Path, default=DEFAULT_BASELINE)
-    baseline.add_argument(
-        "--subject-revision", default=DEFAULT_SUBJECT_REVISION)
+    baseline.add_argument("--subject-revision", default=DEFAULT_SUBJECT_REVISION)
     baseline.add_argument("--collector-revision", required=True)
 
     validate = subparsers.add_parser("validate", help="validate an existing bundle")
@@ -1960,11 +1943,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "collect-example":
             path = collect_example_bundle(
-                args.output, args.subject_revision, args.collector_revision)
+                args.output, args.subject_revision, args.collector_revision
+            )
             print(f"collected and validated {path}")
         elif args.command == "collect-baseline":
             path = collect_baseline_bundle(
-                args.output, args.subject_revision, args.collector_revision)
+                args.output, args.subject_revision, args.collector_revision
+            )
             print(f"collected and validated canonical {path}")
         elif args.command == "validate":
             validate_bundle(args.bundle)

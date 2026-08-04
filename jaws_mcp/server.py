@@ -1,16 +1,23 @@
 """JAWS MCP Server — exposes the full JAWS network-analysis pipeline via MCPServer."""
 
-from mcp.server import MCPServer
+import json
+import os
 import subprocess
 import sys
-import os
-import json
 from pathlib import Path
 from typing import Any
 
-from jaws.config import DATABASE, PACKET_MODELS, DEFAULT_PACKET_MODEL, get_neo4j_driver, is_cloud_hosted
+from mcp.server import MCPServer
 
-ROOT = Path(__file__).parent.parent   # /path/to/jaws/
+from jaws.config import (
+    DATABASE,
+    DEFAULT_PACKET_MODEL,
+    PACKET_MODELS,
+    get_neo4j_driver,
+    is_cloud_hosted,
+)
+
+ROOT = Path(__file__).parent.parent  # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
 
 # No hard-coded wall-clock timeout. Capture is bounded by `duration`, and compute /
@@ -22,7 +29,8 @@ SCRIPTS = ROOT / "jaws"
 _env_timeout = os.environ.get("JAWS_MCP_TIMEOUT")
 TIMEOUT = int(_env_timeout) if _env_timeout else None
 
-INSTRUCTIONS = """JAWS captures network traffic into a Neo4j graph, enriches it with OSINT, embeds it, and flags anomalies.
+INSTRUCTIONS = (
+    """JAWS captures network traffic into a Neo4j graph, enriches it with OSINT, embeds it, and flags anomalies.
 
 The tools form a linear pipeline — run them in order:
   1. list_interfaces      — choose a physical interface (virtual/loopback are filtered out).
@@ -61,7 +69,9 @@ Notes:
     a one-time setup step done outside the MCP.
   - compute_embeddings and anomaly_detection can run for a while on large captures — if your client
     aborts them early, raise its per-tool-call timeout (e.g. Claude Code's MCP_TOOL_TIMEOUT).
-  - All tools operate on the single '%s' database.""" % DATABASE
+  - All tools operate on the single '%s' database."""
+    % DATABASE
+)
 
 mcp = MCPServer("JAWS - Wireshark MCP with Network Analysis Tools", instructions=INSTRUCTIONS)
 
@@ -95,7 +105,10 @@ def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
     try:
         result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": f"process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s"}
+        return {
+            "ok": False,
+            "error": f"process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s",
+        }
     out = (result.stdout or "").strip()
     err = (result.stderr or "").strip()
     parsed = _try_json(out)
@@ -126,28 +139,36 @@ def _script(name: str, *args: str) -> dict[str, Any]:
     return _run([sys.executable, str(SCRIPTS / name), *args])
 
 
-@mcp.tool(name="list_interfaces", description=(
-    "Step 1. List the physical network interfaces available for capture, one per line. "
-    "Virtual/loopback interfaces (lo, docker, tailscale) are already filtered out. "
-    "Pick one of these names to pass to capture_packets."
-))
+@mcp.tool(
+    name="list_interfaces",
+    description=(
+        "Step 1. List the physical network interfaces available for capture, one per line. "
+        "Virtual/loopback interfaces (lo, docker, tailscale) are already filtered out. "
+        "Pick one of these names to pass to capture_packets."
+    ),
+)
 def list_interfaces() -> dict[str, Any]:
     return _script("jaws_capture.py", "--list")
 
 
-@mcp.tool(name="capture_packets", description=(
-    "Step 2. Capture live packets from an interface into the graph for `duration` seconds. "
-    "Use an interface name from list_interfaces. Keep captures short (30-120s) and capture "
-    "again rather than running one long session. The call runs for roughly `duration` seconds. "
-    "Each run becomes its own capture SESSION (the result's `capture_id`); sessions accumulate "
-    "in the graph, and compute_embeddings profiles the latest one by default — no need to "
-    "drop_database between captures."
-))
+@mcp.tool(
+    name="capture_packets",
+    description=(
+        "Step 2. Capture live packets from an interface into the graph for `duration` seconds. "
+        "Use an interface name from list_interfaces. Keep captures short (30-120s) and capture "
+        "again rather than running one long session. The call runs for roughly `duration` seconds. "
+        "Each run becomes its own capture SESSION (the result's `capture_id`); sessions accumulate "
+        "in the graph, and compute_embeddings profiles the latest one by default — no need to "
+        "drop_database between captures."
+    ),
+)
 def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
     return _script(
         "jaws_capture.py",
-        "--interface", interface,
-        "--duration", str(duration),
+        "--interface",
+        interface,
+        "--duration",
+        str(duration),
     )
 
 
@@ -168,18 +189,21 @@ ORDER BY computed DESC
 """
 
 
-@mcp.tool(name="list_captures", description=(
-    "List the capture sessions accumulated in the graph, newest first: each with its `capture_id`, "
-    "`source` (interface or imported pcap path), `started` timestamp, and `packets` count. "
-    "`profiled_sessions` lists the endpoint-profile sets stored in the graph (newest computed first, "
-    "each with its endpoint count) — profiles accumulate one set per compute run, and that accumulated "
-    "history is what anomaly_detection baselines each endpoint against. `profiled_session` names the one "
-    "the read tools and anomaly_detection default to ('all', a capture_id, or null when "
-    "compute_embeddings hasn't run); `baseline_sessions` counts the prior sets available to baseline "
-    "against, so 0 means scores are still purely peer-relative and history is only now accumulating. "
-    "Use a capture_id with compute_embeddings(session=...) to re-profile an older session, or with "
-    "anomaly_detection(session=...) to re-analyze a stored profile set."
-))
+@mcp.tool(
+    name="list_captures",
+    description=(
+        "List the capture sessions accumulated in the graph, newest first: each with its `capture_id`, "
+        "`source` (interface or imported pcap path), `started` timestamp, and `packets` count. "
+        "`profiled_sessions` lists the endpoint-profile sets stored in the graph (newest computed first, "
+        "each with its endpoint count) — profiles accumulate one set per compute run, and that accumulated "
+        "history is what anomaly_detection baselines each endpoint against. `profiled_session` names the one "
+        "the read tools and anomaly_detection default to ('all', a capture_id, or null when "
+        "compute_embeddings hasn't run); `baseline_sessions` counts the prior sets available to baseline "
+        "against, so 0 means scores are still purely peer-relative and history is only now accumulating. "
+        "Use a capture_id with compute_embeddings(session=...) to re-profile an older session, or with "
+        "anomaly_detection(session=...) to re-analyze a stored profile set."
+    ),
+)
 def list_captures() -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
@@ -197,103 +221,138 @@ def list_captures() -> dict[str, Any]:
         "count": len(captures),
         "profiled_session": current,
         "profiled_sessions": profiled,
-        "baseline_sessions": len([p for p in profiled
-                                  if p["session"] not in (current, "all", None)]),
+        "baseline_sessions": len(
+            [p for p in profiled if p["session"] not in (current, "all", None)]
+        ),
     }
 
 
-@mcp.tool(name="document_organizations", description=(
-    "Step 3. Enrich the captured IP addresses with organization/ASN ownership via Ipinfo. "
-    "Run after each capture and before compute_embeddings."
-))
+@mcp.tool(
+    name="document_organizations",
+    description=(
+        "Step 3. Enrich the captured IP addresses with organization/ASN ownership via Ipinfo. "
+        "Run after each capture and before compute_embeddings."
+    ),
+)
 def document_organizations() -> dict[str, Any]:
     return _script("jaws_ipinfo.py")
 
 
-@mcp.tool(name="compute_embeddings", description=(
-    "Step 4. Aggregate each IP's captured traffic (both directions) into an endpoint profile and embed "
-    "that profile — one vector per IP — for downstream clustering. "
-    "Use api='transformers' (the default HERE; the CLI's default is 'openai') on a GPU host — the local "
-    "model produces tighter clusters and surfaces anomalies that OpenAI embeddings miss (the model must "
-    "be pre-downloaded on the host). Use api='openai' as a fallback when no GPU is available. "
-    f"`model` selects the local transformers model when api='transformers': one of {list(PACKET_MODELS)} "
-    f"(default '{DEFAULT_PACKET_MODEL}'); ignored for api='openai'. "
-    "`session` selects which capture session to profile: 'latest' (default), 'all' (every packet in "
-    "the graph — inter-packet timing still never crosses session boundaries), or a capture_id from "
-    "list_captures. Each run rebuilds the profile set for THAT scope only and leaves other sessions' "
-    "profile sets in place, so profiles accumulate one set per session: that is the per-endpoint history "
-    "anomaly_detection baselines against, and it is why repeated capture→compute→detect cycles get more "
-    "discriminating over time. The result's `profiled_sessions` counts the sets now stored (1 = no history "
-    "yet). `retain_profiles` caps how many sets are kept (default 20, 0 = unlimited); raw packet history is "
-    "never pruned. May run for a while on large captures."
-))
-def compute_embeddings(api: str = "transformers", model: str = DEFAULT_PACKET_MODEL, session: str = "latest",
-                       retain_profiles: int = 20) -> dict[str, Any]:
+@mcp.tool(
+    name="compute_embeddings",
+    description=(
+        "Step 4. Aggregate each IP's captured traffic (both directions) into an endpoint profile and embed "
+        "that profile — one vector per IP — for downstream clustering. "
+        "Use api='transformers' (the default HERE; the CLI's default is 'openai') on a GPU host — the local "
+        "model produces tighter clusters and surfaces anomalies that OpenAI embeddings miss (the model must "
+        "be pre-downloaded on the host). Use api='openai' as a fallback when no GPU is available. "
+        f"`model` selects the local transformers model when api='transformers': one of {list(PACKET_MODELS)} "
+        f"(default '{DEFAULT_PACKET_MODEL}'); ignored for api='openai'. "
+        "`session` selects which capture session to profile: 'latest' (default), 'all' (every packet in "
+        "the graph — inter-packet timing still never crosses session boundaries), or a capture_id from "
+        "list_captures. Each run rebuilds the profile set for THAT scope only and leaves other sessions' "
+        "profile sets in place, so profiles accumulate one set per session: that is the per-endpoint history "
+        "anomaly_detection baselines against, and it is why repeated capture→compute→detect cycles get more "
+        "discriminating over time. The result's `profiled_sessions` counts the sets now stored (1 = no history "
+        "yet). `retain_profiles` caps how many sets are kept (default 20, 0 = unlimited); raw packet history is "
+        "never pruned. May run for a while on large captures."
+    ),
+)
+def compute_embeddings(
+    api: str = "transformers",
+    model: str = DEFAULT_PACKET_MODEL,
+    session: str = "latest",
+    retain_profiles: int = 20,
+) -> dict[str, Any]:
     if model not in PACKET_MODELS:
         return {"ok": False, "error": f"unknown model '{model}'; available: {list(PACKET_MODELS)}"}
-    return _script("jaws_compute.py", "--api", api, "--model", model, "--session", session,
-                   "--retain-profiles", str(retain_profiles))
+    return _script(
+        "jaws_compute.py",
+        "--api",
+        api,
+        "--model",
+        model,
+        "--session",
+        session,
+        "--retain-profiles",
+        str(retain_profiles),
+    )
 
 
-@mcp.tool(name="anomaly_detection", description=(
-    "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and score every IP for anomaly. "
-    "Returns a JSON summary: endpoints_clustered, outliers_flagged, `clusters`/`cluster_sizes` (so 0 "
-    "outliers from one tight cluster reads differently than 0 from an over-generous eps; `cluster_sizes` "
-    "excludes DBSCAN noise, so sum(cluster_sizes) + outliers_flagged == endpoints_clustered), the DBSCAN "
-    "params (eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
-    "list of clustered IPs sorted by `anomaly_score` (descending), so there is always a ranking to "
-    "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (behavioral distance "
-    "from the typical host: L2 norm of its top-3 |robust-z| components, 'low' deviations down-weighted "
-    "and capped — see the result's `scoring` field), `is_outlier` (the DBSCAN "
-    "verdict), and `reasons` — the features that made it stand out, each with its value, unit, robust_z, "
-    "direction (high/low), and a `host_relative` gloss naming the direction relative to the capture host. "
-    "Counts are from each endpoint's OWN perspective and scored endpoints are REMOTE (host excluded by "
-    "default), so a remote IP's high bytes_out is traffic it sent TO the host (a host DOWNLOAD), NOT exfil; "
-    "the outbound-from-host signal is its bytes_in. Read `host_relative` before labeling a finding — that "
-    "lets you tell a host-upload/exfil from a download from a low-interval_cv beacon. The top-level "
-    "`perspective` field restates this. outliers_flagged == 0 is not a failure. "
-    "The result also carries a `host_outbound` section — the defender-frame counterpart to `endpoints`: "
-    "the CAPTURE HOST's own outbound, per destination, isolated from raw packets (host as source) and "
-    "ranked by `outbound_score` on the host-upload distribution, with `upload_download_ratio` high = "
-    "exfil-shaped. The host is excluded from clustering (a hub), so its real outbound is demoted in the "
-    "`endpoints` ranking; use `host_outbound.destinations` to judge host exfiltration or beaconing. "
-    "Multicast/broadcast addresses (SSDP/mDNS chatter — one-way by construction) are excluded from both "
-    "rankings and listed under `excluded_non_conversational`; each ranked endpoint carries its "
-    "`endpoint_type` (public/private/multicast/…) and `cloud_hosted` — true when the org's ASN is a "
-    "hosting/CDN provider (GCP/AWS/Cloudflare/…), meaning the org label names the infrastructure "
-    "provider, NOT the actual service behind the IP — don't clear a finding on the provider's name. "
-    "`components` is the number of PCA dimensions to retain (minimum 2); if the result's "
-    "`pca_variance_total` comes back well under ~0.5, the projection is dropping structure — re-run "
-    "with components=3. `whiten` scales each PCA "
-    "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
-    "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
-    "tends to overshoot on small captures and return 0 outliers — if outliers_flagged is 0 and you "
-    "expected some, re-run with a smaller eps (e.g. 50-70% of the eps shown in the result). "
-    "`feature_weight` controls how much each endpoint's behavioral numbers (bytes/packets/peers, in & "
-    "out) drive clustering vs. the text profile: 0 clusters on text/org/protocol only, higher (default "
-    "1.0) surfaces volume/fan-out anomalies like unusual outbound traffic. "
-    "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
-    "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it. "
-    "HISTORICAL BASELINE: when the same IPs have been profiled in earlier capture sessions, an endpoint is "
-    "scored against ITS OWN past rather than only against its current peers — so a server that is always "
-    "the heaviest talker stops topping the ranking for volume it posts every single run, and a change in "
-    "its behavior ranks instead. Every reason states which reference produced it via `compared_to` ('own "
-    "history' or 'peer endpoints') and, for historical ones, the `baseline` value and how many sessions "
-    "back it. Cadence features (interval_mean/interval_cv) are NEVER baselined — a beacon looks identical "
-    "in every session, so its own history would declare it normal — and stay peer-relative; the result's "
-    "`baseline.exempt_features` names them. Each endpoint also carries `baseline_sessions` (prior sessions "
-    "behind its baseline) and `first_seen` (true = never observed in any earlier session, a finding on its "
-    "own that no per-feature score can express; null when there is no history at all), with the full list "
-    "under `baseline.first_seen`. Read `baseline.enabled`: false means only one profile set exists and "
-    "every score is peer-relative — run more capture→compute cycles and detection sharpens. Set "
-    "baseline=false to force purely peer-relative scoring. `session` analyzes a specific stored profile "
-    "set (a capture_id from list_captures) instead of the most recent."
-))
-def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | None = None,
-                      feature_weight: float = 1.0, include_local: bool = False,
-                      session: str = "latest", baseline: bool = True) -> dict[str, Any]:
-    args = ["--components", str(components), "--feature-weight", str(feature_weight),
-            "--session", session]
+@mcp.tool(
+    name="anomaly_detection",
+    description=(
+        "Step 5. Cluster the per-IP endpoint embeddings with PCA + DBSCAN and score every IP for anomaly. "
+        "Returns a JSON summary: endpoints_clustered, outliers_flagged, `clusters`/`cluster_sizes` (so 0 "
+        "outliers from one tight cluster reads differently than 0 from an over-generous eps; `cluster_sizes` "
+        "excludes DBSCAN noise, so sum(cluster_sizes) + outliers_flagged == endpoints_clustered), the DBSCAN "
+        "params (eps/min_samples/components), a `units` map labeling the raw numbers, and `endpoints` — the FULL "
+        "list of clustered IPs sorted by `anomaly_score` (descending), so there is always a ranking to "
+        "triage even when DBSCAN flags nothing. Each endpoint carries `anomaly_score` (behavioral distance "
+        "from the typical host: L2 norm of its top-3 |robust-z| components, 'low' deviations down-weighted "
+        "and capped — see the result's `scoring` field), `is_outlier` (the DBSCAN "
+        "verdict), and `reasons` — the features that made it stand out, each with its value, unit, robust_z, "
+        "direction (high/low), and a `host_relative` gloss naming the direction relative to the capture host. "
+        "Counts are from each endpoint's OWN perspective and scored endpoints are REMOTE (host excluded by "
+        "default), so a remote IP's high bytes_out is traffic it sent TO the host (a host DOWNLOAD), NOT exfil; "
+        "the outbound-from-host signal is its bytes_in. Read `host_relative` before labeling a finding — that "
+        "lets you tell a host-upload/exfil from a download from a low-interval_cv beacon. The top-level "
+        "`perspective` field restates this. outliers_flagged == 0 is not a failure. "
+        "The result also carries a `host_outbound` section — the defender-frame counterpart to `endpoints`: "
+        "the CAPTURE HOST's own outbound, per destination, isolated from raw packets (host as source) and "
+        "ranked by `outbound_score` on the host-upload distribution, with `upload_download_ratio` high = "
+        "exfil-shaped. The host is excluded from clustering (a hub), so its real outbound is demoted in the "
+        "`endpoints` ranking; use `host_outbound.destinations` to judge host exfiltration or beaconing. "
+        "Multicast/broadcast addresses (SSDP/mDNS chatter — one-way by construction) are excluded from both "
+        "rankings and listed under `excluded_non_conversational`; each ranked endpoint carries its "
+        "`endpoint_type` (public/private/multicast/…) and `cloud_hosted` — true when the org's ASN is a "
+        "hosting/CDN provider (GCP/AWS/Cloudflare/…), meaning the org label names the infrastructure "
+        "provider, NOT the actual service behind the IP — don't clear a finding on the provider's name. "
+        "`components` is the number of PCA dimensions to retain (minimum 2); if the result's "
+        "`pca_variance_total` comes back well under ~0.5, the projection is dropping structure — re-run "
+        "with components=3. `whiten` scales each PCA "
+        "component to unit variance — helps with a few strong components but amplifies noise when many are retained. "
+        "`eps` overrides the DBSCAN epsilon; when omitted it is auto-recommended, but that recommendation "
+        "tends to overshoot on small captures and return 0 outliers — if outliers_flagged is 0 and you "
+        "expected some, re-run with a smaller eps (e.g. 50-70% of the eps shown in the result). "
+        "`feature_weight` controls how much each endpoint's behavioral numbers (bytes/packets/peers, in & "
+        "out) drive clustering vs. the text profile: 0 clusters on text/org/protocol only, higher (default "
+        "1.0) surfaces volume/fan-out anomalies like unusual outbound traffic. "
+        "The capture host itself is excluded by default (it is a structural hub that dominates clustering; "
+        "its outbound traffic still appears as remote endpoints' inbound) — set include_local=true to keep it. "
+        "HISTORICAL BASELINE: when the same IPs have been profiled in earlier capture sessions, an endpoint is "
+        "scored against ITS OWN past rather than only against its current peers — so a server that is always "
+        "the heaviest talker stops topping the ranking for volume it posts every single run, and a change in "
+        "its behavior ranks instead. Every reason states which reference produced it via `compared_to` ('own "
+        "history' or 'peer endpoints') and, for historical ones, the `baseline` value and how many sessions "
+        "back it. Cadence features (interval_mean/interval_cv) are NEVER baselined — a beacon looks identical "
+        "in every session, so its own history would declare it normal — and stay peer-relative; the result's "
+        "`baseline.exempt_features` names them. Each endpoint also carries `baseline_sessions` (prior sessions "
+        "behind its baseline) and `first_seen` (true = never observed in any earlier session, a finding on its "
+        "own that no per-feature score can express; null when there is no history at all), with the full list "
+        "under `baseline.first_seen`. Read `baseline.enabled`: false means only one profile set exists and "
+        "every score is peer-relative — run more capture→compute cycles and detection sharpens. Set "
+        "baseline=false to force purely peer-relative scoring. `session` analyzes a specific stored profile "
+        "set (a capture_id from list_captures) instead of the most recent."
+    ),
+)
+def anomaly_detection(
+    components: int = 2,
+    whiten: bool = False,
+    eps: float | None = None,
+    feature_weight: float = 1.0,
+    include_local: bool = False,
+    session: str = "latest",
+    baseline: bool = True,
+) -> dict[str, Any]:
+    args = [
+        "--components",
+        str(components),
+        "--feature-weight",
+        str(feature_weight),
+        "--session",
+        session,
+    ]
     if whiten:
         args.append("--whiten")
     if eps is not None:
@@ -305,9 +364,12 @@ def anomaly_detection(components: int = 2, whiten: bool = False, eps: float | No
     return _script("jaws_finder.py", *args)
 
 
-@mcp.tool(name="drop_database", description=(
-    "Wipe ALL data from the graph. Irreversible. Typically run before starting a fresh capture session."
-))
+@mcp.tool(
+    name="drop_database",
+    description=(
+        "Wipe ALL data from the graph. Irreversible. Typically run before starting a fresh capture session."
+    ),
+)
 def drop_database() -> dict[str, Any]:
     return _script("jaws_utils.py")
 
@@ -328,7 +390,9 @@ CALL () {
 
 # Ranked by total bytes, not recency: every profile in a compute run shares one
 # TIMESTAMP, so a recency sort is degenerate and `limit` would truncate arbitrarily.
-_FETCH_QUERY = _LATEST_SCOPE + """
+_FETCH_QUERY = (
+    _LATEST_SCOPE
+    + """
 MATCH (endpoint:ENDPOINT)
 WHERE (endpoint.CAPTURE_ID = scope OR (scope IS NULL AND endpoint.CAPTURE_ID IS NULL))
   AND endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
@@ -356,26 +420,30 @@ RETURN
 ORDER BY endpoint.BYTES_OUT + endpoint.BYTES_IN DESC
 LIMIT $limit
 """
+)
 
 
-@mcp.tool(name="fetch_traffic", description=(
-    "Read processed per-IP endpoint profiles back from the graph. Returns an object with an `endpoints` "
-    "list (ranked by total bytes, heaviest conversations first) and a `count`; each endpoint is one IP "
-    "with its org/hostname/location and "
-    "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag, "
-    "`endpoint_type` (public/private/multicast/… — multicast/broadcast rows are protocol chatter, not "
-    "conversation partners, and are excluded from anomaly rankings), and `cloud_hosted` (the org's ASN "
-    "is a hosting/CDN provider, so the org names the infrastructure provider, not the actual service). "
-    "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
-    "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
-    "Profiles accumulate one set per capture session; this returns the MOST RECENTLY COMPUTED set (one row "
-    "per IP), so it is a snapshot, not a timeseries — use inspect_endpoint's `history` for one IP across "
-    "sessions, or list_captures for what else is stored. "
-    "`duration_minutes` is how many minutes back to include, measured by when each profile was COMPUTED "
-    "(the compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
-    "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
-    "and see exactly who it talked to, use inspect_endpoint instead."
-))
+@mcp.tool(
+    name="fetch_traffic",
+    description=(
+        "Read processed per-IP endpoint profiles back from the graph. Returns an object with an `endpoints` "
+        "list (ranked by total bytes, heaviest conversations first) and a `count`; each endpoint is one IP "
+        "with its org/hostname/location and "
+        "directional traffic (bytes/packets/peers/ports, outbound and inbound), plus its outlier flag, "
+        "`endpoint_type` (public/private/multicast/… — multicast/broadcast rows are protocol chatter, not "
+        "conversation partners, and are excluded from anomaly rankings), and `cloud_hosted` (the org's ASN "
+        "is a hosting/CDN provider, so the org names the infrastructure provider, not the actual service). "
+        "Directions are from the endpoint's OWN perspective: for a remote IP, `bytes_out` is what it sent TO "
+        "the capture host (a host download), and `bytes_in` is what the host sent to it (outbound from host). "
+        "Profiles accumulate one set per capture session; this returns the MOST RECENTLY COMPUTED set (one row "
+        "per IP), so it is a snapshot, not a timeseries — use inspect_endpoint's `history` for one IP across "
+        "sessions, or list_captures for what else is stored. "
+        "`duration_minutes` is how many minutes back to include, measured by when each profile was COMPUTED "
+        "(the compute_embeddings run), not when the traffic occurred; `limit` caps the rows. "
+        "This is the windowed overview; to drill into ONE specific IP (e.g. an outlier from anomaly_detection) "
+        "and see exactly who it talked to, use inspect_endpoint instead."
+    ),
+)
 def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
@@ -389,7 +457,12 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
     endpoints = json.loads(json.dumps(data, default=str))
     for endpoint in endpoints:
         endpoint["cloud_hosted"] = is_cloud_hosted(endpoint.get("org"))
-    return {"ok": True, "endpoints": endpoints, "count": len(endpoints), "duration_minutes": duration_minutes}
+    return {
+        "ok": True,
+        "endpoints": endpoints,
+        "count": len(endpoints),
+        "duration_minutes": duration_minutes,
+    }
 
 
 # The join key back to detail: every PACKET node carries the full 5-tuple as
@@ -530,62 +603,81 @@ def _split_ports(service_ports, high_ports) -> tuple[list[int], int]:
     return service, len(ephemeral)
 
 
-@mcp.tool(name="inspect_endpoint", description=(
-    "Drill into ONE specific IP — the join key from an anomaly back to its detail. Hand it an IP (e.g. an "
-    "outlier from anomaly_detection or any IP from fetch_traffic) and it returns, addressably by that IP: "
-    "`profile` — the endpoint's aggregated profile (org/hostname/location, a `cloud_hosted` hosting-ASN "
-    "hint, directional bytes/packets/peers/"
-    "ports, timing, outlier flag), or null if the IP was captured but compute_embeddings hasn't run yet — "
-    "the profile describes ONE capture session (its `capture_id`); "
-    "`totals` — the true packet and distinct-peer counts for the IP across every session in the graph "
-    "(labeled `scope: all_sessions` — totals exceeding the profile's counts means older sessions also saw "
-    "this IP, not an inconsistency; it also tells you when the lists below are samples); `peers` — WHO this "
-    "IP actually exchanged packets with across all sessions, one row per "
-    "peer (peer IP + org/hostname/location, bytes/packets out & in, protocols, `service_ports` — the "
-    "service-identifying low side of each port pair, e.g. 443 — and `ephemeral_ports`, a count of distinct "
-    "high-side client ports: high churn means many short-lived connections rather than one long tunnel), "
-    "ranked by total bytes; "
-    "`history` — this IP's profile in EVERY capture session it appeared in, newest first (bytes/packets/"
-    "peers per direction, timing, and that session's outlier verdict), with `sessions_seen` counting them: "
-    "the timeseries behind the profile, and the series anomaly_detection baselines an endpoint against, so "
-    "a 'far above its own history' finding can be audited against the real numbers (`history_limit` caps "
-    "the rows); "
-    "and `packets` — a most-recent raw 5-tuple packet sample. Directions are from the inspected IP's OWN "
-    "perspective (outbound = this IP is the packet source): for a remote IP, its outbound bytes are what it "
-    "sent TO the capture host (a host download), and its inbound bytes are what the host sent to it (outbound "
-    "from host). `peer_limit` caps the peer rows, `packet_limit` caps the packet sample. This answers 'now "
-    "show me this IP's packets and peers' without pulling and filtering the whole window client-side."
-))
-def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 20,
-                     history_limit: int = 20) -> dict[str, Any]:
+@mcp.tool(
+    name="inspect_endpoint",
+    description=(
+        "Drill into ONE specific IP — the join key from an anomaly back to its detail. Hand it an IP (e.g. an "
+        "outlier from anomaly_detection or any IP from fetch_traffic) and it returns, addressably by that IP: "
+        "`profile` — the endpoint's aggregated profile (org/hostname/location, a `cloud_hosted` hosting-ASN "
+        "hint, directional bytes/packets/peers/"
+        "ports, timing, outlier flag), or null if the IP was captured but compute_embeddings hasn't run yet — "
+        "the profile describes ONE capture session (its `capture_id`); "
+        "`totals` — the true packet and distinct-peer counts for the IP across every session in the graph "
+        "(labeled `scope: all_sessions` — totals exceeding the profile's counts means older sessions also saw "
+        "this IP, not an inconsistency; it also tells you when the lists below are samples); `peers` — WHO this "
+        "IP actually exchanged packets with across all sessions, one row per "
+        "peer (peer IP + org/hostname/location, bytes/packets out & in, protocols, `service_ports` — the "
+        "service-identifying low side of each port pair, e.g. 443 — and `ephemeral_ports`, a count of distinct "
+        "high-side client ports: high churn means many short-lived connections rather than one long tunnel), "
+        "ranked by total bytes; "
+        "`history` — this IP's profile in EVERY capture session it appeared in, newest first (bytes/packets/"
+        "peers per direction, timing, and that session's outlier verdict), with `sessions_seen` counting them: "
+        "the timeseries behind the profile, and the series anomaly_detection baselines an endpoint against, so "
+        "a 'far above its own history' finding can be audited against the real numbers (`history_limit` caps "
+        "the rows); "
+        "and `packets` — a most-recent raw 5-tuple packet sample. Directions are from the inspected IP's OWN "
+        "perspective (outbound = this IP is the packet source): for a remote IP, its outbound bytes are what it "
+        "sent TO the capture host (a host download), and its inbound bytes are what the host sent to it (outbound "
+        "from host). `peer_limit` caps the peer rows, `packet_limit` caps the packet sample. This answers 'now "
+        "show me this IP's packets and peers' without pulling and filtering the whole window client-side."
+    ),
+)
+def inspect_endpoint(
+    ip_address: str, peer_limit: int = 50, packet_limit: int = 20, history_limit: int = 20
+) -> dict[str, Any]:
     try:
         driver = get_neo4j_driver()
         with driver.session(database=DATABASE) as session:
             profile_rows = [r.data() for r in session.run(_INSPECT_PROFILE_QUERY, ip=ip_address)]
             totals = session.run(_INSPECT_TOTALS_QUERY, ip=ip_address).single()
-            peer_rows = [r.data() for r in session.run(_INSPECT_PEERS_QUERY, ip=ip_address, peer_limit=peer_limit)]
-            packet_rows = [r.data() for r in session.run(_INSPECT_PACKETS_QUERY, ip=ip_address, packet_limit=packet_limit)]
-            history_rows = [r.data() for r in session.run(_INSPECT_HISTORY_QUERY, ip=ip_address, history_limit=history_limit)]
+            peer_rows = [
+                r.data()
+                for r in session.run(_INSPECT_PEERS_QUERY, ip=ip_address, peer_limit=peer_limit)
+            ]
+            packet_rows = [
+                r.data()
+                for r in session.run(
+                    _INSPECT_PACKETS_QUERY, ip=ip_address, packet_limit=packet_limit
+                )
+            ]
+            history_rows = [
+                r.data()
+                for r in session.run(
+                    _INSPECT_HISTORY_QUERY, ip=ip_address, history_limit=history_limit
+                )
+            ]
     except Exception as e:
         return {"ok": False, "error": f"could not inspect endpoint {ip_address!r} ({e})"}
 
     peers = []
     for r in peer_rows:
         service_ports, ephemeral_ports = _split_ports(r["service_ports"], r["high_ports"])
-        peers.append({
-            "peer_ip": r["peer_ip"],
-            "peer_org": r["peer_org"],
-            "peer_hostname": r["peer_hostname"],
-            "peer_location": r["peer_location"],
-            "bytes_out": r["bytes_out"],
-            "packets_out": r["packets_out"],
-            "bytes_in": r["bytes_in"],
-            "packets_in": r["packets_in"],
-            "bytes_total": r["bytes_total"],
-            "protocols": sorted(p for p in (r["protocols"] or []) if p),
-            "service_ports": service_ports,
-            "ephemeral_ports": ephemeral_ports,
-        })
+        peers.append(
+            {
+                "peer_ip": r["peer_ip"],
+                "peer_org": r["peer_org"],
+                "peer_hostname": r["peer_hostname"],
+                "peer_location": r["peer_location"],
+                "bytes_out": r["bytes_out"],
+                "packets_out": r["packets_out"],
+                "bytes_in": r["bytes_in"],
+                "packets_in": r["packets_in"],
+                "bytes_total": r["bytes_total"],
+                "protocols": sorted(p for p in (r["protocols"] or []) if p),
+                "service_ports": service_ports,
+                "ephemeral_ports": ephemeral_ports,
+            }
+        )
 
     total_packets = totals["packets"] if totals else 0
     total_peers = totals["peers"] if totals else 0
@@ -618,8 +710,13 @@ def inspect_endpoint(ip_address: str, peer_limit: int = 50, packet_limit: int = 
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stdio", action="store_true", help="Serve over stdio (for MCP clients that spawn the server) instead of the default SSE HTTP server.")
+    parser.add_argument(
+        "--stdio",
+        action="store_true",
+        help="Serve over stdio (for MCP clients that spawn the server) instead of the default SSE HTTP server.",
+    )
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()

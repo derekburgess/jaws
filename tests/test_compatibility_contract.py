@@ -4,18 +4,16 @@ import copy
 import json
 
 import pytest
-
 from harness.benchmark_contract import ContractViolation, _resolve_commit
 from harness.compatibility_contract import (
     COMPATIBILITY_DIR,
     EXPECTED_CLI_CASES,
     collect_cli_contract,
     collect_graph_schema_inventory,
-    validate_compatibility_directory,
     validate_cli_contract,
+    validate_compatibility_directory,
     validate_graph_schema_inventory,
 )
-
 
 SUBJECT = _resolve_commit("0b68a8c")
 COLLECTOR = "worktree"
@@ -110,16 +108,12 @@ def test_graph_inventory_retains_current_constraints_and_indexes(graph_inventory
 
 def test_graph_inventory_rejects_property_drift(graph_inventory):
     candidate = copy.deepcopy(graph_inventory)
-    candidate["nodes"][0]["properties"].append(
-        {"name": "INVENTED", "observed_type": "string"}
-    )
+    candidate["nodes"][0]["properties"].append({"name": "INVENTED", "observed_type": "string"})
     with pytest.raises(ContractViolation, match="declared node inventory drifted"):
         validate_graph_schema_inventory(candidate)
 
 
-def test_contract_documents_are_canonical_json_serializable(
-    cli_contract, graph_inventory
-):
+def test_contract_documents_are_canonical_json_serializable(cli_contract, graph_inventory):
     for document in (cli_contract, graph_inventory):
         encoded = json.dumps(document, sort_keys=True, allow_nan=False)
         assert json.loads(encoded) == document
@@ -127,12 +121,8 @@ def test_contract_documents_are_canonical_json_serializable(
 
 def test_committed_compatibility_inventories_validate_and_regenerate():
     validate_compatibility_directory(COMPATIBILITY_DIR)
-    cli = json.loads(
-        (COMPATIBILITY_DIR / "cli-contract.json").read_text(encoding="utf-8")
-    )
-    graph = json.loads(
-        (COMPATIBILITY_DIR / "neo4j-schema.json").read_text(encoding="utf-8")
-    )
+    cli = json.loads((COMPATIBILITY_DIR / "cli-contract.json").read_text(encoding="utf-8"))
+    graph = json.loads((COMPATIBILITY_DIR / "neo4j-schema.json").read_text(encoding="utf-8"))
     collector_revision = cli["collector"]["revision"]
     assert collector_revision == graph["collector"]["revision"]
     assert len(collector_revision) == 40

@@ -1,15 +1,17 @@
-import os
 import argparse
+import os
 import socket
 from datetime import datetime, timezone
+
 from rich.console import Group
+
 from jaws.config import CONSOLE, DATABASE
 from jaws.jaws_utils import (
+    Reporter,
     dbms_connection,
     initialize_schema,
-    Reporter,
+    render_activity_panel,
     render_info_panel,
-    render_activity_panel
 )
 from jaws.optional_dependencies import require_module
 
@@ -23,23 +25,27 @@ def get_local_ip():
         return local_ip
     except Exception:
         return "127.0.0.1"
-    
+
 
 def list_interfaces():
     psutil = require_module("psutil", "capture", "Network interface discovery")
     interfaces = psutil.net_if_addrs()
     interface_stats = psutil.net_io_counters(pernic=True)
     interface_list = []
-    
+
     for interface, addrs in interfaces.items():
-        if interface in ['lo'] or interface.startswith('docker') or interface.startswith('tailscale'):
+        if (
+            interface in ["lo"]
+            or interface.startswith("docker")
+            or interface.startswith("tailscale")
+        ):
             continue
-            
+
         if interface in interface_stats:
             stats = interface_stats[interface]
             if stats.bytes_sent > 0 or stats.bytes_recv > 0:
                 interface_list.append(f"{interface}")
-    
+
     return interface_list
 
 
@@ -76,7 +82,9 @@ def finalize_capture(driver, database, capture_id, packet_count):
 
 def add_packets_to_database(driver, packets_batch, database):
     with driver.session(database=database) as session:
-        session.execute_write(lambda tx: tx.run("""
+        session.execute_write(
+            lambda tx: tx.run(
+                """
         UNWIND $packets AS packet
         MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: packet.src_ip_address})
         MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: packet.dst_ip_address})
@@ -104,7 +112,10 @@ def add_packets_to_database(driver, packets_batch, database):
             MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: packet.dst_port, IP_ADDRESS: packet.dst_ip_address})
             CREATE (p)-[:RECEIVED]->(dst_port)
         )
-        """, packets=packets_batch))
+        """,
+                packets=packets_batch,
+            )
+        )
 
 
 def process_packet(packet):
@@ -112,37 +123,54 @@ def process_packet(packet):
     # imported pcap files keep their original timing — the INTERVAL_MEAN/INTERVAL_CV
     # features measure network cadence, not how fast the file was read. It is a naive
     # local datetime; astimezone() attaches the local zone and converts to UTC.
-    sniff_time = getattr(packet, 'sniff_time', None)
+    sniff_time = getattr(packet, "sniff_time", None)
     timestamp = sniff_time.astimezone(timezone.utc) if sniff_time else datetime.now(timezone.utc)
     packet_data = {
         "protocol": packet.highest_layer,
-        "src_ip_address": packet.ip.src if hasattr(packet, 'ip') else '0.0.0.0',
+        "src_ip_address": packet.ip.src if hasattr(packet, "ip") else "0.0.0.0",
         "src_port": 0,
-        "dst_ip_address": packet.ip.dst if hasattr(packet, 'ip') else '0.0.0.0',
+        "dst_ip_address": packet.ip.dst if hasattr(packet, "ip") else "0.0.0.0",
         "dst_port": 0,
         "size": len(packet),
         "payload": None,
-        "timestamp": timestamp.isoformat()
+        "timestamp": timestamp.isoformat(),
     }
 
-    if hasattr(packet, 'tcp') or hasattr(packet, 'udp'):
-        layer = packet.tcp if hasattr(packet, 'tcp') else packet.udp
-        packet_data.update({
-            "src_port": int(layer.srcport) if layer.srcport.isdigit() else 0,
-            "dst_port": int(layer.dstport) if layer.dstport.isdigit() else 0,
-            "payload": layer.payload if hasattr(layer, 'payload') else None
-        })
+    if hasattr(packet, "tcp") or hasattr(packet, "udp"):
+        layer = packet.tcp if hasattr(packet, "tcp") else packet.udp
+        packet_data.update(
+            {
+                "src_port": int(layer.srcport) if layer.srcport.isdigit() else 0,
+                "dst_port": int(layer.dstport) if layer.dstport.isdigit() else 0,
+                "payload": layer.payload if hasattr(layer, "payload") else None,
+            }
+        )
 
     packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['protocol']}({packet_data['size']}) ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']}"
     return packet_data, packet_string
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Collect packets from a network interface and stores them in the database.")
-    parser.add_argument("--interface", default=None, help="Specify the network interface to use (default: the first active interface from --list).")
+    parser = argparse.ArgumentParser(
+        description="Collect packets from a network interface and stores them in the database."
+    )
+    parser.add_argument(
+        "--interface",
+        default=None,
+        help="Specify the network interface to use (default: the first active interface from --list).",
+    )
     parser.add_argument("--file", dest="capture_file", help="Path to a Wireshark capture file.")
-    parser.add_argument("--duration", type=int, default=10, help="Specify the duration of the capture in seconds (default: 10).")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
+    parser.add_argument(
+        "--duration",
+        type=int,
+        default=10,
+        help="Specify the duration of the capture in seconds (default: 10).",
+    )
+    parser.add_argument(
+        "--database",
+        default=DATABASE,
+        help=f"Specify the database to connect to (default: '{DATABASE}').",
+    )
     parser.add_argument("--list", action="store_true", help="List available network interfaces.")
     args = parser.parse_args()
     reporter = Reporter()
@@ -183,7 +211,9 @@ def main():
         initialize_schema(driver, args.database, local_ip, reporter)
 
         if args.capture_file and not os.path.isfile(args.capture_file):
-            reporter.error("ERROR", f"File not found, please check your file path:\n{args.capture_file}")
+            reporter.error(
+                "ERROR", f"File not found, please check your file path:\n{args.capture_file}"
+            )
             return
 
         if not args.capture_file:
@@ -193,9 +223,14 @@ def main():
                     reporter.error("ERROR", "No active network interfaces found.")
                     return
                 args.interface = available_interfaces[0]
-                reporter.info("CONFIG", f"No interface specified, defaulting to: '{args.interface}'")
+                reporter.info(
+                    "CONFIG", f"No interface specified, defaulting to: '{args.interface}'"
+                )
             elif args.interface not in available_interfaces:
-                reporter.error("ERROR", f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.")
+                reporter.error(
+                    "ERROR",
+                    f"Interface '{args.interface}' not found. Use list_interfaces to see available interfaces.",
+                )
                 return
 
         source = args.capture_file if args.capture_file else args.interface
@@ -211,10 +246,11 @@ def main():
         def render():
             return Group(
                 render_info_panel("CONFIG", config_message, CONSOLE),
-                render_activity_panel("PACKETS", packets, CONSOLE)
+                render_activity_panel("PACKETS", packets, CONSOLE),
             )
 
         with reporter.activity(render) as update:
+
             def on_packet(packet):
                 packet_data, packet_string = process_packet(packet)
                 packet_data["capture_id"] = capture_id
@@ -243,7 +279,12 @@ def main():
         finalize_capture(driver, args.database, capture_id, len(packets))
 
         reporter.result(
-            {"database": args.database, "source": source, "capture_id": capture_id, "packets_captured": len(packets)},
+            {
+                "database": args.database,
+                "source": source,
+                "capture_id": capture_id,
+                "packets_captured": len(packets),
+            },
             summary=f"Packets({len(packets)}) added to: '{args.database}' as session '{capture_id}'",
         )
         return
@@ -256,6 +297,7 @@ def main():
         flush_batch()
         close_capture()
         driver.close()
+
 
 if __name__ == "__main__":
     main()

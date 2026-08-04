@@ -1,5 +1,7 @@
 from rich import print
+
 from jaws.config import DATABASE, DEFAULT_PACKET_MODEL
+
 
 def main():
     print(r"""[turquoise2]
@@ -10,13 +12,13 @@ def main():
      o-o  o   o   o   o   o--o
     [/]""")
 
-    print(f"""[gray100]
+    print("""[gray100]
     JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
     the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
     It also provides a set of commands to transform and process packets into plots and reports using:
     PCA, DBSCAN, OpenAI, and local transformers.
     [/]""")
-    
+
     print(f"""[gray100]
     JAWS is set to run against the OpenAI API by default and does not require a specific GPU. JAWS can also
     be configured to run on device using local transformers. If you create the default '{DATABASE}' database,
@@ -34,7 +36,7 @@ def main():
     [grey85]This creates the default '{DATABASE}' database for you. The graph is still browsable at http://localhost:7474 if you want the GUI.[/]
     [/]""")
 
-    print(f"""[gray100]
+    print("""[gray100]
     [grey85]The 'ocean' Dockerfile deploys the JAWS model container, a CUDA image with JAWS and its dependencies installed, 
     for running local transformers on a GPU:[/]
     [turquoise2][DOCKER][/] cd ocean && docker build -t jaws-image
@@ -98,7 +100,7 @@ def main():
     [grey85]--ablate compares text-only vs numeric-only vs blended clustering (silhouette + Jaccard) without writing to the database.[/]
     [/]""")
 
-    print(f"""[gray100]
+    print("""[gray100]
     [grey85]MCP server:[/]
     [green1][CLI][/] jaws-mcp [grey50]OPTIONAL[/] --host '0.0.0.0' --port 8765 [grey50]OR[/] --stdio
     [grey85]Runs an SSE MCP server (default) so agents such as Claude Code can use JAWS. Pass --stdio for spawn-based clients.[/]
@@ -108,6 +110,7 @@ def main():
     version 2.0.0 BETA, 2026
     https://github.com/derekburgess/jaws
     [/]""")
+
 
 if __name__ == "__main__":
     main()

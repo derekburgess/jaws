@@ -1,22 +1,24 @@
 import argparse
-from rich.console import Group
+
 import numpy as np
 import pandas as pd
+from rich.console import Group
+
 from jaws.config import (
     CONSOLE,
     DATABASE,
-    PACKET_MODELS,
     DEFAULT_PACKET_MODEL,
     OPENAI_EMBEDDING_MODEL,
+    PACKET_MODELS,
     get_openai_client,
 )
 from jaws.jaws_utils import (
-    dbms_connection,
+    MIN_TIMING_PACKETS,
     Reporter,
-    render_info_panel,
-    render_activity_panel,
     classify_endpoint,
-    MIN_TIMING_PACKETS
+    dbms_connection,
+    render_activity_panel,
+    render_info_panel,
 )
 from jaws.optional_dependencies import require_module
 
@@ -60,7 +62,8 @@ def resolve_session(driver, database, session_arg):
         return (session_ids[-1] if session_ids else None), session_ids
     if session_arg not in session_ids:
         raise ValueError(
-            f"session '{session_arg}' not found; available: {session_ids or 'none (no CAPTURE nodes — use latest or all)'}")
+            f"session '{session_arg}' not found; available: {session_ids or 'none (no CAPTURE nodes — use latest or all)'}"
+        )
     return session_arg, session_ids
 
 
@@ -154,8 +157,11 @@ def build_endpoint_profiles(packets, metadata):
     has_ts = "ts_ms" in packets.columns
     timing = {}
     if has_ts:
-        session_col = packets["capture_id"].fillna("") if "capture_id" in packets.columns \
+        session_col = (
+            packets["capture_id"].fillna("")
+            if "capture_id" in packets.columns
             else pd.Series("", index=packets.index)
+        )
         for ip in set(packets["src_ip"]) | set(packets["dst_ip"]):
             directions = []
             for ip_col in ("src_ip", "dst_ip"):
@@ -175,27 +181,29 @@ def build_endpoint_profiles(packets, metadata):
         inb = inbound.get(ip, {})
         meta = metadata.get(ip, {})
         interval_mean, interval_cv = timing.get(ip, (None, None))
-        profiles.append({
-            "ip_address": ip,
-            # Address scope (public/private/multicast/…) via stdlib ipaddress. Stored on
-            # the node so readers can tell a real conversation partner from protocol
-            # chatter; the finder keeps non-conversational types out of the rankings.
-            "endpoint_type": classify_endpoint(ip),
-            "org": meta.get("org"),
-            "hostname": meta.get("hostname"),
-            "location": meta.get("location"),
-            "bytes_out": out.get("bytes", 0),
-            "packets_out": out.get("packets", 0),
-            "out_peers": out.get("peers", 0),
-            "out_ports": out.get("ports", []),
-            "bytes_in": inb.get("bytes", 0),
-            "packets_in": inb.get("packets", 0),
-            "in_peers": inb.get("peers", 0),
-            "in_ports": inb.get("ports", []),
-            "protocols": sorted(set(out.get("protocols", [])) | set(inb.get("protocols", []))),
-            "interval_mean": interval_mean,
-            "interval_cv": interval_cv,
-        })
+        profiles.append(
+            {
+                "ip_address": ip,
+                # Address scope (public/private/multicast/…) via stdlib ipaddress. Stored on
+                # the node so readers can tell a real conversation partner from protocol
+                # chatter; the finder keeps non-conversational types out of the rankings.
+                "endpoint_type": classify_endpoint(ip),
+                "org": meta.get("org"),
+                "hostname": meta.get("hostname"),
+                "location": meta.get("location"),
+                "bytes_out": out.get("bytes", 0),
+                "packets_out": out.get("packets", 0),
+                "out_peers": out.get("peers", 0),
+                "out_ports": out.get("ports", []),
+                "bytes_in": inb.get("bytes", 0),
+                "packets_in": inb.get("packets", 0),
+                "in_peers": inb.get("peers", 0),
+                "in_ports": inb.get("ports", []),
+                "protocols": sorted(set(out.get("protocols", [])) | set(inb.get("protocols", []))),
+                "interval_mean": interval_mean,
+                "interval_cv": interval_cv,
+            }
+        )
     return profiles
 
 
@@ -290,18 +298,27 @@ def add_endpoint_to_database(profile, embedding, session_scope, driver, database
         endpoint.TIMESTAMP = datetime()
     """
     with driver.session(database=database) as session:
-        session.run(query,
-                    ip_address=profile["ip_address"], embedding=embedding,
-                    session_scope=session_scope,
-                    endpoint_type=profile["endpoint_type"],
-                    org=profile["org"], hostname=profile["hostname"], location=profile["location"],
-                    bytes_out=profile["bytes_out"], packets_out=profile["packets_out"],
-                    out_peers=profile["out_peers"], out_ports=profile["out_ports"],
-                    bytes_in=profile["bytes_in"], packets_in=profile["packets_in"],
-                    in_peers=profile["in_peers"], in_ports=profile["in_ports"],
-                    protocols=profile["protocols"],
-                    interval_mean=profile.get("interval_mean"),
-                    interval_cv=profile.get("interval_cv"))
+        session.run(
+            query,
+            ip_address=profile["ip_address"],
+            embedding=embedding,
+            session_scope=session_scope,
+            endpoint_type=profile["endpoint_type"],
+            org=profile["org"],
+            hostname=profile["hostname"],
+            location=profile["location"],
+            bytes_out=profile["bytes_out"],
+            packets_out=profile["packets_out"],
+            out_peers=profile["out_peers"],
+            out_ports=profile["out_ports"],
+            bytes_in=profile["bytes_in"],
+            packets_in=profile["packets_in"],
+            in_peers=profile["in_peers"],
+            in_ports=profile["in_ports"],
+            protocols=profile["protocols"],
+            interval_mean=profile.get("interval_mean"),
+            interval_cv=profile.get("interval_cv"),
+        )
 
 
 def _local_embedding_runtime():
@@ -335,10 +352,11 @@ OPENAI_EMBEDDING_BATCH = 512
 # bounding the stored embedding vectors.
 PROFILE_RETENTION_SESSIONS = 20
 
+
 def compute_openai_embeddings(client, descriptions):
     embeddings = []
     for start in range(0, len(descriptions), OPENAI_EMBEDDING_BATCH):
-        chunk = descriptions[start:start + OPENAI_EMBEDDING_BATCH]
+        chunk = descriptions[start : start + OPENAI_EMBEDDING_BATCH]
         response = client.embeddings.create(input=chunk, model=OPENAI_EMBEDDING_MODEL)
         # The API tags each embedding with its input index; sort to guarantee the
         # output order matches the input order.
@@ -347,12 +365,37 @@ def compute_openai_embeddings(client, descriptions):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compute per-IP endpoint embeddings using either OpenAI or Transformers.")
-    parser.add_argument("--api", choices=["openai", "transformers"], default="openai", help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai' — for easy demos without a GPU; note the MCP server defaults to 'transformers', the preferred path on a GPU host).")
-    parser.add_argument("--model", choices=list(PACKET_MODELS), default=DEFAULT_PACKET_MODEL, help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
-    parser.add_argument("--session", default="latest", help="Which capture session to profile: 'latest' (default), 'all' (every packet in the graph; timing still never crosses session boundaries), or a specific CAPTURE_ID from a capture run.")
-    parser.add_argument("--retain-profiles", type=int, default=PROFILE_RETENTION_SESSIONS, help=f"How many computed profile sets (sessions) to keep in the graph; older ones are pruned after this run (default: {PROFILE_RETENTION_SESSIONS}). Profiles accumulate per session so jaws-finder can baseline an endpoint against its own history. 0 disables pruning. Raw PACKET/CAPTURE history is never pruned.")
+    parser = argparse.ArgumentParser(
+        description="Compute per-IP endpoint embeddings using either OpenAI or Transformers."
+    )
+    parser.add_argument(
+        "--api",
+        choices=["openai", "transformers"],
+        default="openai",
+        help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai' — for easy demos without a GPU; note the MCP server defaults to 'transformers', the preferred path on a GPU host).",
+    )
+    parser.add_argument(
+        "--model",
+        choices=list(PACKET_MODELS),
+        default=DEFAULT_PACKET_MODEL,
+        help=f"Local transformers model to use when --api transformers (default: '{DEFAULT_PACKET_MODEL}'). Add more in config.PACKET_MODELS.",
+    )
+    parser.add_argument(
+        "--database",
+        default=DATABASE,
+        help=f"Specify the database to connect to (default: '{DATABASE}').",
+    )
+    parser.add_argument(
+        "--session",
+        default="latest",
+        help="Which capture session to profile: 'latest' (default), 'all' (every packet in the graph; timing still never crosses session boundaries), or a specific CAPTURE_ID from a capture run.",
+    )
+    parser.add_argument(
+        "--retain-profiles",
+        type=int,
+        default=PROFILE_RETENTION_SESSIONS,
+        help=f"How many computed profile sets (sessions) to keep in the graph; older ones are pruned after this run (default: {PROFILE_RETENTION_SESSIONS}). Profiles accumulate per session so jaws-finder can baseline an endpoint against its own history. 0 disables pruning. Raw PACKET/CAPTURE history is never pruned.",
+    )
     args = parser.parse_args()
     reporter = Reporter()
     torch_runtime = None
@@ -377,7 +420,9 @@ def main():
     # The scope stamped on each ENDPOINT and reported back: a concrete session id, or
     # 'all' when unscoped ('all' requested, or a legacy graph with no CAPTURE nodes).
     session_scope = capture_id if capture_id else "all"
-    reporter.info("CONFIG", f"Profiling session: {session_scope} ({len(session_ids)} session(s) in graph)")
+    reporter.info(
+        "CONFIG", f"Profiling session: {session_scope} ({len(session_ids)} session(s) in graph)"
+    )
 
     packets = fetch_packets(driver, args.database, capture_id)
     metadata = fetch_ip_metadata(driver, args.database)
@@ -394,14 +439,14 @@ def main():
         return Group(
             render_info_panel("CONFIG", processing_message, CONSOLE),
             render_activity_panel("EMBEDDINGS(STR)", embedding_strings, CONSOLE),
-            render_activity_panel("EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], CONSOLE)
+            render_activity_panel(
+                "EMBEDDINGS(TENSOR)", [str(tensor) for tensor in embedding_tensors], CONSOLE
+            ),
         )
 
     try:
         if args.api == "transformers":
-            embedder = sentence_transformer(
-                model_name, device=device, trust_remote_code=True
-            )
+            embedder = sentence_transformer(model_name, device=device, trust_remote_code=True)
 
         # Embed every profile in one batched pass (the panels then narrate the DB
         # writes). reporter.info first so a human sees progress during a long encode.
@@ -427,7 +472,10 @@ def main():
         # Retention runs after the write so this run's own set is always among the kept.
         pruned, pruned_scopes = prune_profile_sessions(driver, args.database, args.retain_profiles)
         if pruned:
-            reporter.info("CONFIG", f"Pruned {pruned} profile(s) from {len(pruned_scopes)} session(s) beyond the {args.retain_profiles} most recent: {', '.join(pruned_scopes)}")
+            reporter.info(
+                "CONFIG",
+                f"Pruned {pruned} profile(s) from {len(pruned_scopes)} session(s) beyond the {args.retain_profiles} most recent: {', '.join(pruned_scopes)}",
+            )
 
         # Profile sets now in the graph — how much per-endpoint history jaws-finder can
         # baseline against (1 means this run only: no history yet, baseline is a no-op).
@@ -457,6 +505,7 @@ def main():
         if torch_runtime is not None and torch_runtime.cuda.is_available():
             torch_runtime.cuda.empty_cache()
         driver.close()
+
 
 if __name__ == "__main__":
     main()

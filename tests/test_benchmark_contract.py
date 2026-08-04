@@ -6,13 +6,11 @@ import shutil
 from pathlib import Path
 
 import pytest
-from jsonschema import Draft202012Validator
-
 from harness.benchmark_contract import (
-    ContractViolation,
     DOCUMENT_FILES,
     SCHEMA_FILES,
     SCHEMA_SOURCE,
+    ContractViolation,
     _read_jsonl,
     _resolve_commit,
     collect_baseline_bundle,
@@ -20,7 +18,7 @@ from harness.benchmark_contract import (
     validate_bundle,
     write_checksums,
 )
-
+from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = REPO_ROOT / "benchmarks" / "examples" / "baseline-0"
@@ -58,8 +56,7 @@ def _write(path, value):
 def _write_rankings(path, rows):
     path.write_text(
         "".join(
-            json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-            + "\n"
+            json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
             for row in rows
         ),
         encoding="utf-8",
@@ -119,9 +116,10 @@ def test_example_retains_every_synthetic_ranking_and_explicit_pcap_skips():
 
     assert SYNTHETIC_SCENARIOS <= set(scenario_map)
     assert PCAP_SCENARIOS <= set(scenario_map)
-    assert {
-        ranking_map[name]["evaluation_surface"] for name in SYNTHETIC_SCENARIOS
-    } == {"endpoints", "host_outbound"}
+    assert {ranking_map[name]["evaluation_surface"] for name in SYNTHETIC_SCENARIOS} == {
+        "endpoints",
+        "host_outbound",
+    }
 
     for name in SYNTHETIC_SCENARIOS:
         ranking = ranking_map[name]
@@ -129,7 +127,8 @@ def test_example_retains_every_synthetic_ranking_and_explicit_pcap_skips():
         assert ranking["ranking_complete"] is True
         assert ranking["findings"]
         assert [row["rank"] for row in ranking["findings"]] == list(
-            range(1, len(ranking["findings"]) + 1))
+            range(1, len(ranking["findings"]) + 1)
+        )
 
     for name in PCAP_SCENARIOS:
         ranking = ranking_map[name]
@@ -141,32 +140,24 @@ def test_example_retains_every_synthetic_ranking_and_explicit_pcap_skips():
 
 def test_example_distinguishes_passes_from_known_quality_failures():
     evaluation = _read(EXAMPLE / "evaluation.json")
-    outcomes = {
-        row["scenario_id"]: row["quality_outcome"]
-        for row in evaluation["per_scenario"]
-    }
-    assert {
-        name for name, outcome in outcomes.items() if outcome == "passed"
-    } == {
+    outcomes = {row["scenario_id"]: row["quality_outcome"] for row in evaluation["per_scenario"]}
+    assert {name for name, outcome in outcomes.items() if outcome == "passed"} == {
         "payload_beacon",
         "jittered_beacon",
         "slow_exfil",
         "burst_exfil",
         "behavioral_change",
     }
-    assert {
-        name for name, outcome in outcomes.items() if outcome == "failed_known"
-    } == {"tcp_keepalive", "bulk_download", "stable_heavy"}
+    assert {name for name, outcome in outcomes.items() if outcome == "failed_known"} == {
+        "tcp_keepalive",
+        "bulk_download",
+        "stable_heavy",
+    }
 
 
 def test_example_retains_full_numeric_profiles_and_prior_session_evidence():
-    scenarios = {
-        row["scenario_id"]: row
-        for row in _read(EXAMPLE / "scenarios.json")["scenarios"]
-    }
-    rankings = {
-        row["scenario_id"]: row for row in _read_jsonl(EXAMPLE / "rankings.jsonl")
-    }
+    scenarios = {row["scenario_id"]: row for row in _read(EXAMPLE / "scenarios.json")["scenarios"]}
+    rankings = {row["scenario_id"]: row for row in _read_jsonl(EXAMPLE / "rankings.jsonl")}
     expected_features = {
         "bytes_out",
         "bytes_in",

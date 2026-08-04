@@ -12,7 +12,6 @@ from packaging.version import Version
 
 from jaws.optional_dependencies import require_module
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 PROJECT = PYPROJECT["project"]
@@ -100,7 +99,7 @@ def test_missing_capability_error_names_the_install_extra():
         )
     except ModuleNotFoundError as error:
         assert "Fixture capability" in str(error)
-        assert 'JAWS[agent-lab]' in str(error)
+        assert "JAWS[agent-lab]" in str(error)
     else:
         raise AssertionError("fixture-only module unexpectedly imported")
 
@@ -119,7 +118,7 @@ import os
 import sys
 
 sys.path.insert(0, {str(REPO_ROOT)!r})
-sys.path.insert(0, {str(REPO_ROOT / 'tests')!r})
+sys.path.insert(0, {str(REPO_ROOT / "tests")!r})
 blocked = {{
     'ipinfo', 'matplotlib', 'mcp', 'neo4j', 'openai', 'plotille', 'psutil',
     'pyshark', 'sentence_transformers', 'torch'

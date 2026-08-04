@@ -1,12 +1,14 @@
 import argparse
+
 from rich.console import Group
+
 from jaws.config import CONSOLE, DATABASE, IPINFO_API_KEY
 from jaws.jaws_utils import (
-    dbms_connection,
     Reporter,
-    render_info_panel,
+    classify_endpoint,
+    dbms_connection,
     render_activity_panel,
-    classify_endpoint
+    render_info_panel,
 )
 from jaws.optional_dependencies import require_module
 
@@ -30,7 +32,7 @@ def fetch_data_for_organization(driver, database):
     """
     with driver.session(database=database) as session:
         result = session.run(query)
-        return [record['ip_address'] for record in result]
+        return [record["ip_address"] for record in result]
 
 
 def fetch_total_addresses(driver, database):
@@ -89,18 +91,32 @@ def add_organization_to_database(ip_address, ipinfo, driver, database):
         ip_address.COORDINATES = $coordinates
     """
     with driver.session(database=database) as session:
-        session.run(query, {
-            'ip_address': ip_address,
-            'org': ipinfo.get('org', ipinfo.get('company', {}).get('name', ipinfo.get('asn', {}).get('name', 'Unknown'))),
-            'hostname': ipinfo.get('hostname', 'Unknown'),
-            'location': format_location(ipinfo),
-            'coordinates': ipinfo.get('loc', 'Unknown')
-        })
-        
+        session.run(
+            query,
+            {
+                "ip_address": ip_address,
+                "org": ipinfo.get(
+                    "org",
+                    ipinfo.get("company", {}).get(
+                        "name", ipinfo.get("asn", {}).get("name", "Unknown")
+                    ),
+                ),
+                "hostname": ipinfo.get("hostname", "Unknown"),
+                "location": format_location(ipinfo),
+                "coordinates": ipinfo.get("loc", "Unknown"),
+            },
+        )
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Update the database with IP organization information from Ipinfo.")
-    parser.add_argument("--database", default=DATABASE, help=f"Specify the database to connect to (default: '{DATABASE}').")
+    parser = argparse.ArgumentParser(
+        description="Update the database with IP organization information from Ipinfo."
+    )
+    parser.add_argument(
+        "--database",
+        default=DATABASE,
+        help=f"Specify the database to connect to (default: '{DATABASE}').",
+    )
     args = parser.parse_args()
     reporter = Reporter()
     driver = dbms_connection(args.database, reporter)
@@ -142,7 +158,7 @@ def main():
     def render():
         return Group(
             render_info_panel("CONFIG", address_message, CONSOLE),
-            render_activity_panel("ORGANIZATIONS", organizations, CONSOLE)
+            render_activity_panel("ORGANIZATIONS", organizations, CONSOLE),
         )
 
     try:
@@ -155,7 +171,12 @@ def main():
                 ipinfo_details = get_ipinfo(handler, ip_address, reporter)
                 if ipinfo_details:
                     add_organization_to_database(ip_address, ipinfo_details, driver, args.database)
-                    org_name = ipinfo_details.get('org', ipinfo_details.get('company', {}).get('name', ipinfo_details.get('asn', {}).get('name', 'Unknown')))
+                    org_name = ipinfo_details.get(
+                        "org",
+                        ipinfo_details.get("company", {}).get(
+                            "name", ipinfo_details.get("asn", {}).get("name", "Unknown")
+                        ),
+                    )
                     # The full org→IP→hostname→loc detail is queryable via fetch_traffic;
                     # here we only stream a human view (pretty mode) and return a count.
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo_details.get('hostname', 'Unknown')}, {format_location(ipinfo_details)}\n"
@@ -182,6 +203,7 @@ def main():
 
     finally:
         driver.close()
+
 
 if __name__ == "__main__":
     main()
