@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  quality:
+    name: Format, lint, and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            constraints/py312-direct.txt
+            pyproject.toml
+            requirements-dev.txt
+      - name: Install constrained development profile
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Lint
+        run: python -m ruff check --output-format=github .
+      - name: Check formatting
+        run: python -m ruff format --check .
+      - name: Check typed boundary
+        run: python -m mypy
+
+  correctness:
+    name: Correctness tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            constraints/py312-direct.txt
+            pyproject.toml
+            requirements-dev.txt
+      - name: Install constrained development profile
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run correctness tier
+        run: |
+          mkdir -p test-results
+          python -m pytest -m "not neo4j and not recall" \
+            --junitxml=test-results/correctness.xml
+      - name: Upload correctness report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: correctness-${{ github.sha }}
+          path: test-results/correctness.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  benchmark-smoke:
+    name: Synthetic benchmark report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            constraints/py312-direct.txt
+            pyproject.toml
+            requirements-dev.txt
+      - name: Install constrained development profile
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Generate report-only benchmark artifacts
+        run: python scripts/benchmark_smoke.py --output-dir benchmark-smoke
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-smoke-${{ github.sha }}
+          path: benchmark-smoke/
+          if-no-files-found: error
+          retention-days: 30

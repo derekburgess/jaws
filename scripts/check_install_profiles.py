@@ -12,16 +12,24 @@ import argparse
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import venv
 from pathlib import Path
-
+from typing import NotRequired, TypedDict
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONSTRAINTS = REPO_ROOT / "constraints" / "py312-direct.txt"
 
-PROFILES = {
+
+class ProfileSpec(TypedDict):
+    """One isolated installation and import probe."""
+
+    extra: str | None
+    imports: list[str]
+    absent: NotRequired[list[str]]
+
+
+PROFILES: dict[str, ProfileSpec] = {
     "core": {
         "extra": None,
         "imports": ["jaws.jaws_compute", "jaws.jaws_finder"],
@@ -58,7 +66,15 @@ PROFILES = {
     },
     "dev": {
         "extra": "dev",
-        "imports": ["pytest", "jsonschema", "packaging", "psutil", "jaws"],
+        "imports": [
+            "pytest",
+            "jsonschema",
+            "mypy",
+            "packaging",
+            "psutil",
+            "yaml",
+            "jaws",
+        ],
         "absent": ["neo4j", "openai", "torch", "sentence_transformers", "mcp"],
     },
     "all": {

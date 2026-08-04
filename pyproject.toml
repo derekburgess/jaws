@@ -77,9 +77,12 @@ all = [
 ]
 dev = [
     "jsonschema>=4,<5",
+    "mypy>=2.3,<2.4",
     "packaging>=26,<27",
     "psutil>=7,<8",
     "pytest>=8,<9",
+    "pyyaml>=6,<7",
+    "ruff>=0.16,<0.17",
 ]
 
 [project.urls]
@@ -106,3 +109,27 @@ markers = [
     "recall: detector-quality benchmark (deselected by default)",
 ]
 addopts = "-m 'not neo4j and not recall'"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+# Start with deterministic imports and high-signal syntax/name errors across the
+# complete Python tree. Rule families may expand, but this set may not shrink.
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jaws", "jaws_mcp"]
+
+[tool.mypy]
+python_version = "3.12"
+files = [
+    "jaws/optional_dependencies.py",
+    "scripts/benchmark_smoke.py",
+    "scripts/check_install_profiles.py",
+]
+strict = true
+warn_unused_configs = true
+show_error_codes = true
+pretty = true

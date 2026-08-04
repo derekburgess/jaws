@@ -11,3 +11,7 @@ tests/harness/fixtures/*.pcap
 tests/harness/fixtures/*.pcapng
 tests/harness/fixtures/*.zip
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/benchmark-smoke/
+/test-results/

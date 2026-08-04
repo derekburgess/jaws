@@ -283,6 +283,11 @@ The MCP tools follow the same sequence: `list_interfaces` → `capture_packets` 
 ### 7. Run tests
 
 ```bash
+# Formatting, linting, and the initial strict type boundary.
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
+.venv/bin/python -m mypy
+
 # Collect every test item available in the current environment without running it.
 .venv/bin/python -m pytest --collect-only -q -o addopts=""
 
@@ -304,6 +309,8 @@ Correctness, integration, and detector quality are separate signals. The quality
 may expose known ranking failures; those outcomes are research observations rather
 than reasons to weaken the scenarios. Restricted or licensed PCAPs are never committed.
 When a requested real-PCAP fixture is absent, that tier reports an explicit skip.
+The [quality-automation policy](docs/quality.md) documents CI jobs, the type-checking
+ratchet, report-only benchmark artifacts, optional integrations, and cache provenance.
 
 ## History
 

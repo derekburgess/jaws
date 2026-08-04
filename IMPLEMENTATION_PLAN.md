@@ -419,12 +419,12 @@ Introduce lightweight, versioned domain contracts and a maintainable project fou
 
 #### Quality automation
 
-- [ ] Add formatting/lint rules and run them in CI.
-- [ ] Add static type checking with an explicit initial coverage boundary and ratchet policy.
-- [ ] Add correctness-test CI for every change.
-- [ ] Add optional/integration jobs for Neo4j and external tooling.
-- [ ] Add benchmark smoke reporting without treating every metric change as an automatic failure.
-- [ ] Cache dependencies/models only where the cache key includes the relevant lock and model revision.
+- [x] Add formatting/lint rules and run them in CI ([policy](docs/quality.md)).
+- [x] Add static type checking with an explicit initial coverage boundary and ratchet policy.
+- [x] Add correctness-test CI for every change ([workflow](.github/workflows/ci.yml)).
+- [x] Add optional/integration jobs for Neo4j and external tooling ([workflow](.github/workflows/integration.yml)).
+- [x] Add benchmark smoke reporting without treating every metric change as an automatic failure.
+- [x] Cache dependencies/models only where the cache key includes the relevant lock and model revision.
 
 #### Domain contracts
 
@@ -1218,11 +1218,39 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-Milestone 1 dependency/package boundaries are complete. The next active work is quality
-automation, followed by the typed domain, result-envelope, settings, error, and service
-port contracts while continuously comparing CLI behavior and rankings with Benchmark 0.
+Milestone 1 dependency/package boundaries and quality automation are complete. The next
+active work is the typed domain and result-envelope contracts, followed by settings,
+errors, and service ports while continuously comparing CLI behavior and rankings with
+Benchmark 0.
 
 ## Change log
+
+### 2026-08-03 — Milestone 1 quality automation
+
+- Added a pinned Ruff formatter/linter over the complete Python tree and normalized the
+  existing files once. The blocking lint floor covers import ordering, high-signal name
+  and syntax errors, and stable pycodestyle error families without blanket suppressions.
+- Added strict mypy checking for the optional-dependency loader, clean-install profile
+  runner, and benchmark-smoke adapter. The documented ratchet may expand but may not
+  shrink; new Milestone 1 contract modules must enter it in the same change.
+- Added push, pull-request, and manual CI jobs for quality checks, offline correctness,
+  and synthetic benchmark reporting. Correctness JUnit and benchmark JSON/Markdown are
+  retained as workflow artifacts and the benchmark also renders a step summary.
+- Added scheduled/manual Neo4j and capture-tooling jobs. The former uses the exact
+  Neo4j 5.26.28 community image; the latter installs and probes `tshark` without
+  initiating a live capture.
+- Limited automation caches to pip downloads whose keys include the reviewed direct
+  constraints, package metadata, and development profile. Model caching remains
+  disabled until an immutable model revision can be included in its key.
+- Added a deterministic `report_only` benchmark artifact. Metric outcomes do not affect
+  its exit status; harness execution, scenario identity, empty rankings, and invalid
+  ranks remain blocking software errors.
+- Verification evidence: 66 offline correctness cases, Ruff, strict mypy, workflow
+  structure/cache contracts, all three frozen bundle validators, and dependency
+  integrity pass. Benchmark smoke remains Recall@3 5/5 with the same three benign
+  top-three failures; Neo4j and PCAP tiers retain explicit unavailable-resource skips.
+- Completed the quality-automation checklist. The next Milestone 1 task is the typed
+  domain and result-envelope contract foundation.
 
 ### 2026-08-03 — Milestone 1 dependency and packaging boundaries
 

@@ -21,7 +21,7 @@ plotting library, or MCP SDK.
 | `plotting` | Matplotlib, Plotille | File, interactive, and terminal plots |
 | `mcp` | MCP SDK | MCP interface adapter |
 | `agent-lab` | None yet | Reserved boundary; Milestone 9 owns framework selection |
-| `dev` | pytest, jsonschema, packaging, psutil | Lightweight correctness and artifact-contract development |
+| `dev` | pytest, jsonschema, packaging, psutil, Ruff, mypy, PyYAML | Lightweight correctness, quality automation, and artifact-contract development |
 | `all` | Every runtime extra | Backward-compatible complete runtime installation |
 
 Extras are capabilities rather than transitive workflow bundles. For example, the
@@ -66,6 +66,9 @@ The lightweight development/correctness environment is:
 ```bash
 .venv/bin/python -m pip install --requirement requirements-dev.txt
 ```
+
+That profile also contains the pinned formatter/linter, type checker, and workflow
+parser used by the [quality automation](quality.md).
 
 ## Version and lock policy
 
