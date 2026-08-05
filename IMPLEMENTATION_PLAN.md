@@ -428,14 +428,14 @@ Introduce lightweight, versioned domain contracts and a maintainable project fou
 
 #### Domain contracts
 
-- [ ] Implement versioned types for IDs, capture state, observation windows, entity definitions, representations, references, rankers, findings, evidence pointers, and result envelopes.
-- [ ] Make experiment-facing specifications immutable after validation.
-- [ ] Define canonical UTC timestamp serialization and duration units.
-- [ ] Define consistent byte, packet, interval, ratio, rank, and score types/units.
-- [ ] Define a stable error taxonomy: validation, configuration, unavailable dependency, storage, provider, capture, experiment, and internal errors.
-- [ ] Define typed success/failure envelopes used by both CLI and MCP serializers.
-- [ ] Define deterministic clocks and ID generators as injectable protocols.
-- [ ] Define stable ordering and tie-breaking rules for every ranking.
+- [x] Implement versioned types for IDs, capture state, observation windows, entity definitions, representations, references, rankers, findings, evidence pointers, and result envelopes ([ADR-0009](docs/adr/0009-standard-library-domain-contracts.md)).
+- [x] Make experiment-facing specifications immutable after validation.
+- [x] Define canonical UTC timestamp serialization and duration units.
+- [x] Define consistent byte, packet, interval, ratio, rank, and score types/units.
+- [x] Define a stable error taxonomy: validation, configuration, unavailable dependency, storage, provider, capture, experiment, and internal errors.
+- [x] Define typed success/failure envelopes used by both CLI and MCP serializers ([ADR-0010](docs/adr/0010-versioned-service-and-legacy-result-envelopes.md)).
+- [x] Define deterministic clocks and ID generators as injectable protocols.
+- [x] Define stable ordering and tie-breaking rules for every ranking.
 
 #### Settings
 
@@ -1218,12 +1218,28 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-Milestone 1 dependency/package boundaries and quality automation are complete. The next
-active work is the typed domain and result-envelope contracts, followed by settings,
-errors, and service ports while continuously comparing CLI behavior and rankings with
-Benchmark 0.
+Milestone 1 dependency/package boundaries, quality automation, and typed domain/result
+contracts are complete. The next active work is the validated settings object and secret
+redaction contracts, followed by initial service ports while continuously comparing CLI
+behavior and rankings with Benchmark 0.
 
 ## Change log
+
+### 2026-08-05 — Milestone 1 typed domain and result contracts
+
+- Added the standard-library-only `jaws.domain` package with immutable versioned
+  specifications, runtime-distinct identifiers, canonical JSON/digests, UTC time,
+  explicit measurement units, lifecycle contracts, evidence joins, stable ranking ties,
+  and separate score/outlier concepts ([ADR-0009](docs/adr/0009-standard-library-domain-contracts.md)).
+- Added stable error categories/codes and typed versioned success/failure envelopes. CLI
+  Reporter and MCP subprocess fallbacks now share a legacy compatibility serializer that
+  preserves the frozen flat JSON surface ([ADR-0010](docs/adr/0010-versioned-service-and-legacy-result-envelopes.md)).
+- Expanded the strict mypy ratchet across `jaws/domain/` and added domain, result,
+  serialization, ranking, lifecycle, and optional-import-boundary contract tests.
+- Verification retained exact CLI compatibility artifacts and Benchmark 0 behavior; the
+  detailed gate evidence is recorded in the publishing commit and CI run.
+- The next Milestone 1 task is the validated settings object and secret-redaction
+  contracts, followed by the initial service ports.
 
 ### 2026-08-03 — Milestone 1 quality automation
 

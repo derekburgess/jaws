@@ -15,6 +15,7 @@ from jaws.config import (
     PACKET_MODELS,
     get_neo4j_driver,
 )
+from jaws.domain import legacy_failure, legacy_success
 from jaws.optional_dependencies import require_module
 
 # Address-scope classification shared by compute (tags each profile), finder (excludes
@@ -146,7 +147,7 @@ class Reporter:
         # payload carries a boolean `ok` so callers branch on a field, not on the
         # presence of an "error" key — the failure half of the {"ok": ...} envelope.
         if self.agent:
-            print(json.dumps({"ok": False, "error": message}))
+            print(json.dumps(legacy_failure(message)))
         else:
             CONSOLE.print(render_error_panel(title, message, CONSOLE))
 
@@ -156,7 +157,7 @@ class Reporter:
         # The success half of the envelope: ok=True merged with the result fields
         # (obj is always a dict and never carries its own "ok").
         if self.agent:
-            print(json.dumps({"ok": True, **obj}, default=str, indent=2))
+            print(json.dumps(legacy_success(obj), default=str, indent=2))
         elif summary is not None:
             CONSOLE.print(render_success_panel("PROCESS COMPLETE", summary, CONSOLE))
 

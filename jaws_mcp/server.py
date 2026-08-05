@@ -16,6 +16,7 @@ from jaws.config import (
     get_neo4j_driver,
     is_cloud_hosted,
 )
+from jaws.domain import legacy_failure, legacy_success
 
 ROOT = Path(__file__).parent.parent  # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
@@ -105,10 +106,7 @@ def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
     try:
         result = subprocess.run(args, capture_output=True, text=True, cwd=ROOT, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return {
-            "ok": False,
-            "error": f"process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s",
-        }
+        return legacy_failure(f"process exceeded the JAWS_MCP_TIMEOUT backstop of {timeout}s")
     out = (result.stdout or "").strip()
     err = (result.stderr or "").strip()
     parsed = _try_json(out)
@@ -119,7 +117,7 @@ def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
         if isinstance(parsed, dict):
             parsed.setdefault("ok", False)
             return parsed
-        return {"ok": False, "error": err or out or "no output", "exit_code": result.returncode}
+        return legacy_failure(err or out or "no output", exit_code=result.returncode)
     if isinstance(parsed, dict):
         # Already enveloped by the Reporter; backstop ok in case a CLI printed a
         # bare dict outside reporter.result.
@@ -127,12 +125,12 @@ def _run(args: list[str], timeout: int | None = TIMEOUT) -> dict[str, Any]:
         return parsed
     if parsed is not None:
         # Valid JSON that isn't an object (e.g. a bare array) — keep it addressable.
-        return {"ok": True, "result": parsed}
+        return legacy_success({"result": parsed})
     if not out:
-        return {"ok": False, "error": "process produced no output"}
+        return legacy_failure("process produced no output")
     # Unexpected non-JSON on stdout in agent mode — a contract violation. Preserve
     # it rather than crash, but mark it failed so the client doesn't read it as a result.
-    return {"ok": False, "error": "process produced non-JSON output", "raw": out}
+    return legacy_failure("process produced non-JSON output", raw=out)
 
 
 def _script(name: str, *args: str) -> dict[str, Any]:
@@ -211,20 +209,21 @@ def list_captures() -> dict[str, Any]:
             captures = [record.data() for record in session.run(_CAPTURES_QUERY)]
             profiled = [record.data() for record in session.run(_PROFILED_QUERY)]
     except Exception as e:
-        return {"ok": False, "error": f"could not list captures ({e})"}
+        return legacy_failure(f"could not list captures ({e})")
     captures = json.loads(json.dumps(captures, default=str))
     profiled = json.loads(json.dumps(profiled, default=str))
     current = profiled[0]["session"] if profiled else None
-    return {
-        "ok": True,
-        "captures": captures,
-        "count": len(captures),
-        "profiled_session": current,
-        "profiled_sessions": profiled,
-        "baseline_sessions": len(
-            [p for p in profiled if p["session"] not in (current, "all", None)]
-        ),
-    }
+    return legacy_success(
+        {
+            "captures": captures,
+            "count": len(captures),
+            "profiled_session": current,
+            "profiled_sessions": profiled,
+            "baseline_sessions": len(
+                [p for p in profiled if p["session"] not in (current, "all", None)]
+            ),
+        }
+    )
 
 
 @mcp.tool(
@@ -265,7 +264,7 @@ def compute_embeddings(
     retain_profiles: int = 20,
 ) -> dict[str, Any]:
     if model not in PACKET_MODELS:
-        return {"ok": False, "error": f"unknown model '{model}'; available: {list(PACKET_MODELS)}"}
+        return legacy_failure(f"unknown model '{model}'; available: {list(PACKET_MODELS)}")
     return _script(
         "jaws_compute.py",
         "--api",
@@ -451,18 +450,19 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
             result = session.run(_FETCH_QUERY, duration=duration_minutes, limit=limit)
             data = [record.data() for record in result]
     except Exception as e:
-        return {"ok": False, "error": f"could not fetch endpoints ({e})"}
+        return legacy_failure(f"could not fetch endpoints ({e})")
     # Round-trip through json with default=str to coerce Neo4j DateTime values into
     # JSON-native strings, so MCPServer can serialize the returned dict cleanly.
     endpoints = json.loads(json.dumps(data, default=str))
     for endpoint in endpoints:
         endpoint["cloud_hosted"] = is_cloud_hosted(endpoint.get("org"))
-    return {
-        "ok": True,
-        "endpoints": endpoints,
-        "count": len(endpoints),
-        "duration_minutes": duration_minutes,
-    }
+    return legacy_success(
+        {
+            "endpoints": endpoints,
+            "count": len(endpoints),
+            "duration_minutes": duration_minutes,
+        }
+    )
 
 
 # The join key back to detail: every PACKET node carries the full 5-tuple as
@@ -657,7 +657,7 @@ def inspect_endpoint(
                 )
             ]
     except Exception as e:
-        return {"ok": False, "error": f"could not inspect endpoint {ip_address!r} ({e})"}
+        return legacy_failure(f"could not inspect endpoint {ip_address!r} ({e})")
 
     peers = []
     for r in peer_rows:
@@ -705,7 +705,7 @@ def inspect_endpoint(
     # Coerce Neo4j DateTime values (in profile.timestamp and each packet) to strings so
     # MCPServer can serialize the dict cleanly, matching fetch_traffic.
     payload = json.loads(json.dumps(payload, default=str))
-    return {"ok": True, **payload}
+    return legacy_success(payload)
 
 
 def main():

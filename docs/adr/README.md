@@ -20,6 +20,8 @@ the research-workbench rollout.
 | [0006](0006-deterministic-core-and-adapter-boundaries.md) | Accepted | Keep the deterministic core independent of interfaces, storage, and agents |
 | [0007](0007-freeze-benchmark-zero-before-detector-refactoring.md) | Accepted | Freeze Benchmark 0 before detector refactoring |
 | [0008](0008-capability-extras-and-direct-constraints.md) | Accepted | Use capability extras and reviewed direct constraints |
+| [0009](0009-standard-library-domain-contracts.md) | Accepted | Use immutable standard-library domain contracts |
+| [0010](0010-versioned-service-and-legacy-result-envelopes.md) | Accepted | Separate versioned service results from legacy envelopes |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In

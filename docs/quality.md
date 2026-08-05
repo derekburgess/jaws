@@ -42,6 +42,7 @@ make CI green.
 
 Mypy begins in strict mode on the files that already form typed infrastructure:
 
+- `jaws/domain/`
 - `jaws/optional_dependencies.py`
 - `scripts/benchmark_smoke.py`
 - `scripts/check_install_profiles.py`

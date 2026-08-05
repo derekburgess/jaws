@@ -73,11 +73,12 @@ def test_lint_and_type_boundaries_are_explicit_ratchets():
     assert mypy["strict"] is True
     assert mypy["warn_unused_configs"] is True
     assert set(mypy["files"]) == {
+        "jaws/domain/",
         "jaws/optional_dependencies.py",
         "scripts/benchmark_smoke.py",
         "scripts/check_install_profiles.py",
     }
-    assert all((REPO_ROOT / path).is_file() for path in mypy["files"])
+    assert all((REPO_ROOT / path).exists() for path in mypy["files"])
 
     policy = (REPO_ROOT / "docs" / "quality.md").read_text(encoding="utf-8")
     assert "may expand but may not shrink" in policy
