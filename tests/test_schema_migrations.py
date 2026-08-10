@@ -1,0 +1,281 @@
+"""Deterministic contract tests for schema migration planning and recovery."""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from jaws.ports import FrozenClock
+from jaws.storage.migrations import MIGRATIONS, Migration, MigrationError, Neo4jMigrationManager
+from jaws.storage.migrations.models import SchemaObject
+
+
+@dataclass
+class FakeResult:
+    records: list[dict[str, object]] = field(default_factory=list)
+
+    def __iter__(self) -> Iterator[dict[str, object]]:
+        return iter(self.records)
+
+    def consume(self) -> None:
+        return None
+
+
+@dataclass
+class FakeNeo4j:
+    constraints: dict[str, SchemaObject] = field(default_factory=dict)
+    indexes: dict[str, SchemaObject] = field(default_factory=dict)
+    applied: list[dict[str, object]] = field(default_factory=list)
+    writes: list[str] = field(default_factory=list)
+    fail_on: str | None = None
+    databases: list[str] = field(default_factory=list)
+
+    def session(self, *, database: str) -> FakeNeo4j:
+        self.databases.append(database)
+        return self
+
+    def __enter__(self) -> FakeNeo4j:
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        return None
+
+    def execute_write(self, work: Callable[[FakeNeo4j], Any]) -> Any:
+        return work(self)
+
+    def run(self, query: str, parameters: Mapping[str, object] | None = None) -> FakeResult:
+        normalized = " ".join(query.split())
+        if self.fail_on and self.fail_on in normalized:
+            raise RuntimeError(f"fixture failure: {self.fail_on}")
+        if normalized.startswith("MATCH (migration:JAWS_SCHEMA_MIGRATION)"):
+            return FakeResult(list(self.applied))
+        if normalized.startswith("SHOW CONSTRAINTS"):
+            return FakeResult([self._schema_record(item) for item in self.constraints.values()])
+        if normalized.startswith("SHOW INDEXES"):
+            return FakeResult([self._schema_record(item) for item in self.indexes.values()])
+        if normalized.startswith("CREATE CONSTRAINT"):
+            self.writes.append(normalized)
+            self._create_schema("constraint", normalized)
+            return FakeResult()
+        if normalized.startswith("CREATE INDEX"):
+            self.writes.append(normalized)
+            self._create_schema("index", normalized)
+            return FakeResult()
+        if normalized.startswith("CALL db.awaitIndexes"):
+            return FakeResult()
+        if normalized.startswith("CREATE (:JAWS_SCHEMA_MIGRATION"):
+            assert parameters is not None
+            self.writes.append(normalized)
+            self.applied.append(
+                {
+                    "version": parameters["version"],
+                    "name": parameters["name"],
+                    "checksum": parameters["checksum"],
+                    "applied_at": parameters["applied_at"],
+                }
+            )
+            return FakeResult()
+        raise AssertionError(f"unexpected query: {normalized}")
+
+    @staticmethod
+    def _schema_record(item: SchemaObject) -> dict[str, object]:
+        return {
+            "name": item.name,
+            "labelsOrTypes": [item.label],
+            "properties": list(item.properties),
+        }
+
+    def _create_schema(self, kind: str, query: str) -> None:
+        name = re.search(r"CREATE (?:CONSTRAINT|INDEX) (\w+)", query)
+        assert name is not None
+        expected = next(
+            item
+            for item in MIGRATIONS[0].required_schema
+            if item.kind == kind and item.name == name.group(1)
+        )
+        target = self.constraints if kind == "constraint" else self.indexes
+        target[expected.name] = expected
+
+
+@pytest.fixture
+def clock() -> FrozenClock:
+    return FrozenClock(datetime(2026, 8, 10, 15, 30, tzinfo=UTC))
+
+
+def _manager(graph: FakeNeo4j, clock: FrozenClock) -> Neo4jMigrationManager:
+    return Neo4jMigrationManager(graph, "captures", MIGRATIONS, clock=clock)
+
+
+def test_version_one_matches_the_frozen_legacy_schema_contract():
+    migration = MIGRATIONS[0]
+    assert migration.version == 1
+    assert len(migration.checksum) == 64
+    assert migration.reversible is False
+    assert {item.name for item in migration.required_schema if item.kind == "constraint"} == {
+        "capture_id_unique",
+        "ip_address_unique",
+        "jaws_schema_migration_version_unique",
+        "organization_unique",
+    }
+    assert {item.name for item in migration.required_schema if item.kind == "index"} == {
+        "endpoint_capture_index",
+        "endpoint_ip_index",
+        "packet_capture_index",
+        "packet_timestamp_index",
+        "port_composite_index",
+    }
+
+
+def test_legacy_utility_delegates_schema_ownership_to_migrations():
+    utility_source = Path("jaws/jaws_utils.py").read_text(encoding="utf-8")
+    migration_source = Path("jaws/storage/migrations/v0001_adopt_legacy_schema.py").read_text(
+        encoding="utf-8"
+    )
+    assert "CREATE CONSTRAINT" not in utility_source
+    assert "CREATE INDEX" not in utility_source
+    assert "CREATE CONSTRAINT" in migration_source
+    assert "CREATE INDEX" in migration_source
+
+
+def test_fresh_database_dry_run_is_read_only_and_migration_is_idempotent(clock):
+    graph = FakeNeo4j()
+    migration_manager = _manager(graph, clock)
+
+    status = migration_manager.status()
+    assert status.current_version is None
+    assert status.pending_versions == (1,)
+    plan = migration_manager.dry_run()
+    assert plan.current_version is None
+    assert plan.target_version == 1
+    assert plan.pending == MIGRATIONS
+    assert len(plan.statements) == 9
+    assert graph.writes == []
+
+    result = migration_manager.migrate()
+    assert result.applied_versions == (1,)
+    assert result.status.is_current
+    assert graph.applied == [
+        {
+            "version": 1,
+            "name": MIGRATIONS[0].name,
+            "checksum": MIGRATIONS[0].checksum,
+            "applied_at": "2026-08-10T15:30:00.000000Z",
+        }
+    ]
+
+    writes = list(graph.writes)
+    repeated = migration_manager.migrate()
+    assert repeated.applied_versions == ()
+    assert graph.writes == writes
+
+
+def test_legacy_schema_is_adopted_without_requiring_a_data_rewrite(clock):
+    legacy = tuple(
+        item
+        for item in MIGRATIONS[0].required_schema
+        if item.name != "jaws_schema_migration_version_unique"
+    )
+    graph = FakeNeo4j(
+        constraints={item.name: item for item in legacy if item.kind == "constraint"},
+        indexes={item.name: item for item in legacy if item.kind == "index"},
+    )
+
+    result = _manager(graph, clock).migrate()
+
+    assert result.status.is_current
+    assert set(graph.constraints) - {item.name for item in legacy} == {
+        "jaws_schema_migration_version_unique"
+    }
+    assert set(graph.indexes) == {item.name for item in legacy if item.kind == "index"}
+
+
+def test_partial_schema_application_writes_no_version_and_can_retry(clock):
+    graph = FakeNeo4j(fail_on="packet_capture_index")
+    migration_manager = _manager(graph, clock)
+
+    with pytest.raises(RuntimeError, match="fixture failure"):
+        migration_manager.migrate()
+    assert graph.applied == []
+    assert graph.constraints
+    assert graph.indexes
+
+    graph.fail_on = None
+    result = migration_manager.migrate()
+    assert result.status.is_current
+    assert len(graph.applied) == 1
+
+
+def test_applied_checksum_drift_blocks_validation_and_migration(clock):
+    graph = FakeNeo4j()
+    migration_manager = _manager(graph, clock)
+    migration_manager.migrate()
+    graph.applied[0]["checksum"] = "0" * 64
+
+    status = migration_manager.validate()
+    assert not status.is_current
+    assert "migration 1 checksum does not match registry" in status.issues
+    with pytest.raises(MigrationError, match="checksum does not match"):
+        migration_manager.migrate()
+
+
+def test_missing_required_object_is_reported_after_application(clock):
+    graph = FakeNeo4j()
+    migration_manager = _manager(graph, clock)
+    migration_manager.migrate()
+    del graph.indexes["packet_timestamp_index"]
+
+    status = migration_manager.validate()
+    assert not status.is_current
+    assert "applied migration 1 is missing index packet_timestamp_index" in status.issues
+
+
+def test_noncontiguous_applied_history_blocks_an_earlier_migration(clock):
+    second = Migration(
+        version=2,
+        name="fixture_second",
+        statements=MIGRATIONS[0].statements,
+        required_schema=(),
+        reversible=False,
+        rollback="fixture",
+    )
+    graph = FakeNeo4j(
+        applied=[
+            {
+                "version": 2,
+                "name": second.name,
+                "checksum": second.checksum,
+                "applied_at": "2026-08-10T15:30:00.000000Z",
+            }
+        ]
+    )
+    migration_manager = Neo4jMigrationManager(
+        graph, "captures", (MIGRATIONS[0], second), clock=clock
+    )
+
+    status = migration_manager.validate()
+    assert "applied migration history is not contiguous from version 1" in status.issues
+    with pytest.raises(MigrationError, match="not contiguous"):
+        migration_manager.dry_run()
+
+
+@pytest.mark.parametrize("versions", [(2,), (1, 3), (1, 1)])
+def test_registry_versions_must_be_contiguous_and_unique(versions):
+    migrations = tuple(
+        MIGRATIONS[0].__class__(
+            version=version,
+            name=f"fixture_{position}",
+            statements=MIGRATIONS[0].statements,
+            required_schema=MIGRATIONS[0].required_schema,
+            reversible=False,
+            rollback="fixture",
+        )
+        for position, version in enumerate(versions)
+    )
+    with pytest.raises(ValueError, match="contiguous"):
+        Neo4jMigrationManager(FakeNeo4j(), "captures", migrations)

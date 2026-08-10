@@ -31,6 +31,12 @@ OpenAI, sentence-transformers, CLI, and MCP code implement or consume these cont
 outer layers; none belongs in `jaws.domain` or `jaws.ports`. The deterministic fakes live
 beside the contracts because service unit tests need the same lightweight install boundary.
 
+`jaws.storage` is an outer infrastructure package. It may depend inward on domain and port
+contracts and may eventually import the optional Neo4j driver, but the migration registry
+and its public status/planning records currently remain importable without that dependency.
+Cypher owned by versioned migrations belongs there; legacy commands may call the migration
+manager during the ratcheted transition but must not redefine schema objects themselves.
+
 ## Ratchet policy
 
 The test governs every Python file under a listed package. A new inner package must be

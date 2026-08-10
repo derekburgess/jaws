@@ -44,13 +44,14 @@ Mypy begins in strict mode on the files that already form typed infrastructure:
 
 - `jaws/domain/`
 - `jaws/ports/`
+- `jaws/storage/`
 - `jaws/settings.py`
 - `jaws/optional_dependencies.py`
 - `scripts/benchmark_smoke.py`
 - `scripts/check_install_profiles.py`
 
 The boundary may expand but may not shrink. New domain, settings, error, result-envelope,
-and service-port modules introduced during Milestone 1 must enter the strict boundary in
+service-port, storage migration, and schema-administration modules must enter the strict boundary in
 the same change. Existing files remain in scope when they import legacy untyped modules;
 targeted interface types or local casts should isolate that legacy surface. Weakening a
 strict flag, removing a covered file, or adding a broad ignore requires an explicit plan
@@ -82,7 +83,9 @@ unexpected scenario set is still a software failure.
 started manually. It does not run on every change:
 
 - The Neo4j job starts the exact declared community image with per-run ephemeral
-  authentication, waits for connectivity, and runs the opt-in Neo4j test marker.
+  authentication, waits for connectivity, and runs the opt-in connectivity plus fresh
+  and starting-revision migration tests against an explicitly designated disposable
+  database.
 - The capture-tooling job installs `tshark`, the constrained capture extra, and verifies
   the external executable/import boundary without starting a live capture.
 

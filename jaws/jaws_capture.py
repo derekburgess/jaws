@@ -14,6 +14,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.storage.migrations import MigrationError
 
 
 def get_local_ip():
@@ -289,7 +290,7 @@ def main():
         )
         return
 
-    except ModuleNotFoundError as e:
+    except (MigrationError, ModuleNotFoundError) as e:
         reporter.error("ERROR", str(e))
         return
 

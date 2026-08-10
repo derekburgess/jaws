@@ -23,6 +23,7 @@ the research-workbench rollout.
 | [0009](0009-standard-library-domain-contracts.md) | Accepted | Use immutable standard-library domain contracts |
 | [0010](0010-versioned-service-and-legacy-result-envelopes.md) | Accepted | Separate versioned service results from legacy envelopes |
 | [0011](0011-standard-library-settings-and-redacted-secrets.md) | Accepted | Validate settings with the standard library and redact secrets by construction |
+| [0012](0012-ordered-neo4j-schema-migrations.md) | Accepted | Use ordered, checksummed Neo4j schema migrations |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In

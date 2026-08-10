@@ -95,10 +95,18 @@ jaws-ipinfo = "jaws.jaws_ipinfo:main"
 jaws-compute = "jaws.jaws_compute:main"
 jaws-finder = "jaws.jaws_finder:main"
 jaws-utils = "jaws.jaws_utils:main"
+jaws-schema = "jaws.storage.cli:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
-packages = ["jaws", "jaws.domain", "jaws.ports", "jaws_mcp"]
+packages = [
+    "jaws",
+    "jaws.domain",
+    "jaws.ports",
+    "jaws.storage",
+    "jaws.storage.migrations",
+    "jaws_mcp",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -127,6 +135,7 @@ python_version = "3.12"
 files = [
     "jaws/domain/",
     "jaws/ports/",
+    "jaws/storage/",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

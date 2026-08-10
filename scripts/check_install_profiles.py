@@ -32,10 +32,13 @@ class ProfileSpec(TypedDict):
 PROFILES: dict[str, ProfileSpec] = {
     "core": {
         "extra": None,
-        "imports": ["jaws.jaws_compute", "jaws.jaws_finder", "jaws.ports"],
+        "imports": ["jaws.jaws_compute", "jaws.jaws_finder", "jaws.ports", "jaws.storage"],
         "absent": ["neo4j", "openai", "torch", "sentence_transformers", "mcp"],
     },
-    "neo4j": {"extra": "neo4j", "imports": ["neo4j", "jaws.config"]},
+    "neo4j": {
+        "extra": "neo4j",
+        "imports": ["neo4j", "jaws.config", "jaws.storage", "jaws.storage.cli"],
+    },
     "capture": {
         "extra": "capture",
         "imports": ["psutil", "pyshark", "jaws.jaws_capture"],

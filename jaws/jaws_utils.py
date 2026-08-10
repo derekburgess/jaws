@@ -17,6 +17,8 @@ from jaws.config import (
 )
 from jaws.domain import legacy_failure, legacy_success
 from jaws.optional_dependencies import require_module
+from jaws.storage.migrations import MigrationError
+from jaws.storage.migrations import manager as migration_manager
 
 # Address-scope classification shared by compute (tags each profile), finder (excludes
 # non-conversational endpoints from the rankings), and ipinfo (skips lookups that can
@@ -219,92 +221,25 @@ def dbms_connection(database, reporter=None):
 
 # Populate database with schema. Called prior to capture.
 def initialize_schema(driver, database, local_ip, reporter):
-    schema_definitions = [
-        {
-            "type": "constraint",
-            "name": "ip_address_unique",
-            "label": "IP_ADDRESS",
-            "properties": ["IP_ADDRESS"],
-            "query": "CREATE CONSTRAINT ip_address_unique IF NOT EXISTS FOR (ip:IP_ADDRESS) REQUIRE ip.IP_ADDRESS IS UNIQUE",
-        },
-        {
-            "type": "index",
-            "name": "packet_timestamp_index",
-            "label": "PACKET",
-            "properties": ["TIMESTAMP"],
-            "query": "CREATE INDEX packet_timestamp_index IF NOT EXISTS FOR (p:PACKET) ON (p.TIMESTAMP)",
-        },
-        {
-            "type": "index",
-            "name": "port_composite_index",
-            "label": "PORT",
-            "properties": ["PORT", "IP_ADDRESS"],
-            "query": "CREATE INDEX port_composite_index IF NOT EXISTS FOR (p:PORT) ON (p.PORT, p.IP_ADDRESS)",
-        },
-        {
-            "type": "constraint",
-            "name": "organization_unique",
-            "label": "ORGANIZATION",
-            "properties": ["ORGANIZATION"],
-            "query": "CREATE CONSTRAINT organization_unique IF NOT EXISTS FOR (org:ORGANIZATION) REQUIRE org.ORGANIZATION IS UNIQUE",
-        },
-        {
-            "type": "home_organization",
-            "name": "YOU ARE HERE",
-            "description": "Create an organization for the current system's IP address.",
-            "query": "MERGE (ip:IP_ADDRESS {IP_ADDRESS: $local_ip}) MERGE (org:ORGANIZATION {ORGANIZATION: 'YOU ARE HERE'}) MERGE (org)-[:OWNERSHIP]->(ip)",
-            "parameters": {"local_ip": local_ip},
-        },
-        {
-            "type": "index",
-            "name": "endpoint_ip_index",
-            "label": "ENDPOINT",
-            "properties": ["IP_ADDRESS"],
-            "query": "CREATE INDEX endpoint_ip_index IF NOT EXISTS FOR (e:ENDPOINT) ON (e.IP_ADDRESS)",
-        },
-        {
-            # An ENDPOINT profile is identified by (IP, session), not by IP alone: profile
-            # sets accumulate one per compute run so an IP's history is queryable across
-            # sessions. Every profile read either scopes to one CAPTURE_ID or groups by IP
-            # within a scope, so the composite index is the one that matters.
-            "type": "index",
-            "name": "endpoint_capture_index",
-            "label": "ENDPOINT",
-            "properties": ["IP_ADDRESS", "CAPTURE_ID"],
-            "query": "CREATE INDEX endpoint_capture_index IF NOT EXISTS FOR (e:ENDPOINT) ON (e.IP_ADDRESS, e.CAPTURE_ID)",
-        },
-        {
-            "type": "constraint",
-            "name": "capture_id_unique",
-            "label": "CAPTURE",
-            "properties": ["CAPTURE_ID"],
-            "query": "CREATE CONSTRAINT capture_id_unique IF NOT EXISTS FOR (c:CAPTURE) REQUIRE c.CAPTURE_ID IS UNIQUE",
-        },
-        {
-            "type": "index",
-            "name": "packet_capture_index",
-            "label": "PACKET",
-            "properties": ["CAPTURE_ID"],
-            "query": "CREATE INDEX packet_capture_index IF NOT EXISTS FOR (p:PACKET) ON (p.CAPTURE_ID)",
-        },
-    ]
-
-    with driver.session(database=database) as session:
-        errors = []
-        for schema in schema_definitions:
-            try:
-                session.run(schema["query"], schema.get("parameters", {}))
-            except Exception as e:
-                errors.append(str(e))
-
-        if errors:
-            details = "\n".join(f"  - {error}" for error in errors)
-            reporter.info(
-                "WARNING",
-                f"Schema initialization for '{database}' encountered {len(errors)} error(s):\n{details}",
-            )
-        else:
-            reporter.info("CONFIG", f"Schema ready for: '{database}'")
+    try:
+        result = migration_manager(driver, database).migrate()
+        with driver.session(database=database) as session:
+            session.run(
+                "MERGE (ip:IP_ADDRESS {IP_ADDRESS: $local_ip}) "
+                "MERGE (org:ORGANIZATION {ORGANIZATION: 'YOU ARE HERE'}) "
+                "MERGE (org)-[:OWNERSHIP]->(ip)",
+                {"local_ip": local_ip},
+            ).consume()
+        reporter.info(
+            "CONFIG",
+            f"Schema ready for: '{database}' (version {result.status.current_version})",
+        )
+    except Exception as error:
+        reporter.info(
+            "WARNING",
+            f"Schema migration for '{database}' failed; capture will not start:\n  - {error}",
+        )
+        raise MigrationError(f"schema migration failed for '{database}'") from error
 
 
 # Drops all entities from the database.

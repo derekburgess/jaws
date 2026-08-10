@@ -34,7 +34,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | --- | --- | --- | --- |
 | 0 | Research contract and Benchmark 0 | Complete | — |
 | 1 | Project foundation and typed contracts | Complete | 0 |
-| 2 | Versioned evidence storage and migrations | Not started | 1 |
+| 2 | Versioned evidence storage and migrations | In progress | 1 |
 | 3 | Ingest, enrichment, and profiling services | Not started | 2 |
 | 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
 | 5 | Experiment, run, provenance, and artifact system | Not started | 4 |
@@ -477,15 +477,15 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 #### Schema ownership
 
-- [ ] Move schema definitions out of `jaws_utils.initialize_schema` into a versioned migration package.
-- [ ] Assign a schema version and store applied migration metadata.
-- [ ] Document current and target node, relationship, property, constraint, and index contracts.
-- [ ] Add schema status, validate, migrate, and dry-run operations.
-- [ ] Make migrations idempotent and transactional where Neo4j permits.
+- [x] Move schema definitions out of `jaws_utils.initialize_schema` into a versioned migration package ([migration registry](jaws/storage/migrations/)).
+- [x] Assign a schema version and store applied migration metadata ([ADR-0012](docs/adr/0012-ordered-neo4j-schema-migrations.md)).
+- [x] Document current and target node, relationship, property, constraint, and index contracts ([schema contract](docs/storage/neo4j-schema.md)).
+- [x] Add schema status, validate, migrate, and dry-run operations (`jaws-schema`).
+- [x] Make migrations idempotent and transactional where Neo4j permits.
 - [ ] Back up/export metadata before destructive or irreversible migrations.
-- [ ] Test upgrade from a graph created by the starting code revision.
-- [ ] Test a fresh empty database migration.
-- [ ] Define downgrade/rollback behavior per migration; explicitly mark non-reversible migrations.
+- [x] Test upgrade from a graph created by the starting code revision.
+- [x] Test a fresh empty database migration.
+- [x] Define downgrade/rollback behavior per migration; explicitly mark non-reversible migrations.
 
 #### Evidence identities and lifecycle
 
@@ -1190,7 +1190,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 | Canonical schema/validation library for external specs | M1 | Accepted in [ADR-0009](docs/adr/0009-standard-library-domain-contracts.md): immutable standard-library contracts and canonical JSON in the core; external JSON Schema/coercion remains an adapter responsibility when those inputs land |
 | Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Accepted in [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md): compatible metadata ranges, exact direct constraints, and complete run-environment inventories |
 | Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
-| Neo4j migration mechanism and schema-version storage | M2 | Ordered idempotent migrations with an applied-version record |
+| Neo4j migration mechanism and schema-version storage | M2 | Accepted in [ADR-0012](docs/adr/0012-ordered-neo4j-schema-migrations.md): ordered idempotent migrations with checksummed applied-version records and required live-schema validation |
 | Experiment artifact formats | M5 | Canonical JSON/JSONL; optional Parquet for large tables |
 | Artifact-store location/configuration | M5 | Local filesystem store behind a protocol |
 | Registry mechanism for research components | M6 | Built-in registry first; package entry points only after contract stabilization |
@@ -1220,11 +1220,31 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
-enforced import-direction ratchet are in place. The next active work is Milestone 2 schema
-ownership: document the current and target Neo4j schema, define migration/version records,
-and select the migration mechanism before moving Cypher behind repository adapters.
+enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
+ownership and database version 1 are implemented. The next active work is evidence
+identity and lifecycle design: collision-resistant capture IDs, explicit states and
+provenance, observation scopes, profile uniqueness, and legacy lookup compatibility.
 
 ## Change log
+
+### 2026-08-10 — Milestone 2 schema ownership and migration version 1
+
+- Added [ADR-0012](docs/adr/0012-ordered-neo4j-schema-migrations.md) and the
+  [Neo4j schema contract](docs/storage/neo4j-schema.md), distinguishing the frozen
+  inventory document version from a stored database migration version.
+- Moved all legacy constraints and indexes out of `jaws_utils.initialize_schema` into
+  ordered migration `0001_adopt_legacy_evidence_schema`. Version 1 preserves the starting
+  evidence model and adds only the checksummed `JAWS_SCHEMA_MIGRATION` ledger.
+- Added read-only status, validation, and dry-run operations plus explicit migration via
+  `jaws-schema`; schema drift, unknown history, and applied checksum changes fail closed.
+- Kept connection settings unchanged and retained `--database` as a runtime override.
+  Runtime-local `YOU ARE HERE` ownership remains idempotent seed data outside schema
+  history.
+- Added deterministic tests for fresh, legacy, partial-failure/retry, drift, and
+  idempotence paths. Fresh and starting-revision upgrades both passed against the pinned
+  Neo4j 5.26.28 community image; the legacy evidence fixture remained intact.
+- Capture now delegates schema ownership to the migration manager and does not start
+  evidence writes when migration or validation fails.
 
 ### 2026-08-10 — Milestone 1 initial service ports and closeout
 
