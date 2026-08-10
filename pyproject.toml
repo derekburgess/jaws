@@ -98,7 +98,7 @@ jaws-utils = "jaws.jaws_utils:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
-packages = ["jaws", "jaws.domain", "jaws_mcp"]
+packages = ["jaws", "jaws.domain", "jaws.ports", "jaws_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -126,6 +126,7 @@ known-first-party = ["jaws", "jaws_mcp"]
 python_version = "3.12"
 files = [
     "jaws/domain/",
+    "jaws/ports/",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

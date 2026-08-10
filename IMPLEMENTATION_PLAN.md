@@ -33,7 +33,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | Milestone | Outcome | Status | Depends on |
 | --- | --- | --- | --- |
 | 0 | Research contract and Benchmark 0 | Complete | — |
-| 1 | Project foundation and typed contracts | In progress | 0 |
+| 1 | Project foundation and typed contracts | Complete | 0 |
 | 2 | Versioned evidence storage and migrations | Not started | 1 |
 | 3 | Ingest, enrichment, and profiling services | Not started | 2 |
 | 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
@@ -447,9 +447,9 @@ Introduce lightweight, versioned domain contracts and a maintainable project fou
 
 #### Initial service ports
 
-- [ ] Define protocols for evidence storage, artifact storage, packet sources, enrichment providers, embedding providers, rankers, reference builders, evaluators, clocks, and ID generation.
-- [ ] Add deterministic in-memory/fake implementations needed by unit tests.
-- [ ] Document allowed import directions and enforce them with a lightweight architecture test.
+- [x] Define protocols for evidence storage, artifact storage, packet sources, enrichment providers, embedding providers, rankers, reference builders, evaluators, clocks, and ID generation ([ports](jaws/ports/contracts.py)).
+- [x] Add deterministic in-memory/fake implementations needed by unit tests ([fakes](jaws/ports/fakes.py)).
+- [x] Document allowed import directions and enforce them with a lightweight architecture test ([policy](docs/architecture.md)).
 
 ### Completion gate
 
@@ -1187,7 +1187,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 
 | Decision | Due | Default pending ADR |
 | --- | --- | --- |
-| Canonical schema/validation library for external specs | M1 | Validated, versioned models with canonical JSON support; [ADR-0011](docs/adr/0011-standard-library-settings-and-redacted-secrets.md) applies only to process settings |
+| Canonical schema/validation library for external specs | M1 | Accepted in [ADR-0009](docs/adr/0009-standard-library-domain-contracts.md): immutable standard-library contracts and canonical JSON in the core; external JSON Schema/coercion remains an adapter responsibility when those inputs land |
 | Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Accepted in [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md): compatible metadata ranges, exact direct constraints, and complete run-environment inventories |
 | Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
 | Neo4j migration mechanism and schema-version storage | M2 | Ordered idempotent migrations with an applied-version record |
@@ -1218,14 +1218,31 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-Milestone 1 dependency/package boundaries, quality automation, typed domain/result
-contracts, and the validated settings object are complete. The remaining Milestone 1 work
-is the initial service ports: protocols for evidence and artifact storage, packet sources,
-enrichment/embedding providers, rankers, reference builders, evaluators, clocks, and ID
-generation, with deterministic fakes and an enforced import-direction test — all while
-continuously comparing CLI behavior and rankings with Benchmark 0.
+Milestone 1 is complete: dependency/package boundaries, quality automation, typed
+domain/results, validated settings, initial service ports, deterministic fakes, and the
+enforced import-direction ratchet are in place. The next active work is Milestone 2 schema
+ownership: document the current and target Neo4j schema, define migration/version records,
+and select the migration mechanism before moving Cypher behind repository adapters.
 
 ## Change log
+
+### 2026-08-10 — Milestone 1 initial service ports and closeout
+
+- Added the standard-library-only `jaws.ports` package with inward-facing protocols for
+  capture-scoped evidence, byte artifacts, packet sources, enrichment and embedding
+  providers, rankers, reference builders, and evaluators. Existing domain `Clock` and
+  `IdGenerator` protocols are re-exported through the same boundary.
+- Added deterministic in-memory/scripted implementations for every initial port, including
+  capture-scoped append-only evidence, content-digested artifacts, packet replay, provider
+  calls, ranking/reference/evaluation results, UTC clocks, and finite ID sequences.
+- Documented the initial dependency graph and added a static AST-based ratchet: domain may
+  import only domain, ports may import only domain/ports, and both plus settings remain
+  free of third-party packages. Legacy modules enter the ratchet only as later milestones
+  extract them behind compliant packages.
+- Expanded strict mypy and clean-package coverage to `jaws/ports/`; the complete gate
+  retains frozen CLI and Benchmark 0 behavior.
+- Completed Milestone 1. The next task is Milestone 2 schema ownership and migration
+  mechanism design, beginning with current/target Neo4j schema documentation.
 
 ### 2026-08-05 — Milestone 1 validated settings and secret redaction
 
