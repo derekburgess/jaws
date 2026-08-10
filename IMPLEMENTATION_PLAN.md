@@ -3,7 +3,7 @@
 | Plan field | Value |
 | --- | --- |
 | Status | Active |
-| Last reviewed | 2026-08-03 |
+| Last reviewed | 2026-08-05 |
 | Integration branch | `codex/readme-research-workbench` |
 | Starting documentation revision | `497f15a` |
 | Starting code revision | `0b68a8c` (the two later commits change only `README.md`) |
@@ -439,11 +439,11 @@ Introduce lightweight, versioned domain contracts and a maintainable project fou
 
 #### Settings
 
-- [ ] Replace module-level mixed configuration with a validated settings object.
-- [ ] Separate database, capture, provider, model, artifact-store, runtime, and interface settings.
-- [ ] Validate required credentials only when the corresponding provider is invoked.
-- [ ] Record safe settings in run provenance while redacting secret values.
-- [ ] Preserve environment-variable compatibility for existing installations during the rollout.
+- [x] Replace module-level mixed configuration with a validated settings object ([ADR-0011](docs/adr/0011-standard-library-settings-and-redacted-secrets.md)).
+- [x] Separate existing database, provider, model, artifact-store, runtime, and interface settings; keep capture parameters as explicit per-run inputs.
+- [x] Validate required credentials only when the corresponding provider is invoked.
+- [x] Define safe settings serialization for later run provenance while redacting secret values.
+- [x] Preserve environment-variable compatibility for existing installations during the rollout.
 
 #### Initial service ports
 
@@ -1187,7 +1187,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 
 | Decision | Due | Default pending ADR |
 | --- | --- | --- |
-| Canonical schema/validation library for external specs | M1 | Validated, versioned models with canonical JSON support |
+| Canonical schema/validation library for external specs | M1 | Validated, versioned models with canonical JSON support; [ADR-0011](docs/adr/0011-standard-library-settings-and-redacted-secrets.md) applies only to process settings |
 | Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Accepted in [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md): compatible metadata ranges, exact direct constraints, and complete run-environment inventories |
 | Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
 | Neo4j migration mechanism and schema-version storage | M2 | Ordered idempotent migrations with an applied-version record |
@@ -1218,12 +1218,45 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 6. Commit the complete Benchmark 0 bundle and update the milestone status/evidence here. **Complete:**
    the canonical bundle is [`benchmarks/baseline-0/`](benchmarks/baseline-0/).
 
-Milestone 1 dependency/package boundaries, quality automation, and typed domain/result
-contracts are complete. The next active work is the validated settings object and secret
-redaction contracts, followed by initial service ports while continuously comparing CLI
-behavior and rankings with Benchmark 0.
+Milestone 1 dependency/package boundaries, quality automation, typed domain/result
+contracts, and the validated settings object are complete. The remaining Milestone 1 work
+is the initial service ports: protocols for evidence and artifact storage, packet sources,
+enrichment/embedding providers, rankers, reference builders, evaluators, clocks, and ID
+generation, with deterministic fakes and an enforced import-direction test — all while
+continuously comparing CLI behavior and rankings with Benchmark 0.
 
 ## Change log
+
+### 2026-08-05 — Milestone 1 validated settings and secret redaction
+
+- Added `jaws/settings.py`: frozen standard-library dataclasses separating existing
+  database, provider, model, artifact-store, runtime, and interface settings under one
+  `Settings` root, with an injectable environment mapping so tests never mutate
+  `os.environ` ([ADR-0011](docs/adr/0011-standard-library-settings-and-redacted-secrets.md)).
+- Added `jaws.domain.Secret`, a non-dataclass credential value object that redacts through
+  `repr`, `str`, and f-strings. `primitive` redacts it as its first branch, ahead of the
+  dataclass walk that would otherwise have serialized the value, so a secret nested
+  anywhere in a structure cannot reach canonical JSON. Unconfigured secrets serialize as
+  null so provenance distinguishes withheld from never set.
+- Credentials are validated at invocation through `require_*`, never at import or
+  construction. `SettingsError` subclasses `ValueError` and carries a typed `DomainError`
+  in the `configuration` category, so the existing MCP and CLI handlers are unaffected.
+- `jaws/config.py` is now a compatibility layer owning the single process-wide `SETTINGS`
+  and deriving the legacy flat names from it; no CLI, MCP, or test call site changed.
+  `JAWS_MCP_TIMEOUT` moved out of an ad-hoc read in `jaws_mcp/server.py` into runtime
+  settings with its name and semantics preserved. No environment variables were added.
+- Established the settings/argument boundary: the environment configures where JAWS points
+  and what it authenticates with; what an individual run does stays on the command.
+  Capture interface, duration, database selection, model, and session remain explicit
+  per-run arguments; they do not gain hidden environment equivalents.
+- Chose standard-library validation for process settings without deciding the separate
+  adapter-boundary question for untrusted external specifications.
+- Expanded the strict mypy ratchet to `jaws/settings.py` in the same change, per the
+  ratchet policy, and updated the boundary assertion in `tests/test_quality_automation.py`.
+- Verification covers settings contracts, production invocation-time credential checks,
+  redaction, and the import boundary. Ruff lint/format, the declared mypy boundary, frozen
+  CLI compatibility, and Benchmark 0 parity remain required before publication.
+- The next Milestone 1 task is the initial service ports and their deterministic fakes.
 
 ### 2026-08-05 — Milestone 1 typed domain and result contracts
 

@@ -1,31 +1,35 @@
-import os
-import sys
+"""Process-wide settings instance and the legacy module-level names built from it.
+
+`jaws.settings` owns validation and category separation. This module holds the one
+process-wide `SETTINGS` and re-exports the flat names the CLI, MCP server, and tests
+already import, so existing installations and call sites keep working while the service
+ports land. New code should take a `Settings` argument or read `SETTINGS`, not these
+aliases; the aliases are removed when the Milestone 3 CLI adapters take settings directly.
+"""
+
 from functools import lru_cache
 
 from rich.console import Console
 
 from jaws.optional_dependencies import require_module
+from jaws.settings import Settings, load_settings
 
 # Used for the message panels below.
 CONSOLE = Console()
 
-# Raw (non-rich) output mode. Auto-enabled when stdout is not a TTY — which is
-# exactly the case when a script is run as a subprocess with captured output by
-# the MCP server. Humans running a script directly in a terminal get the pretty
-# rich panels; the MCP server gets clean, parseable text. Detected automatically,
-# so callers never have to opt in.
-AGENT_MODE = not sys.stdout.isatty()
+SETTINGS: Settings = load_settings()
+
+# Raw (non-rich) output mode, auto-detected from stdout. See Settings/_detect_agent_mode.
+AGENT_MODE = SETTINGS.interface.agent_mode
 
 # Graph database configuration. The URI and username fall back to the standard
 # local-install values (see README.md) because the process env is not guaranteed to
-# carry them: MCP clients spawn the server as a child process and may strip the
-# environment (the Python MCP SDK whitelists only PATH/HOME/etc., and GUI-launched
-# clients never see shell exports at all). The password has no safe default and must
-# arrive via the environment — jaws_mcp/mcp-local.json shows how to pass it through.
-DATABASE = "captures"  # Created using the Neo4j Desktop app. Default is 'captures'.
-NEO4J_URI = os.getenv("NEO4J_URI") or "bolt://localhost:7687"
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME") or "neo4j"
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+# carry them; the password has no safe default and must arrive via the environment —
+# jaws_mcp/mcp-local.json shows how to pass it through.
+DATABASE = SETTINGS.database.name  # Created using the Neo4j Desktop app. Default is 'captures'.
+NEO4J_URI = SETTINGS.database.uri
+NEO4J_USERNAME = SETTINGS.database.username
+NEO4J_PASSWORD = SETTINGS.database.password.reveal()
 
 
 # The OpenAI client and Neo4j driver are created lazily so that importing this
@@ -37,23 +41,29 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 def get_neo4j_driver():
     # Fail with the actual problem instead of the driver's "URI scheme b''" — this
     # message is what surfaces in the MCP error envelope when credentials never
-    # reached the server process.
-    if not NEO4J_PASSWORD:
-        raise ValueError(
-            "NEO4J_PASSWORD is not set. Export it in the environment, or pass it "
-            "through your MCP client's env block (see jaws_mcp/mcp-local.json)."
-        )
+    # reached the server process. SettingsError is a ValueError, so callers that
+    # already catch ValueError here are unaffected.
+    password = SETTINGS.database.require_password()
     neo4j = require_module("neo4j", "neo4j", "Neo4j storage")
-    return neo4j.GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+    return neo4j.GraphDatabase.driver(
+        SETTINGS.database.uri, auth=(SETTINGS.database.username, password)
+    )
 
 
 @lru_cache(maxsize=1)
 def get_openai_client():
+    api_key = SETTINGS.provider.require_openai_api_key()
     openai = require_module("openai", "openai-embeddings", "OpenAI embeddings")
-    return openai.OpenAI()
+    return openai.OpenAI(api_key=api_key)
 
 
-IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
+IPINFO_API_KEY = SETTINGS.provider.ipinfo_api_key.reveal()
+
+
+def get_ipinfo_api_key():
+    """Return the configured IPinfo key, validating it only when enrichment runs."""
+    return SETTINGS.provider.require_ipinfo_api_key()
+
 
 # ASNs that primarily host or front OTHER organizations' workloads (IaaS, CDN, reverse
 # proxies). Ipinfo labels an IP with its ASN's owner, so on these networks the org
@@ -61,9 +71,10 @@ IPINFO_API_KEY = os.getenv("IPINFO_API_KEY")
 # Google LLC" is some GCP customer's VM, not Google (Google's own services ride
 # AS15169). Triage surfaces attach `cloud_hosted` from this set so the provider's name
 # isn't read as the service's reputation — attacker infrastructure lives in exactly
-# these networks. Curated, not exhaustive: extend as new hosting ASNs show up. Lives in
-# config (not jaws_utils) so the MCP server can import it without pulling in
-# sentence_transformers.
+# these networks. Curated, not exhaustive: extend as new hosting ASNs show up.
+#
+# This is provider-independent reference data rather than configuration; it moves to the
+# Milestone 3 enrichment service, which owns deterministic classification.
 HOSTING_ASNS = {
     "AS396982",  # Google Cloud Platform (customer VMs)
     "AS16509",
@@ -89,25 +100,13 @@ def is_cloud_hosted(org):
     return bool(parts) and parts[0] in HOSTING_ASNS
 
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
+OPENAI_API_KEY = SETTINGS.provider.openai_api_key.reveal()
+OPENAI_EMBEDDING_MODEL = SETTINGS.model.openai_embedding_model
 
-# Local embedding models, selectable by short id (jaws-compute --model <id>). They run
-# fully on-device via sentence-transformers, which reads each model's own pooling and
-# normalization config — so adding a model needs no new code, just an id -> HF name entry.
-PACKET_MODELS = {
-    "jina-code": "jinaai/jina-embeddings-v2-base-code",
-    # Cisco's security-domain bi-encoder (ModernBERT, 768-dim, sentence-transformers
-    # native). An alternative to jina-code's code-token specialization: tests whether a
-    # cybersecurity-trained embedder clusters endpoints better. Both are 768-dim, so the
-    # downstream PCA/DBSCAN path is unchanged. Predownload via `jaws-utils --model securebert`.
-    "securebert": "cisco-ai/SecureBERT2.0-biencoder",
-    # Add more here, e.g.:
-    # "bge-small": "BAAI/bge-small-en-v1.5",
-    # "nomic": "nomic-ai/nomic-embed-text-v1.5",
-    # "gte-base": "thenlper/gte-base",
-}
-DEFAULT_PACKET_MODEL = "jina-code"
+# Local embedding models, selectable by short id (jaws-compute --model <id>). Defined in
+# jaws.settings; adding a model needs no new code, just an id -> HF name entry there.
+PACKET_MODELS = dict(SETTINGS.model.packet_models)
+DEFAULT_PACKET_MODEL = SETTINGS.model.default_packet_model
 
 # Saves plots to this location.
-FINDER_ENDPOINT = os.getenv("JAWS_FINDER_ENDPOINT")
+FINDER_ENDPOINT = SETTINGS.artifacts.finder_endpoint

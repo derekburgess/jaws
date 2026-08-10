@@ -11,10 +11,17 @@ from enum import Enum
 from typing import Any
 
 from .identifiers import CanonicalDigest, Identifier
+from .secrets import REDACTED, Secret
 from .time import utc_text
 
 
 def primitive(value: Any) -> Any:
+    # Redaction comes first: every later branch either recurses or returns the value
+    # itself, so a secret reached after this point would be a leak. An unconfigured
+    # secret serializes as null rather than a sentinel, so provenance distinguishes
+    # "withheld" from "never set".
+    if isinstance(value, Secret):
+        return REDACTED if value.configured else None
     if isinstance(value, Identifier):
         return value.value
     if isinstance(value, datetime):

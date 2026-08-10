@@ -22,11 +22,14 @@ the research-workbench rollout.
 | [0008](0008-capability-extras-and-direct-constraints.md) | Accepted | Use capability extras and reviewed direct constraints |
 | [0009](0009-standard-library-domain-contracts.md) | Accepted | Use immutable standard-library domain contracts |
 | [0010](0010-versioned-service-and-legacy-result-envelopes.md) | Accepted | Separate versioned service results from legacy envelopes |
+| [0011](0011-standard-library-settings-and-redacted-secrets.md) | Accepted | Validate settings with the standard library and redact secrets by construction |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In
-particular, these ADRs do not prematurely choose a schema library, ID format,
-artifact encoding, container image, MCP job protocol, or agent framework.
+particular, these ADRs do not prematurely choose an ID format, artifact
+encoding, container image, MCP job protocol, or agent framework. ADR-0011
+settles validation for settings and records why external-specification
+validation remains an adapter-boundary question.
 
 ## Status values
 

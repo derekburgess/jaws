@@ -210,7 +210,22 @@ export HUGGINGFACE_API_KEY="..."  # only for gated local models
 export JAWS_FINDER_ENDPOINT="..." # optional plot output directory
 ```
 
-OpenAI embeddings are the CLI default. To run locally, pass `--api transformers`; public models in `jaws.config.PACKET_MODELS` do not require a Hugging Face key. The MCP server defaults to local transformers.
+Optional, unset by default:
+
+```bash
+export JAWS_MCP_TIMEOUT="900"  # server-side backstop; none by default
+```
+
+The environment carries connection details and credentials. Everything a run does — which
+interface, how long, which database, which model, which session — stays on the command, so
+a JAWS command means the same thing wherever it is pasted.
+
+A credential is only required when the provider that needs it is actually invoked, so the
+local-embeddings path runs with no API keys set at all. Settings can be serialized for
+future run provenance with every secret redacted — see
+[ADR-0011](docs/adr/0011-standard-library-settings-and-redacted-secrets.md).
+
+OpenAI embeddings are the CLI default. To run locally, pass `--api transformers`; public models in `jaws.settings.DEFAULT_PACKET_MODELS` do not require a Hugging Face key. The MCP server defaults to local transformers.
 
 ### 4. Start Neo4j
 

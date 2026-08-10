@@ -126,6 +126,7 @@ known-first-party = ["jaws", "jaws_mcp"]
 python_version = "3.12"
 files = [
     "jaws/domain/",
+    "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",
     "scripts/check_install_profiles.py",

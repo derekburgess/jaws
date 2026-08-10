@@ -1,7 +1,6 @@
 """JAWS MCP Server — exposes the full JAWS network-analysis pipeline via MCPServer."""
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +12,7 @@ from jaws.config import (
     DATABASE,
     DEFAULT_PACKET_MODEL,
     PACKET_MODELS,
+    SETTINGS,
     get_neo4j_driver,
     is_cloud_hosted,
 )
@@ -27,8 +27,7 @@ SCRIPTS = ROOT / "jaws"
 # real limit is the MCP client's own per-tool-call timeout (e.g. Claude Code's
 # MCP_TOOL_TIMEOUT). An operator who wants a server-side backstop can set
 # JAWS_MCP_TIMEOUT (seconds); by default there is none.
-_env_timeout = os.environ.get("JAWS_MCP_TIMEOUT")
-TIMEOUT = int(_env_timeout) if _env_timeout else None
+TIMEOUT = SETTINGS.runtime.mcp_timeout_seconds
 
 INSTRUCTIONS = (
     """JAWS captures network traffic into a Neo4j graph, enriches it with OSINT, embeds it, and flags anomalies.

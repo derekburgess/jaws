@@ -25,6 +25,7 @@ from .measurements import Measurement, bytes_count, interval_seconds, packet_cou
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
+from .secrets import REDACTED, UNSET, Secret
 from .serialization import canonical_digest, canonical_json, primitive
 from .specifications import (
     EntityDefinition,
@@ -42,7 +43,9 @@ from .time import CAPTURE_TRANSITIONS, RUN_TRANSITIONS, normalize_utc, require_t
 
 __all__ = [
     "CAPTURE_TRANSITIONS",
+    "REDACTED",
     "RUN_TRANSITIONS",
+    "UNSET",
     "CanonicalDigest",
     "CaptureId",
     "CaptureState",
@@ -75,6 +78,7 @@ __all__ = [
     "Score",
     "ScoreDirection",
     "ScoredEntity",
+    "Secret",
     "Success",
     "VersionedSpec",
     "bytes_count",
