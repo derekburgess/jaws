@@ -40,6 +40,11 @@ class CaptureId(Identifier):
 
 
 @dataclass(frozen=True, slots=True, order=True)
+class ObservationScopeId(Identifier):
+    pass
+
+
+@dataclass(frozen=True, slots=True, order=True)
 class EntityId(Identifier):
     pass
 

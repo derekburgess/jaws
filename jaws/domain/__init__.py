@@ -1,10 +1,20 @@
 """Lightweight public contracts for the JAWS research workbench."""
 
+from .captures import (
+    ACTIVE_CAPTURE_STATES,
+    TERMINAL_CAPTURE_STATES,
+    CaptureRecord,
+    ObservationScope,
+    ProfileIdentity,
+    capture_scope_id,
+)
 from .enums import (
+    CaptureSourceKind,
     CaptureState,
     EntityType,
     ErrorCategory,
     MeasurementUnit,
+    ObservationScopeKind,
     OutlierStatus,
     ReferenceKind,
     RunState,
@@ -18,6 +28,7 @@ from .identifiers import (
     EntityId,
     ExperimentId,
     FindingId,
+    ObservationScopeId,
     RunId,
     SchemaVersion,
 )
@@ -43,11 +54,14 @@ from .time import CAPTURE_TRANSITIONS, RUN_TRANSITIONS, normalize_utc, require_t
 
 __all__ = [
     "CAPTURE_TRANSITIONS",
+    "ACTIVE_CAPTURE_STATES",
     "REDACTED",
     "RUN_TRANSITIONS",
     "UNSET",
     "CanonicalDigest",
     "CaptureId",
+    "CaptureRecord",
+    "CaptureSourceKind",
     "CaptureState",
     "Clock",
     "DatasetId",
@@ -65,6 +79,9 @@ __all__ = [
     "Measurement",
     "MeasurementUnit",
     "ObservationWindow",
+    "ObservationScope",
+    "ObservationScopeId",
+    "ObservationScopeKind",
     "OutlierStatus",
     "RankedFinding",
     "RankerSpec",
@@ -78,10 +95,13 @@ __all__ = [
     "Score",
     "ScoreDirection",
     "ScoredEntity",
+    "ProfileIdentity",
     "Secret",
     "Success",
+    "TERMINAL_CAPTURE_STATES",
     "VersionedSpec",
     "bytes_count",
+    "capture_scope_id",
     "canonical_digest",
     "canonical_json",
     "deterministic_ranking",

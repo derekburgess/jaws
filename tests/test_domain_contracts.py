@@ -2,13 +2,18 @@
 
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta, timezone
+from uuid import UUID
 
 import pytest
 
+from jaws.adapters import UuidCaptureIdGenerator
 from jaws.domain import (
     CAPTURE_TRANSITIONS,
     RUN_TRANSITIONS,
+    CanonicalDigest,
     CaptureId,
+    CaptureRecord,
+    CaptureSourceKind,
     CaptureState,
     EntityDefinition,
     EntityId,
@@ -16,8 +21,11 @@ from jaws.domain import (
     EvidencePointer,
     ExperimentSpec,
     FindingId,
+    ObservationScope,
+    ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
+    ProfileIdentity,
     RankedFinding,
     RankerSpec,
     ReferenceSpec,
@@ -61,6 +69,94 @@ def test_identifier_classes_are_runtime_distinct_and_validated():
     assert type(capture) is CaptureId
     with pytest.raises(ValueError):
         CaptureId("  ")
+
+
+def test_uuid_capture_ids_are_opaque_collision_resistant_runtime_identity():
+    values = iter(
+        (
+            UUID("12345678-1234-5678-1234-567812345678"),
+            UUID("87654321-4321-8765-4321-876543218765"),
+        )
+    )
+    generator = UuidCaptureIdGenerator(lambda: next(values))
+
+    first = generator.new()
+    second = generator.new()
+
+    assert first == CaptureId("cap_12345678123456781234567812345678")
+    assert second == CaptureId("cap_87654321432187654321876543218765")
+    assert first != second
+
+
+def test_capture_record_tracks_live_and_import_lifecycle_without_inferred_perspective():
+    registered_at = datetime(2026, 8, 10, 15, 30, tzinfo=UTC)
+    live = CaptureRecord(
+        capture_id=CaptureId("cap_live"),
+        source_kind=CaptureSourceKind.LIVE_INTERFACE,
+        source_name="eth0",
+        state=CaptureState.REGISTERED,
+        registered_at=registered_at,
+        legacy_capture_id="20260810T153000Z",
+        perspective=EntityId("ip:10.0.0.2"),
+        tool_versions={"jaws": "2.0.0", "tshark": "4.4.0"},
+    )
+    running = live.transition(CaptureState.RUNNING, registered_at + timedelta(seconds=1))
+    complete = running.transition(
+        CaptureState.COMPLETE,
+        registered_at + timedelta(seconds=11),
+        packet_count=42,
+    )
+    assert complete.packet_count == 42
+    assert complete.ended_at == registered_at + timedelta(seconds=11)
+    assert list(complete.tool_versions) == ["jaws", "tshark"]
+
+    imported = CaptureRecord(
+        capture_id=CaptureId("cap_import"),
+        source_kind=CaptureSourceKind.PCAP_FILE,
+        source_name="fixture.pcap",
+        state=CaptureState.REGISTERED,
+        registered_at=registered_at,
+        content_digest=CanonicalDigest("a" * 64),
+    ).transition(CaptureState.IMPORTING, registered_at)
+    assert imported.perspective is None
+    with pytest.raises(ValueError, match="invalid lifecycle transition"):
+        complete.transition(CaptureState.RUNNING, registered_at + timedelta(seconds=12))
+
+
+def test_observation_scope_and_profile_identity_are_explicit_and_stable():
+    created_at = datetime(2026, 8, 10, 15, 30, tzinfo=UTC)
+    capture_id = CaptureId("cap_example")
+    scope = ObservationScope.for_capture(
+        capture_id,
+        created_at,
+        perspective=EntityId("ip:10.0.0.2"),
+        filters=("tcp",),
+    )
+    assert scope.scope_id == ObservationScopeId("scope_cap_example")
+    assert scope.capture_ids == (capture_id,)
+
+    first = ProfileIdentity(
+        entity_id=EntityId("ip:8.8.8.8"),
+        scope_id=scope.scope_id,
+        representation_id="numeric",
+        representation_version="2",
+    )
+    second = ProfileIdentity(
+        entity_id=EntityId("ip:8.8.8.8"),
+        scope_id=scope.scope_id,
+        representation_id="numeric",
+        representation_version="2",
+    )
+    assert first.profile_key == second.profile_key
+    assert first.profile_key.startswith("profile_")
+    with pytest.raises(ValueError, match="provided together"):
+        ProfileIdentity(
+            entity_id=EntityId("ip:8.8.8.8"),
+            scope_id=scope.scope_id,
+            representation_id="embedding",
+            representation_version="1",
+            model_id="model-only",
+        )
 
 
 def test_specs_are_frozen_and_digest_semantic_content():

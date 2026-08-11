@@ -73,6 +73,7 @@ def test_lint_and_type_boundaries_are_explicit_ratchets():
     assert mypy["strict"] is True
     assert mypy["warn_unused_configs"] is True
     assert set(mypy["files"]) == {
+        "jaws/adapters/",
         "jaws/domain/",
         "jaws/ports/",
         "jaws/storage/",

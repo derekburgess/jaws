@@ -1,11 +1,24 @@
 import argparse
+import hashlib
 import os
 import socket
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 
 from rich.console import Group
 
+from jaws.adapters import SystemClock, UuidCaptureIdGenerator
 from jaws.config import CONSOLE, DATABASE
+from jaws.domain import (
+    CanonicalDigest,
+    CaptureRecord,
+    CaptureSourceKind,
+    CaptureState,
+    EntityId,
+    ObservationScope,
+    canonical_json,
+    utc_text,
+)
 from jaws.jaws_utils import (
     Reporter,
     dbms_connection,
@@ -60,25 +73,111 @@ BATCH_SIZE = 100
 # spans the dead gap between two capture runs, so a real beacon's interval_cv is
 # inflated by a 20-minute pause. jaws_compute scopes to a session ('latest' by
 # default), which is why drop_database between captures is optional, not required.
-def register_capture(driver, database, capture_id, source):
-    # MERGE, not CREATE: two runs starting the same second share one session, which
-    # is the honest reading of "same second" at capture granularity.
+def register_capture(driver, database, record):
+    """Create one collision-resistant capture and its explicit observation scope."""
+
+    scope = ObservationScope.for_capture(
+        record.capture_id,
+        record.registered_at,
+        perspective=record.perspective,
+        filters=(record.capture_filter,) if record.capture_filter else (),
+    )
     query = """
-    MERGE (c:CAPTURE {CAPTURE_ID: $capture_id})
-    ON CREATE SET c.STARTED = datetime()
-    SET c.SOURCE = $source
+    CREATE (capture:CAPTURE {
+        CAPTURE_ID: $capture_id,
+        LEGACY_CAPTURE_ID: $legacy_capture_id,
+        STATE: $state,
+        SOURCE_KIND: $source_kind,
+        SOURCE_NAME: $source_name,
+        CONTENT_SHA256: $content_sha256,
+        REGISTERED_AT: datetime($registered_at),
+        STARTED_AT: datetime($started_at),
+        STARTED: datetime($started_at),
+        PACKET_COUNT: 0,
+        PACKETS: 0,
+        PERSPECTIVE_IP: $perspective_ip,
+        CAPTURE_FILTER: $capture_filter,
+        TOOL_VERSIONS_JSON: $tool_versions_json,
+        SOURCE: $source_name
+    })
+    CREATE (scope:OBSERVATION_SCOPE {
+        SCOPE_ID: $scope_id,
+        KIND: $scope_kind,
+        CREATED_AT: datetime($registered_at),
+        PERSPECTIVE_IP: $perspective_ip,
+        FILTERS: $filters
+    })
+    CREATE (scope)-[:INCLUDES]->(capture)
     """
+    assert record.started_at is not None
+    parameters = {
+        "capture_id": record.capture_id.value,
+        "legacy_capture_id": record.legacy_capture_id,
+        "state": record.state.value,
+        "source_kind": record.source_kind.value,
+        "source_name": record.source_name,
+        "content_sha256": str(record.content_digest) if record.content_digest else None,
+        "registered_at": utc_text(record.registered_at),
+        "started_at": utc_text(record.started_at),
+        "perspective_ip": record.perspective.value if record.perspective else None,
+        "capture_filter": record.capture_filter,
+        "tool_versions_json": canonical_json(record.tool_versions),
+        "scope_id": scope.scope_id.value,
+        "scope_kind": scope.kind.value,
+        "filters": list(scope.filters),
+    }
     with driver.session(database=database) as session:
-        session.run(query, capture_id=capture_id, source=source)
+        session.run(query, parameters).consume()
 
 
-def finalize_capture(driver, database, capture_id, packet_count):
+def finalize_capture(driver, database, record):
+    """Persist one terminal capture snapshot without changing compatibility identity."""
+
+    if record.state not in {
+        CaptureState.COMPLETE,
+        CaptureState.PARTIAL,
+        CaptureState.FAILED,
+        CaptureState.CANCELLED,
+    }:
+        raise ValueError("finalize_capture requires a terminal capture record")
+    assert record.ended_at is not None
     query = """
     MATCH (c:CAPTURE {CAPTURE_ID: $capture_id})
-    SET c.PACKETS = $packet_count
+    SET c.PACKETS = $packet_count,
+        c.PACKET_COUNT = $packet_count,
+        c.STATE = $state,
+        c.ENDED_AT = datetime($ended_at),
+        c.FAILURE_CODE = $failure_code
     """
     with driver.session(database=database) as session:
-        session.run(query, capture_id=capture_id, packet_count=packet_count)
+        session.run(
+            query,
+            {
+                "capture_id": record.capture_id.value,
+                "packet_count": record.packet_count,
+                "state": record.state.value,
+                "ended_at": utc_text(record.ended_at),
+                "failure_code": record.failure_code,
+            },
+        ).consume()
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as capture_file:
+        for chunk in iter(lambda: capture_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return CanonicalDigest(digest.hexdigest())
+
+
+def capture_tool_versions():
+    versions = {}
+    for distribution in ("JAWS", "pyshark"):
+        try:
+            versions[distribution.lower()] = version(distribution)
+        except PackageNotFoundError:
+            versions[distribution.lower()] = "unknown"
+    return versions
 
 
 def add_packets_to_database(driver, packets_batch, database):
@@ -193,13 +292,20 @@ def main():
         return
 
     capture = None
+    capture_record = None
     packets = []
     batch = []
+    stored_packet_count = 0
+    clock = SystemClock()
+    capture_ids = UuidCaptureIdGenerator()
 
     def flush_batch():
+        nonlocal stored_packet_count
         if batch:
+            pending = len(batch)
             add_packets_to_database(driver, batch, args.database)
             batch.clear()
+            stored_packet_count += pending
 
     def close_capture():
         if capture is not None:
@@ -236,13 +342,36 @@ def main():
 
         source = args.capture_file if args.capture_file else args.interface
         pyshark = require_module("pyshark", "capture", "Packet capture and import")
-        capture_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        register_capture(driver, args.database, capture_id, source)
+        registered_at = clock.now()
+        capture_id = capture_ids.new()
+        source_kind = (
+            CaptureSourceKind.PCAP_FILE if args.capture_file else CaptureSourceKind.LIVE_INTERFACE
+        )
+        active_state = CaptureState.IMPORTING if args.capture_file else CaptureState.RUNNING
+        perspective = None if args.capture_file else EntityId(f"ip:{local_ip}")
+        content_digest = file_sha256(args.capture_file) if args.capture_file else None
+        capture_record = CaptureRecord(
+            capture_id=capture_id,
+            source_kind=source_kind,
+            source_name=source,
+            state=CaptureState.REGISTERED,
+            registered_at=registered_at,
+            legacy_capture_id=registered_at.strftime("%Y%m%dT%H%M%SZ"),
+            content_digest=content_digest,
+            perspective=perspective,
+            tool_versions=capture_tool_versions(),
+        ).transition(active_state, clock.now())
+        register_capture(driver, args.database, capture_record)
 
         if args.capture_file:
-            config_message = f"Import: {args.capture_file} | {local_ip} | session {capture_id}"
+            config_message = (
+                f"Import: {args.capture_file} | perspective unknown | session {capture_id}"
+            )
         else:
-            config_message = f"Interface: {args.interface} | {local_ip} | {args.duration} seconds | session {capture_id}"
+            config_message = (
+                f"Interface: {args.interface} | {local_ip} | {args.duration} seconds | "
+                f"session {capture_id}"
+            )
 
         def render():
             return Group(
@@ -254,7 +383,7 @@ def main():
 
             def on_packet(packet):
                 packet_data, packet_string = process_packet(packet)
-                packet_data["capture_id"] = capture_id
+                packet_data["capture_id"] = capture_id.value
                 batch.append(packet_data)
                 packets.append(packet_string)
                 if len(batch) >= BATCH_SIZE:
@@ -277,25 +406,67 @@ def main():
                     pass  # the normal end of a timed capture
 
         flush_batch()
-        finalize_capture(driver, args.database, capture_id, len(packets))
+        completed_record = capture_record.transition(
+            CaptureState.COMPLETE,
+            clock.now(),
+            packet_count=stored_packet_count,
+        )
+        finalize_capture(driver, args.database, completed_record)
+        capture_record = completed_record
 
         reporter.result(
             {
                 "database": args.database,
                 "source": source,
-                "capture_id": capture_id,
-                "packets_captured": len(packets),
+                "capture_id": capture_id.value,
+                "legacy_capture_id": capture_record.legacy_capture_id,
+                "packets_captured": stored_packet_count,
             },
             summary=f"Packets({len(packets)}) added to: '{args.database}' as session '{capture_id}'",
         )
+        return
+
+    except KeyboardInterrupt:
+        if capture_record is not None:
+            try:
+                flush_batch()
+            except Exception:
+                pass
+            capture_record = capture_record.transition(
+                CaptureState.CANCELLED,
+                clock.now(),
+                packet_count=stored_packet_count,
+                failure_code="capture_cancelled",
+            )
+            finalize_capture(driver, args.database, capture_record)
+        reporter.error("CANCELLED", "Capture cancelled.")
         return
 
     except (MigrationError, ModuleNotFoundError) as e:
         reporter.error("ERROR", str(e))
         return
 
+    except Exception as error:
+        if capture_record is not None:
+            try:
+                flush_batch()
+            except Exception:
+                pass
+            target = CaptureState.PARTIAL if stored_packet_count else CaptureState.FAILED
+            capture_record = capture_record.transition(
+                target,
+                clock.now(),
+                packet_count=stored_packet_count,
+                failure_code=type(error).__name__,
+            )
+            try:
+                finalize_capture(driver, args.database, capture_record)
+            except Exception as finalize_error:
+                reporter.info("WARNING", f"Could not finalize failed capture: {finalize_error}")
+        reporter.error("ERROR", str(error))
+        return
+
     finally:
-        flush_batch()
         close_capture()
         driver.close()
 

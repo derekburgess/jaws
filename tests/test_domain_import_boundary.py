@@ -37,7 +37,10 @@ assert not loaded & blocked, sorted(loaded & blocked)
     )
 
 
-@pytest.mark.parametrize("module", ["jaws.domain", "jaws.ports", "jaws.settings", "jaws.storage"])
+@pytest.mark.parametrize(
+    "module",
+    ["jaws.domain", "jaws.ports", "jaws.settings", "jaws.storage", "jaws.adapters.runtime"],
+)
 def test_module_imports_with_every_optional_stack_blocked(module):
     result = _run_with_optional_stacks_blocked(f"import {module}")
     assert result.returncode == 0, result.stderr

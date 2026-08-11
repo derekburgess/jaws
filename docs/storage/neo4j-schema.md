@@ -72,6 +72,63 @@ The local-host `YOU ARE HERE` organization and its `OWNERSHIP` relationship are 
 seed data because the IP is invocation-specific. They are idempotently initialized after
 schema migration and are not part of the migration checksum.
 
+## Managed target: database schema version 2
+
+Version 2 is additive and retains every version-1 object. New captures use opaque UUID4-
+backed `CAPTURE_ID` values while legacy captures retain their original identity.
+
+### Capture properties
+
+| Property | Contract |
+| --- | --- |
+| `CAPTURE_ID` | Unique canonical identity; `cap_` plus UUID4 hex for new captures, preserved timestamp-shaped value for legacy captures |
+| `LEGACY_CAPTURE_ID` | Human-readable timestamp alias for new captures; preserved original ID for migrated captures; indexed, not unique |
+| `STATE` | `registered`, `running`, `importing`, `complete`, `partial`, `failed`, or `cancelled` |
+| `SOURCE_KIND` | `live_interface`, `pcap_file`, or `legacy_unknown` |
+| `SOURCE_NAME` | Interface, PCAP source name/path, or preserved legacy source |
+| `CONTENT_SHA256` | Lowercase PCAP SHA-256 when available; absent for live/legacy evidence |
+| `REGISTERED_AT`, `STARTED_AT`, `ENDED_AT` | Neo4j datetimes; unknown legacy end time remains absent |
+| `PACKET_COUNT` | Nonnegative stored packet count; mirrors legacy `PACKETS` during compatibility |
+| `PERSPECTIVE_IP` | Capture-host IP only when known; absent for imported/legacy evidence unless supplied explicitly |
+| `CAPTURE_FILTER` | Capture/display filter when one was declared |
+| `TOOL_VERSIONS_JSON` | Canonical JSON object of available tool versions |
+| `FAILURE_CODE` | Non-secret machine-readable terminal failure code when applicable |
+
+`SOURCE`, `STARTED`, and `PACKETS` remain dual-written compatibility fields. New code must
+not use `LEGACY_CAPTURE_ID` or UUID lexicographic order as chronology.
+
+### Observation scopes and profiles
+
+| Label/property | Contract |
+| --- | --- |
+| `OBSERVATION_SCOPE.SCOPE_ID` | Unique explicit scope identity |
+| `OBSERVATION_SCOPE.KIND` | `capture`, `pooled`, `custom`, or `legacy` |
+| `OBSERVATION_SCOPE.CREATED_AT` | UTC creation datetime |
+| `OBSERVATION_SCOPE.PERSPECTIVE_IP` | Optional known host perspective |
+| `OBSERVATION_SCOPE.FILTERS` | Ordered filter strings |
+| `ENDPOINT.SCOPE_ID` | Explicit profile scope; backfilled from non-null legacy `CAPTURE_ID` |
+| `ENDPOINT.PROFILE_KEY` | Canonical digest of entity, scope, representation version, and optional complete model ID/revision pair |
+
+The new relationship is
+`(:OBSERVATION_SCOPE)-[:INCLUDES]->(:CAPTURE)`. Version 2 does not invent `PROFILE_KEY`
+for legacy endpoints because representation/model provenance cannot be recovered reliably.
+
+### Version-2 constraints and indexes
+
+| Kind | Name | Label/properties |
+| --- | --- | --- |
+| Uniqueness constraint | `observation_scope_id_unique` | `OBSERVATION_SCOPE(SCOPE_ID)` |
+| Uniqueness constraint | `endpoint_profile_key_unique` | `ENDPOINT(PROFILE_KEY)` when present |
+| Range index | `capture_legacy_id_index` | `CAPTURE(LEGACY_CAPTURE_ID)` |
+| Range index | `capture_state_index` | `CAPTURE(STATE)` |
+| Range index | `endpoint_scope_index` | `ENDPOINT(SCOPE_ID)` |
+
+Legacy backfill copies original IDs into `LEGACY_CAPTURE_ID`, classifies captures with a
+final packet count as `complete` and those without one as `partial`, retains unknown source
+kind explicitly, and creates `scope_` plus `CAPTURE_ID` for each legacy capture. Migration
+markers bound the conditional rollback described by
+[ADR-0013](../adr/0013-capture-identity-lifecycle-and-observation-scope.md).
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -95,8 +152,9 @@ runtime argument; URI, username, and password retain their existing settings beh
 
 ## Later Milestone 2 versions
 
-Version 1 establishes ownership, not the final evidence redesign. Later migrations own
-collision-resistant capture identity, lifecycle/provenance fields, explicit observation
-scope, profile uniqueness, legacy aliases, and legacy-data quarantine. Each will add its
-target contract here before implementation, state backup and rollback behavior, and retain
-Benchmark 0 compatibility until repository and interface parity gates pass.
+Versions 1 and 2 establish ownership and evidence identity, not the complete storage
+redesign. Later migrations own legacy-profile quarantine, pooled `all` semantics,
+historical ordering, unknown-ownership cleanup, and tri-state outlier preservation. Each
+will add its target contract here before implementation, state backup and rollback
+behavior, and retain Benchmark 0 compatibility until repository and interface parity gates
+pass.

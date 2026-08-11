@@ -619,16 +619,25 @@ def resolve_profile_scope(driver, database, session_arg):
     return session_arg, available
 
 
-# Every numeric input the baseline needs, read from the profile sets that PRECEDE the one
-# being analyzed. Ordering is lexicographic on CAPTURE_ID, which is chronological by
-# construction (compact UTC timestamps), so "prior" stays correct when an older session is
-# re-profiled after a newer one.
+# Every numeric input the baseline needs, read from profile sets whose CAPTURE started
+# before the one being analyzed. Identity is deliberately opaque from schema version 2,
+# so chronology must come from stored evidence time rather than CAPTURE_ID text. This also
+# keeps an older session prior when it is re-profiled after a newer one.
 _HISTORY_QUERY = """
 MATCH (e:ENDPOINT)
+OPTIONAL MATCH (historical_capture:CAPTURE {CAPTURE_ID: e.CAPTURE_ID})
+OPTIONAL MATCH (target_capture:CAPTURE {CAPTURE_ID: $scope})
+WITH e,
+     coalesce(historical_capture.STARTED_AT, historical_capture.STARTED) AS historical_started,
+     coalesce(target_capture.STARTED_AT, target_capture.STARTED) AS target_started
 WHERE e.CAPTURE_ID IS NOT NULL
   AND e.CAPTURE_ID <> $scope
   AND e.CAPTURE_ID <> $pooled
-  AND ($scope = $pooled OR e.CAPTURE_ID < $scope)
+  AND ($scope = $pooled OR (
+      historical_started IS NOT NULL
+      AND target_started IS NOT NULL
+      AND historical_started < target_started
+  ))
 RETURN e.IP_ADDRESS AS ip_address,
        e.CAPTURE_ID AS capture_id,
        e.BYTES_OUT AS bytes_out,

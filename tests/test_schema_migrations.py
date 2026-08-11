@@ -81,6 +81,11 @@ class FakeNeo4j:
                 }
             )
             return FakeResult()
+        if normalized.startswith("MATCH (capture:CAPTURE)") or normalized.startswith(
+            "MATCH (endpoint:ENDPOINT)"
+        ):
+            self.writes.append(normalized)
+            return FakeResult()
         raise AssertionError(f"unexpected query: {normalized}")
 
     @staticmethod
@@ -96,7 +101,8 @@ class FakeNeo4j:
         assert name is not None
         expected = next(
             item
-            for item in MIGRATIONS[0].required_schema
+            for migration in MIGRATIONS
+            for item in migration.required_schema
             if item.kind == kind and item.name == name.group(1)
         )
         target = self.constraints if kind == "constraint" else self.indexes
@@ -132,6 +138,22 @@ def test_version_one_matches_the_frozen_legacy_schema_contract():
     }
 
 
+def test_version_two_adds_identity_lifecycle_scope_and_profile_contracts():
+    migration = MIGRATIONS[1]
+    assert migration.version == 2
+    assert len(migration.checksum) == 64
+    assert migration.reversible is True
+    assert {item.name for item in migration.required_schema if item.kind == "constraint"} == {
+        "endpoint_profile_key_unique",
+        "observation_scope_id_unique",
+    }
+    assert {item.name for item in migration.required_schema if item.kind == "index"} == {
+        "capture_legacy_id_index",
+        "capture_state_index",
+        "endpoint_scope_index",
+    }
+
+
 def test_legacy_utility_delegates_schema_ownership_to_migrations():
     utility_source = Path("jaws/jaws_utils.py").read_text(encoding="utf-8")
     migration_source = Path("jaws/storage/migrations/v0001_adopt_legacy_schema.py").read_text(
@@ -149,24 +171,25 @@ def test_fresh_database_dry_run_is_read_only_and_migration_is_idempotent(clock):
 
     status = migration_manager.status()
     assert status.current_version is None
-    assert status.pending_versions == (1,)
+    assert status.pending_versions == (1, 2)
     plan = migration_manager.dry_run()
     assert plan.current_version is None
-    assert plan.target_version == 1
+    assert plan.target_version == 2
     assert plan.pending == MIGRATIONS
-    assert len(plan.statements) == 9
+    assert len(plan.statements) == sum(len(migration.statements) for migration in MIGRATIONS)
     assert graph.writes == []
 
     result = migration_manager.migrate()
-    assert result.applied_versions == (1,)
+    assert result.applied_versions == (1, 2)
     assert result.status.is_current
     assert graph.applied == [
         {
-            "version": 1,
-            "name": MIGRATIONS[0].name,
-            "checksum": MIGRATIONS[0].checksum,
+            "version": migration.version,
+            "name": migration.name,
+            "checksum": migration.checksum,
             "applied_at": "2026-08-10T15:30:00.000000Z",
         }
+        for migration in MIGRATIONS
     ]
 
     writes = list(graph.writes)
@@ -189,10 +212,20 @@ def test_legacy_schema_is_adopted_without_requiring_a_data_rewrite(clock):
     result = _manager(graph, clock).migrate()
 
     assert result.status.is_current
-    assert set(graph.constraints) - {item.name for item in legacy} == {
-        "jaws_schema_migration_version_unique"
+    expected_constraints = {
+        item.name
+        for migration in MIGRATIONS
+        for item in migration.required_schema
+        if item.kind == "constraint"
     }
-    assert set(graph.indexes) == {item.name for item in legacy if item.kind == "index"}
+    expected_indexes = {
+        item.name
+        for migration in MIGRATIONS
+        for item in migration.required_schema
+        if item.kind == "index"
+    }
+    assert set(graph.constraints) == expected_constraints
+    assert set(graph.indexes) == expected_indexes
 
 
 def test_partial_schema_application_writes_no_version_and_can_retry(clock):
@@ -208,7 +241,7 @@ def test_partial_schema_application_writes_no_version_and_can_retry(clock):
     graph.fail_on = None
     result = migration_manager.migrate()
     assert result.status.is_current
-    assert len(graph.applied) == 1
+    assert len(graph.applied) == 2
 
 
 def test_applied_checksum_drift_blocks_validation_and_migration(clock):

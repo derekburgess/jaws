@@ -67,7 +67,7 @@ def main():
     [grey85]To capture or import packets:[/]
     [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'eth0' OR --file PATH --duration 10 --database '{DATABASE}'
     [grey85]You can use jaws-capture --list to list available interfaces. When --interface is omitted, the first active interface is used.[/]
-    [grey85]Each run is its own capture session (capture_id); sessions accumulate — no need to drop the database between captures.[/]
+    [grey85]Each run has an opaque capture_id plus a timestamp legacy_capture_id; sessions accumulate — no need to drop the database between captures.[/]
     [/]""")
 
     print(f"""[gray100]

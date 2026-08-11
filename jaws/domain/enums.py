@@ -13,6 +13,19 @@ class CaptureState(StrEnum):
     CANCELLED = "cancelled"
 
 
+class CaptureSourceKind(StrEnum):
+    LIVE_INTERFACE = "live_interface"
+    PCAP_FILE = "pcap_file"
+    LEGACY_UNKNOWN = "legacy_unknown"
+
+
+class ObservationScopeKind(StrEnum):
+    CAPTURE = "capture"
+    POOLED = "pooled"
+    CUSTOM = "custom"
+    LEGACY = "legacy"
+
+
 class RunState(StrEnum):
     CREATED = "created"
     RUNNING = "running"

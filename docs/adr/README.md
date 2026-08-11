@@ -24,13 +24,15 @@ the research-workbench rollout.
 | [0010](0010-versioned-service-and-legacy-result-envelopes.md) | Accepted | Separate versioned service results from legacy envelopes |
 | [0011](0011-standard-library-settings-and-redacted-secrets.md) | Accepted | Validate settings with the standard library and redact secrets by construction |
 | [0012](0012-ordered-neo4j-schema-migrations.md) | Accepted | Use ordered, checksummed Neo4j schema migrations |
+| [0013](0013-capture-identity-lifecycle-and-observation-scope.md) | Accepted | Separate capture identity, lifecycle, and observation scope |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In
-particular, these ADRs do not prematurely choose an ID format, artifact
-encoding, container image, MCP job protocol, or agent framework. ADR-0011
-settles validation for settings and records why external-specification
-validation remains an adapter-boundary question.
+particular, these ADRs do not prematurely choose experiment/run IDs, artifact encoding,
+container images, the MCP job protocol, or an agent framework. ADR-0013 now settles
+capture identity because its Milestone 2 migration is due. ADR-0011 settles validation for
+settings and records why external-specification validation remains an adapter-boundary
+question.
 
 ## Status values
 

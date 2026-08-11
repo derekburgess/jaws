@@ -101,6 +101,7 @@ jaws-mcp = "jaws_mcp.server:main"
 [tool.setuptools]
 packages = [
     "jaws",
+    "jaws.adapters",
     "jaws.domain",
     "jaws.ports",
     "jaws.storage",
@@ -133,6 +134,7 @@ known-first-party = ["jaws", "jaws_mcp"]
 [tool.mypy]
 python_version = "3.12"
 files = [
+    "jaws/adapters/",
     "jaws/domain/",
     "jaws/ports/",
     "jaws/storage/",

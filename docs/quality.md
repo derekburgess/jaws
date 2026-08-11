@@ -43,6 +43,7 @@ make CI green.
 Mypy begins in strict mode on the files that already form typed infrastructure:
 
 - `jaws/domain/`
+- `jaws/adapters/`
 - `jaws/ports/`
 - `jaws/storage/`
 - `jaws/settings.py`
@@ -51,9 +52,10 @@ Mypy begins in strict mode on the files that already form typed infrastructure:
 - `scripts/check_install_profiles.py`
 
 The boundary may expand but may not shrink. New domain, settings, error, result-envelope,
-service-port, storage migration, and schema-administration modules must enter the strict boundary in
-the same change. Existing files remain in scope when they import legacy untyped modules;
-targeted interface types or local casts should isolate that legacy surface. Weakening a
+service-port, runtime-adapter, storage-migration, and schema-administration modules must
+enter the strict boundary in the same change. Existing files remain in scope when they
+import legacy untyped modules; targeted interface types or local casts should isolate that
+legacy surface. Weakening a
 strict flag, removing a covered file, or adding a broad ignore requires an explicit plan
 entry with rationale and a replacement ratchet.
 

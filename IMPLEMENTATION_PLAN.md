@@ -489,12 +489,12 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 #### Evidence identities and lifecycle
 
-- [ ] Replace second-resolution capture identity with a collision-resistant ID while retaining a human-readable timestamp.
-- [ ] Record capture/import states: registered, running/importing, complete, partial, failed, and cancelled.
-- [ ] Record source kind, source name, content checksum when available, start/end, packet count, capture host perspective, filter, and tool versions.
-- [ ] Represent observation scope explicitly instead of relying only on a `CAPTURE_ID` property convention.
-- [ ] Define uniqueness for endpoint profiles using entity, scope, representation version, and model/revision as applicable.
-- [ ] Preserve legacy `CAPTURE_ID` lookup through migration aliases or compatibility fields.
+- [x] Replace second-resolution capture identity with a collision-resistant ID while retaining a human-readable timestamp ([ADR-0013](docs/adr/0013-capture-identity-lifecycle-and-observation-scope.md)).
+- [x] Record capture/import states: registered, running/importing, complete, partial, failed, and cancelled.
+- [x] Record source kind, source name, content checksum when available, start/end, packet count, capture host perspective, filter, and tool versions.
+- [x] Represent observation scope explicitly instead of relying only on a `CAPTURE_ID` property convention.
+- [x] Define uniqueness for endpoint profiles using entity, scope, representation version, and model/revision as applicable.
+- [x] Preserve legacy `CAPTURE_ID` lookup through migration aliases or compatibility fields.
 
 #### Repository implementations
 
@@ -1189,7 +1189,7 @@ These decisions require ADRs at the named milestone. An ADR may refine the imple
 | --- | --- | --- |
 | Canonical schema/validation library for external specs | M1 | Accepted in [ADR-0009](docs/adr/0009-standard-library-domain-contracts.md): immutable standard-library contracts and canonical JSON in the core; external JSON Schema/coercion remains an adapter responsibility when those inputs land |
 | Dependency pin/lock strategy across CPU/GPU/platforms | M1 | Accepted in [ADR-0008](docs/adr/0008-capability-extras-and-direct-constraints.md): compatible metadata ranges, exact direct constraints, and complete run-environment inventories |
-| Capture, experiment, and run ID formats | M1–M2 | Collision-resistant opaque IDs plus human-readable timestamps/digests |
+| Capture, experiment, and run ID formats | M1–M2 | Capture identity accepted in [ADR-0013](docs/adr/0013-capture-identity-lifecycle-and-observation-scope.md): `cap_` plus UUID4 hex with separate UTC and legacy timestamp fields; experiment/run formats remain due with their owning milestones |
 | Neo4j migration mechanism and schema-version storage | M2 | Accepted in [ADR-0012](docs/adr/0012-ordered-neo4j-schema-migrations.md): ordered idempotent migrations with checksummed applied-version records and required live-schema validation |
 | Experiment artifact formats | M5 | Canonical JSON/JSONL; optional Parquet for large tables |
 | Artifact-store location/configuration | M5 | Local filesystem store behind a protocol |
@@ -1221,11 +1221,32 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
-ownership and database version 1 are implemented. The next active work is evidence
-identity and lifecycle design: collision-resistant capture IDs, explicit states and
-provenance, observation scopes, profile uniqueness, and legacy lookup compatibility.
+ownership plus database versions 1 and 2 now cover evidence identity, lifecycle,
+provenance, observation scope, profile uniqueness, and legacy lookup compatibility. The
+next active work is repository implementation, beginning with `CaptureRepository` and
+`PacketRepository` contracts, deterministic fakes, and Neo4j adapters.
 
 ## Change log
+
+### 2026-08-10 — Milestone 2 capture identity, lifecycle, and scope
+
+- Added [ADR-0013](docs/adr/0013-capture-identity-lifecycle-and-observation-scope.md):
+  new captures use `cap_` plus standard-library UUID4 hex through an injectable ID port;
+  UTC registration time and second-resolution `LEGACY_CAPTURE_ID` remain separate.
+- Added immutable `CaptureRecord`, `ObservationScope`, and `ProfileIdentity` contracts,
+  explicit source/scope enumerations, stable scope derivation, canonical profile keys, and
+  standard runtime clock/UUID adapters under the strict typed boundary.
+- Added migration version 2 with additive lifecycle/provenance backfill, explicit
+  `OBSERVATION_SCOPE` nodes and `INCLUDES` relationships, profile-key uniqueness, legacy
+  alias/state/scope indexes, and conditional rollback markers. Legacy identities and joins
+  are never rewritten.
+- Updated the legacy capture adapter to dual-write compatibility and version-2 fields,
+  hash PCAPs in bounded chunks, leave imported perspective unknown, and finalize complete,
+  partial, failed, or cancelled state explicitly.
+- Added deterministic tests for same-second UUID identity, lifecycle validation, scope and
+  profile identity, cancellation, partial import flush, and checksum provenance. The pinned
+  Neo4j 5.26.28 suite passes fresh/legacy upgrades, preserves legacy evidence, backfills
+  scope, and rejects a duplicate capture start.
 
 ### 2026-08-10 — Milestone 2 schema ownership and migration version 1
 

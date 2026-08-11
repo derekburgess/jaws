@@ -37,6 +37,11 @@ and its public status/planning records currently remain importable without that 
 Cypher owned by versioned migrations belongs there; legacy commands may call the migration
 manager during the ratcheted transition but must not redefine schema objects themselves.
 
+`jaws.adapters` contains outer implementations of inward ports. Its standard runtime clock
+and UUID capture-ID generator import only domain contracts and the standard library; later
+provider/interface adapters may carry their declared optional dependencies without moving
+those dependencies into domain or ports.
+
 ## Ratchet policy
 
 The test governs every Python file under a listed package. A new inner package must be
