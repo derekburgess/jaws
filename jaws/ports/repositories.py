@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from typing import Protocol
 
 from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureState,
+    EndpointInspection,
     EndpointProfile,
     EnrichmentRecord,
     EntityId,
@@ -134,3 +136,20 @@ class ProfileRepository(Protocol):
     ) -> int: ...
 
     def prune(self, retain: int) -> tuple[int, tuple[ObservationScopeId, ...]]: ...
+
+
+class InspectionRepository(Protocol):
+    """Optimized read-only projections for overview and endpoint drill-down tools."""
+
+    def recent_profiles(
+        self, *, computed_after: datetime, limit: int
+    ) -> tuple[EndpointProfile, ...]: ...
+
+    def inspect(
+        self,
+        entity_id: EntityId,
+        *,
+        peer_limit: int,
+        packet_limit: int,
+        history_limit: int,
+    ) -> EndpointInspection: ...

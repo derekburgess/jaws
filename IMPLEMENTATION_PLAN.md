@@ -502,6 +502,7 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 - [x] Implement `PacketRepository` for batched evidence writes and scoped reads ([repository contract](docs/storage/repositories.md)).
 - [x] Implement `EnrichmentRepository` for metadata and annotations ([ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
 - [x] Implement `ProfileRepository` for versioned profile sets and histories ([ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
+- [x] Implement `InspectionRepository` for bounded profile overviews and endpoint drill-down ([repository contract](docs/storage/repositories.md)).
 - [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
 - [ ] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph.
 - [ ] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher.
@@ -1225,11 +1226,26 @@ ownership plus database versions 1–3 now cover evidence identity, lifecycle, e
 provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
-implementations. Capture, enrichment, compute, and finder contain no Cypher. The next
-active Milestone 2 slice is MCP inspection/query centralization, followed by declared
-retention, export/import, and guarded administration.
+implementations. Capture, enrichment, compute, finder, and MCP inspection contain no
+Cypher. The next active Milestone 2 slice is declared retention with dry-run behavior,
+followed by export/import and guarded administration.
 
 ## Change log
+
+### 2026-08-12 — Milestone 2 MCP inspection repository centralization
+
+- Added typed endpoint-peer, raw-packet-sample, and bounded endpoint-inspection projections
+  plus a read-only `InspectionRepository` contract.
+- Added deterministic in-memory composition and optimized Neo4j implementations for the
+  most recent profile overview, latest endpoint profile, all-session totals/peers, concrete
+  profile history, and newest packet samples.
+- Routed `list_captures`, `fetch_traffic`, and `inspect_endpoint` through the validated
+  repository bundle. `jaws_mcp/server.py` now contains no Cypher or direct Neo4j session
+  calls while preserving the existing MCP tool inputs and legacy payload fields.
+- Added shared fake/Neo4j behavior coverage, MCP payload compatibility tests, and an
+  architecture ratchet preventing query logic from returning to the MCP adapter.
+- Passed 161 offline tests, strict types, Ruff format/lint, report-only Recall@3 at 5/5,
+  and eight integration tests against disposable pinned Neo4j 5.26.28.
 
 ### 2026-08-12 — Milestone 2 CLI read-side repository centralization
 

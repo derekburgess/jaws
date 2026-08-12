@@ -82,3 +82,10 @@ def test_capture_cli_delegates_cypher_to_storage_adapters():
     assert not any(
         token in source for token in ("MATCH (", "MERGE (", "CREATE (", "UNWIND $", "session.run(")
     )
+
+
+def test_mcp_adapter_delegates_cypher_to_storage_adapters():
+    source = (REPO_ROOT / "jaws_mcp" / "server.py").read_text(encoding="utf-8")
+    assert not any(
+        token in source for token in ("MATCH (", "MERGE (", "CREATE (", "UNWIND $", "session.run(")
+    )

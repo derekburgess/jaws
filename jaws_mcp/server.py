@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,17 @@ from jaws.config import (
     get_neo4j_driver,
     is_cloud_hosted,
 )
-from jaws.domain import legacy_failure, legacy_success
+from jaws.domain import (
+    EndpointPacketSample,
+    EndpointPeerTraffic,
+    EndpointProfile,
+    EntityId,
+    OutlierStatus,
+    legacy_failure,
+    legacy_success,
+    utc_text,
+)
+from jaws.storage import Neo4jRepositories
 
 ROOT = Path(__file__).parent.parent  # /path/to/jaws/
 SCRIPTS = ROOT / "jaws"
@@ -136,6 +147,90 @@ def _script(name: str, *args: str) -> dict[str, Any]:
     return _run([sys.executable, str(SCRIPTS / name), *args])
 
 
+def _repositories() -> Neo4jRepositories:
+    return Neo4jRepositories.connect(get_neo4j_driver(), DATABASE)
+
+
+def _legacy_outlier(status: OutlierStatus) -> bool | None:
+    if status is OutlierStatus.OUTLIER:
+        return True
+    if status is OutlierStatus.INLIER:
+        return False
+    return None
+
+
+def _legacy_scope(profile: EndpointProfile) -> str | None:
+    return None if profile.legacy_scope == "legacy_unstamped" else profile.legacy_scope
+
+
+def _profile_payload(profile: EndpointProfile) -> dict[str, Any]:
+    return {
+        "ip_address": profile.identity.entity_id.value.removeprefix("ip:"),
+        "endpoint_type": profile.address_classification,
+        "capture_id": _legacy_scope(profile),
+        "org": profile.organization,
+        "hostname": profile.hostname,
+        "location": profile.location,
+        "bytes_out": profile.bytes_out,
+        "packets_out": profile.packets_out,
+        "out_peers": profile.out_peers,
+        "out_ports": list(profile.out_ports),
+        "bytes_in": profile.bytes_in,
+        "packets_in": profile.packets_in,
+        "in_peers": profile.in_peers,
+        "in_ports": list(profile.in_ports),
+        "protocols": list(profile.protocols),
+        "interval_mean": profile.interval_mean,
+        "interval_cv": profile.interval_cv,
+        "outlier": _legacy_outlier(profile.outlier),
+        "timestamp": utc_text(profile.computed_at) if profile.computed_at else None,
+    }
+
+
+def _history_payload(profile: EndpointProfile) -> dict[str, Any]:
+    return {
+        "capture_id": _legacy_scope(profile),
+        "bytes_out": profile.bytes_out,
+        "packets_out": profile.packets_out,
+        "out_peers": profile.out_peers,
+        "bytes_in": profile.bytes_in,
+        "packets_in": profile.packets_in,
+        "in_peers": profile.in_peers,
+        "interval_mean": profile.interval_mean,
+        "interval_cv": profile.interval_cv,
+        "outlier": _legacy_outlier(profile.outlier),
+    }
+
+
+def _peer_payload(peer: EndpointPeerTraffic) -> dict[str, Any]:
+    return {
+        "peer_ip": peer.peer.ip_address,
+        "peer_org": peer.peer.organization,
+        "peer_hostname": peer.peer.hostname,
+        "peer_location": peer.peer.location,
+        "bytes_out": peer.bytes_out,
+        "packets_out": peer.packets_out,
+        "bytes_in": peer.bytes_in,
+        "packets_in": peer.packets_in,
+        "bytes_total": peer.bytes_total,
+        "protocols": list(peer.protocols),
+        "service_ports": list(peer.service_ports),
+        "ephemeral_ports": peer.ephemeral_ports,
+    }
+
+
+def _packet_payload(packet: EndpointPacketSample) -> dict[str, Any]:
+    return {
+        "src_ip": packet.source_ip,
+        "src_port": packet.source_port,
+        "dst_ip": packet.destination_ip,
+        "dst_port": packet.destination_port,
+        "protocol": packet.protocol,
+        "size": packet.size_bytes,
+        "timestamp": utc_text(packet.observed_at),
+    }
+
+
 @mcp.tool(
     name="list_interfaces",
     description=(
@@ -169,23 +264,6 @@ def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
     )
 
 
-_CAPTURES_QUERY = """
-MATCH (c:CAPTURE)
-RETURN c.CAPTURE_ID AS capture_id, c.SOURCE AS source,
-       c.STARTED AS started, c.PACKETS AS packets
-ORDER BY c.STARTED DESC
-"""
-
-# Every profile set stored in the graph, newest-computed first. Profile sets accumulate
-# (one per compute run), so this is the per-endpoint history the anomaly baseline draws
-# on; the first row is the set the read tools and anomaly_detection default to.
-_PROFILED_QUERY = """
-MATCH (e:ENDPOINT)
-RETURN e.CAPTURE_ID AS session, count(e) AS endpoints, max(e.TIMESTAMP) AS computed
-ORDER BY computed DESC
-"""
-
-
 @mcp.tool(
     name="list_captures",
     description=(
@@ -203,19 +281,43 @@ ORDER BY computed DESC
 )
 def list_captures() -> dict[str, Any]:
     try:
-        driver = get_neo4j_driver()
-        with driver.session(database=DATABASE) as session:
-            captures = [record.data() for record in session.run(_CAPTURES_QUERY)]
-            profiled = [record.data() for record in session.run(_PROFILED_QUERY)]
+        repositories = _repositories()
+        captures = sorted(
+            repositories.captures.list_all(),
+            key=lambda record: (
+                record.started_at is not None,
+                record.started_at or record.registered_at,
+                record.capture_id.value,
+            ),
+            reverse=True,
+        )
+        profiled_scopes = repositories.profiles.list_scopes()
     except Exception as e:
         return legacy_failure(f"could not list captures ({e})")
-    captures = json.loads(json.dumps(captures, default=str))
-    profiled = json.loads(json.dumps(profiled, default=str))
+    capture_payloads = [
+        {
+            "capture_id": record.capture_id.value,
+            "source": record.source_name,
+            "started": utc_text(record.started_at) if record.started_at else None,
+            "packets": record.packet_count,
+        }
+        for record in captures
+    ]
+    profiled = [
+        {
+            "session": (
+                None if summary.legacy_scope == "legacy_unstamped" else summary.legacy_scope
+            ),
+            "endpoints": summary.profile_count,
+            "computed": utc_text(summary.computed_at) if summary.computed_at else None,
+        }
+        for summary in profiled_scopes
+    ]
     current = profiled[0]["session"] if profiled else None
     return legacy_success(
         {
-            "captures": captures,
-            "count": len(captures),
+            "captures": capture_payloads,
+            "count": len(capture_payloads),
             "profiled_session": current,
             "profiled_sessions": profiled,
             "baseline_sessions": len(
@@ -372,55 +474,6 @@ def drop_database() -> dict[str, Any]:
     return _script("jaws_utils.py")
 
 
-# Endpoint profiles ACCUMULATE, one set per capture session, so every profile read must
-# pin a session first — an unscoped MATCH returns the same IP once per session it was
-# ever seen in. This resolves the most recently COMPUTED set, which is what the pipeline
-# just produced and what anomaly_detection analyzes by default. The null branch covers a
-# legacy graph whose profiles predate session stamping.
-_LATEST_SCOPE = """
-CALL () {
-    MATCH (e:ENDPOINT)
-    RETURN e.CAPTURE_ID AS scope
-    ORDER BY e.TIMESTAMP DESC
-    LIMIT 1
-}
-"""
-
-# Ranked by total bytes, not recency: every profile in a compute run shares one
-# TIMESTAMP, so a recency sort is degenerate and `limit` would truncate arbitrarily.
-_FETCH_QUERY = (
-    _LATEST_SCOPE
-    + """
-MATCH (endpoint:ENDPOINT)
-WHERE (endpoint.CAPTURE_ID = scope OR (scope IS NULL AND endpoint.CAPTURE_ID IS NULL))
-  AND endpoint.TIMESTAMP > datetime() - duration({minutes: $duration})
-OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
-RETURN
-    endpoint.IP_ADDRESS AS ip_address,
-    endpoint.ENDPOINT_TYPE AS endpoint_type,
-    endpoint.CAPTURE_ID AS capture_id,
-    COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
-    COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
-    COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,
-    endpoint.BYTES_OUT AS bytes_out,
-    endpoint.PACKETS_OUT AS packets_out,
-    endpoint.OUT_PEERS AS out_peers,
-    endpoint.OUT_PORTS AS out_ports,
-    endpoint.BYTES_IN AS bytes_in,
-    endpoint.PACKETS_IN AS packets_in,
-    endpoint.IN_PEERS AS in_peers,
-    endpoint.IN_PORTS AS in_ports,
-    endpoint.PROTOCOLS AS protocols,
-    endpoint.INTERVAL_MEAN AS interval_mean,
-    endpoint.INTERVAL_CV AS interval_cv,
-    endpoint.OUTLIER AS outlier,
-    endpoint.TIMESTAMP AS timestamp
-ORDER BY endpoint.BYTES_OUT + endpoint.BYTES_IN DESC
-LIMIT $limit
-"""
-)
-
-
 @mcp.tool(
     name="fetch_traffic",
     description=(
@@ -444,15 +497,13 @@ LIMIT $limit
 )
 def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any]:
     try:
-        driver = get_neo4j_driver()
-        with driver.session(database=DATABASE) as session:
-            result = session.run(_FETCH_QUERY, duration=duration_minutes, limit=limit)
-            data = [record.data() for record in result]
+        profiles = _repositories().inspection.recent_profiles(
+            computed_after=datetime.now(UTC) - timedelta(minutes=duration_minutes),
+            limit=limit,
+        )
     except Exception as e:
         return legacy_failure(f"could not fetch endpoints ({e})")
-    # Round-trip through json with default=str to coerce Neo4j DateTime values into
-    # JSON-native strings, so MCPServer can serialize the returned dict cleanly.
-    endpoints = json.loads(json.dumps(data, default=str))
+    endpoints = [_profile_payload(profile) for profile in profiles]
     for endpoint in endpoints:
         endpoint["cloud_hosted"] = is_cloud_hosted(endpoint.get("org"))
     return legacy_success(
@@ -462,144 +513,6 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
             "duration_minutes": duration_minutes,
         }
     )
-
-
-# The join key back to detail: every PACKET node carries the full 5-tuple as
-# properties (SRC_IP/DST_IP/SRC_PORT/DST_PORT/PROTOCOL/SIZE/TIMESTAMP), so an IP is
-# directly addressable with no traversal. anomaly_detection / fetch_traffic hand back
-# an IP; these three queries turn that IP into its profile, its peer list, and a raw
-# packet sample.
-
-# One ENDPOINT (the aggregated profile) for a specific IP — the same fields
-# fetch_traffic returns, scoped to $ip. Empty when the IP was captured but
-# compute_embeddings hasn't run yet (the peers/packets below still resolve from raw
-# PACKET nodes in that case). Profiles accumulate per session, so this takes the IP's
-# most recently computed one; _INSPECT_HISTORY_QUERY returns the rest as a series.
-_INSPECT_PROFILE_QUERY = """
-MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
-WITH endpoint ORDER BY endpoint.TIMESTAMP DESC LIMIT 1
-OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip})<-[:OWNERSHIP]-(org:ORGANIZATION)
-RETURN
-    endpoint.IP_ADDRESS AS ip_address,
-    endpoint.ENDPOINT_TYPE AS endpoint_type,
-    endpoint.CAPTURE_ID AS capture_id,
-    COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION) AS org,
-    COALESCE(endpoint.HOSTNAME, ip.HOSTNAME) AS hostname,
-    COALESCE(endpoint.LOCATION, ip.LOCATION) AS location,
-    endpoint.BYTES_OUT AS bytes_out,
-    endpoint.PACKETS_OUT AS packets_out,
-    endpoint.OUT_PEERS AS out_peers,
-    endpoint.OUT_PORTS AS out_ports,
-    endpoint.BYTES_IN AS bytes_in,
-    endpoint.PACKETS_IN AS packets_in,
-    endpoint.IN_PEERS AS in_peers,
-    endpoint.IN_PORTS AS in_ports,
-    endpoint.PROTOCOLS AS protocols,
-    endpoint.INTERVAL_MEAN AS interval_mean,
-    endpoint.INTERVAL_CV AS interval_cv,
-    endpoint.OUTLIER AS outlier,
-    endpoint.TIMESTAMP AS timestamp
-"""
-
-# The same IP's profile in every session it was seen in, newest first — the timeseries
-# view that a single profile cannot give. This is what turns "is 2 GB a lot?" into "it
-# moved 40 MB in each of the last five sessions and 2 GB in this one", and what the
-# anomaly baseline is computed from, so an agent can audit a baselined finding rather
-# than take the score on faith. The pooled 'all' scope is excluded: it re-aggregates
-# every session at once, so it is not a point in the series.
-_INSPECT_HISTORY_QUERY = """
-MATCH (endpoint:ENDPOINT {IP_ADDRESS: $ip})
-WHERE endpoint.CAPTURE_ID IS NOT NULL AND endpoint.CAPTURE_ID <> 'all'
-RETURN endpoint.CAPTURE_ID AS capture_id,
-       endpoint.BYTES_OUT AS bytes_out,
-       endpoint.PACKETS_OUT AS packets_out,
-       endpoint.OUT_PEERS AS out_peers,
-       endpoint.BYTES_IN AS bytes_in,
-       endpoint.PACKETS_IN AS packets_in,
-       endpoint.IN_PEERS AS in_peers,
-       endpoint.INTERVAL_MEAN AS interval_mean,
-       endpoint.INTERVAL_CV AS interval_cv,
-       endpoint.OUTLIER AS outlier
-ORDER BY capture_id DESC
-LIMIT $history_limit
-"""
-
-# True totals for the IP across EVERY session in the graph (NOT truncated by the
-# peer/packet limits below), so the caller knows when the returned lists are samples.
-# The profile above is scoped to one session, so totals can legitimately exceed it —
-# the payload labels this with totals.scope so the mismatch doesn't read as a bug.
-_INSPECT_TOTALS_QUERY = """
-MATCH (p:PACKET)
-WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
-RETURN count(p) AS packets,
-       count(DISTINCT CASE WHEN p.SRC_IP = $ip THEN p.DST_IP ELSE p.SRC_IP END) AS peers
-"""
-
-# The conversation breakdown: every other IP this one exchanged packets with, split by
-# direction (outbound = this IP is the source). This is the handle the profile lacks —
-# it stores OUT_PEERS as a count, never which peers. Ranked by total bytes so the
-# heaviest conversations surface first.
-# Ports are split by role via the flow heuristic: per packet, the service-identifying
-# side is min(src, dst) — ephemeral client ports are allocated high (Linux default
-# 32768+), so a naive src∪dst union balloons with one throwaway port per connection
-# across sessions while burying the one port that says what the conversation IS. The
-# high side is collected only to be counted (churn signal); exact per-packet ports
-# remain available in the `packets` sample. Port-0 placeholders (no TCP/UDP layer)
-# yield null from the guarded CASE and collect() skips nulls.
-_INSPECT_PEERS_QUERY = """
-MATCH (p:PACKET)
-WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
-WITH p,
-     CASE WHEN p.SRC_IP = $ip THEN p.DST_IP ELSE p.SRC_IP END AS peer,
-     (p.SRC_IP = $ip) AS outbound
-WITH peer,
-     sum(CASE WHEN outbound THEN p.SIZE ELSE 0 END) AS bytes_out,
-     sum(CASE WHEN outbound THEN 1 ELSE 0 END) AS packets_out,
-     sum(CASE WHEN NOT outbound THEN p.SIZE ELSE 0 END) AS bytes_in,
-     sum(CASE WHEN NOT outbound THEN 1 ELSE 0 END) AS packets_in,
-     collect(DISTINCT p.PROTOCOL) AS protocols,
-     collect(DISTINCT CASE WHEN p.SRC_PORT > 0 AND p.DST_PORT > 0
-                           THEN CASE WHEN p.SRC_PORT < p.DST_PORT THEN p.SRC_PORT ELSE p.DST_PORT END
-                      END) AS service_ports,
-     collect(DISTINCT CASE WHEN p.SRC_PORT > 0 AND p.DST_PORT > 0
-                           THEN CASE WHEN p.SRC_PORT < p.DST_PORT THEN p.DST_PORT ELSE p.SRC_PORT END
-                      END) AS high_ports
-OPTIONAL MATCH (peer_ip:IP_ADDRESS {IP_ADDRESS: peer})<-[:OWNERSHIP]-(peer_org:ORGANIZATION)
-RETURN peer AS peer_ip,
-       peer_org.ORGANIZATION AS peer_org,
-       peer_ip.HOSTNAME AS peer_hostname,
-       peer_ip.LOCATION AS peer_location,
-       bytes_out, packets_out, bytes_in, packets_in,
-       (bytes_out + bytes_in) AS bytes_total,
-       protocols, service_ports, high_ports
-ORDER BY bytes_total DESC
-LIMIT $peer_limit
-"""
-
-# A raw, most-recent packet sample for the IP — for inspecting a specific conversation
-# at 5-tuple granularity once the peer breakdown points somewhere interesting.
-_INSPECT_PACKETS_QUERY = """
-MATCH (p:PACKET)
-WHERE p.SRC_IP = $ip OR p.DST_IP = $ip
-RETURN p.SRC_IP AS src_ip, p.SRC_PORT AS src_port,
-       p.DST_IP AS dst_ip, p.DST_PORT AS dst_port,
-       p.PROTOCOL AS protocol, p.SIZE AS size,
-       p.TIMESTAMP AS timestamp
-ORDER BY p.TIMESTAMP DESC
-LIMIT $packet_limit
-"""
-
-
-def _split_ports(service_ports, high_ports) -> tuple[list[int], int]:
-    """Turn the query's per-role port collections into (service_ports, ephemeral count).
-
-    A port equal on both sides of a packet (e.g. NTP 123↔123) lands in both
-    collections; subtracting the service set keeps it from double-counting as
-    ephemeral churn.
-    """
-    service = sorted(int(p) for p in (service_ports or []) if p)
-    ephemeral = {int(p) for p in (high_ports or []) if p} - set(service)
-    return service, len(ephemeral)
 
 
 @mcp.tool(
@@ -635,75 +548,39 @@ def inspect_endpoint(
     ip_address: str, peer_limit: int = 50, packet_limit: int = 20, history_limit: int = 20
 ) -> dict[str, Any]:
     try:
-        driver = get_neo4j_driver()
-        with driver.session(database=DATABASE) as session:
-            profile_rows = [r.data() for r in session.run(_INSPECT_PROFILE_QUERY, ip=ip_address)]
-            totals = session.run(_INSPECT_TOTALS_QUERY, ip=ip_address).single()
-            peer_rows = [
-                r.data()
-                for r in session.run(_INSPECT_PEERS_QUERY, ip=ip_address, peer_limit=peer_limit)
-            ]
-            packet_rows = [
-                r.data()
-                for r in session.run(
-                    _INSPECT_PACKETS_QUERY, ip=ip_address, packet_limit=packet_limit
-                )
-            ]
-            history_rows = [
-                r.data()
-                for r in session.run(
-                    _INSPECT_HISTORY_QUERY, ip=ip_address, history_limit=history_limit
-                )
-            ]
+        inspection = _repositories().inspection.inspect(
+            EntityId(f"ip:{ip_address}"),
+            peer_limit=peer_limit,
+            packet_limit=packet_limit,
+            history_limit=history_limit,
+        )
     except Exception as e:
         return legacy_failure(f"could not inspect endpoint {ip_address!r} ({e})")
 
-    peers = []
-    for r in peer_rows:
-        service_ports, ephemeral_ports = _split_ports(r["service_ports"], r["high_ports"])
-        peers.append(
-            {
-                "peer_ip": r["peer_ip"],
-                "peer_org": r["peer_org"],
-                "peer_hostname": r["peer_hostname"],
-                "peer_location": r["peer_location"],
-                "bytes_out": r["bytes_out"],
-                "packets_out": r["packets_out"],
-                "bytes_in": r["bytes_in"],
-                "packets_in": r["packets_in"],
-                "bytes_total": r["bytes_total"],
-                "protocols": sorted(p for p in (r["protocols"] or []) if p),
-                "service_ports": service_ports,
-                "ephemeral_ports": ephemeral_ports,
-            }
-        )
-
-    total_packets = totals["packets"] if totals else 0
-    total_peers = totals["peers"] if totals else 0
-
-    profile = profile_rows[0] if profile_rows else None
+    profile = _profile_payload(inspection.profile) if inspection.profile else None
     if profile:
         profile["cloud_hosted"] = is_cloud_hosted(profile.get("org"))
 
     payload = {
         "ip_address": ip_address,
         # True if the IP appears anywhere in the capture (raw packets) or as a profile.
-        "found": bool(total_packets > 0 or profile_rows),
+        "found": inspection.found,
         "profile": profile,
-        "totals": {"packets": total_packets, "peers": total_peers, "scope": "all_sessions"},
+        "totals": {
+            "packets": inspection.total_packets,
+            "peers": inspection.total_peers,
+            "scope": "all_sessions",
+        },
         # This IP's profile in each session it was seen in, newest first — the series the
         # anomaly baseline is derived from, so a "far above its own history" finding can
         # be checked against the actual numbers.
-        "history": history_rows,
-        "sessions_seen": len(history_rows),
-        "peers": peers,
-        "peers_returned": len(peers),
-        "packets": packet_rows,
-        "packets_returned": len(packet_rows),
+        "history": [_history_payload(record) for record in inspection.history],
+        "sessions_seen": len(inspection.history),
+        "peers": [_peer_payload(record) for record in inspection.peers],
+        "peers_returned": len(inspection.peers),
+        "packets": [_packet_payload(record) for record in inspection.packets],
+        "packets_returned": len(inspection.packets),
     }
-    # Coerce Neo4j DateTime values (in profile.timestamp and each packet) to strings so
-    # MCPServer can serialize the dict cleanly, matching fetch_traffic.
-    payload = json.loads(json.dumps(payload, default=str))
     return legacy_success(payload)
 
 

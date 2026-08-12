@@ -15,6 +15,7 @@ from jaws.domain import (
     CaptureRecord,
     CaptureSourceKind,
     CaptureState,
+    EndpointInspection,
     EndpointProfile,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -199,6 +200,17 @@ def test_enrichment_and_profile_records_separate_provider_and_researcher_evidenc
     assert profile.protocols == ("TCP",)
     assert profile.out_ports == (443,)
     assert profile.outlier is OutlierStatus.NOT_SCORED
+    inspection = EndpointInspection(
+        entity_id=entity_id,
+        profile=profile,
+        total_packets=0,
+        total_peers=0,
+    )
+    assert inspection.found
+    with pytest.raises(ValueError, match="normalized IP address"):
+        replace(inspection, entity_id=EntityId("ip:2001:0db8::1"))
+    with pytest.raises(ValueError, match="requested entity"):
+        replace(inspection, entity_id=EntityId("ip:8.8.8.8"))
     with pytest.raises(ValueError, match="unsuccessful"):
         replace(enrichment, status=EnrichmentStatus.NOT_FOUND)
     with pytest.raises(ValueError, match="successful enrichment requires"):

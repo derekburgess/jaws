@@ -34,6 +34,7 @@ from jaws.ports import (
 from jaws.ports.repositories import capture_metadata
 
 from .migrations import manager
+from .neo4j_inspection_repository import Neo4jInspectionRepository
 from .neo4j_profile_repositories import Neo4jEnrichmentRepository, Neo4jProfileRepository
 
 ResultT = TypeVar("ResultT")
@@ -485,6 +486,7 @@ class Neo4jRepositories:
     packets: Neo4jPacketRepository
     enrichment: Neo4jEnrichmentRepository
     profiles: Neo4jProfileRepository
+    inspection: Neo4jInspectionRepository
 
     @classmethod
     def connect(cls, driver: object, database: str) -> Self:
@@ -497,4 +499,5 @@ class Neo4jRepositories:
             packets=Neo4jPacketRepository(driver, database),
             enrichment=Neo4jEnrichmentRepository(driver, database),
             profiles=Neo4jProfileRepository(driver, database),
+            inspection=Neo4jInspectionRepository(driver, database),
         )

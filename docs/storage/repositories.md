@@ -74,3 +74,22 @@ Pooled `all` is represented by `scope_pooled_all` and returns no history. Unstam
 profiles are retained in `scope_legacy_unstamped` with `legacy_quarantined` status.
 Version-aware writers require a computation timestamp and canonical `PROFILE_KEY`; readers
 may expose quarantined/unversioned records without inventing missing provenance.
+
+## InspectionRepository
+
+`InspectionRepository` owns optimized, read-only projections used by overview and endpoint
+drill-down interfaces. `recent_profiles` selects the most recently computed profile set,
+applies an explicit computation-time lower bound, ranks by total traffic, and enforces a
+row limit. `inspect` returns one IP's latest profile, chronological concrete-scope history,
+all-session packet/peer totals, bounded peer aggregates, and a bounded newest-packet sample.
+
+The projection retains legacy directionality: outbound means the inspected endpoint is the
+packet source. Peer service ports use the low-side flow heuristic while distinct high-side
+ports are exposed only as an ephemeral-port churn count. Metadata attached to profiles wins;
+entity metadata is a display-only fallback. Cypher and Neo4j value decoding remain inside
+the storage adapter, while MCP owns only compatibility serialization and cloud-host hints.
+
+The in-memory implementation composes `ProfileRepository`, `PacketRepository`, and
+`EnrichmentRepository`. Both implementations run through the same behavioral contract,
+including limits, missing endpoints, metadata fallback, history order, port roles, and
+directional byte counts.

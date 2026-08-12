@@ -4,6 +4,7 @@ import os
 from datetime import UTC, datetime
 
 import pytest
+from inspection_repository_contract import assert_inspection_repository_contract
 from profile_repository_contract import assert_enrichment_and_profile_repository_contract
 from repository_contract import assert_capture_and_packet_repository_contract
 
@@ -53,12 +54,19 @@ def _reset_migration_fixture(driver, database):
             "WHERE capture.CAPTURE_ID STARTS WITH 'cap_migration_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
+            "   OR capture.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
             "DETACH DELETE capture"
         ).consume()
         session.run(
             "MATCH (packet:PACKET) "
             "WHERE packet.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
+            "   OR packet.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
             "DETACH DELETE packet"
+        ).consume()
+        session.run(
+            "MATCH (endpoint:ENDPOINT) "
+            "WHERE endpoint.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
+            "DETACH DELETE endpoint"
         ).consume()
         session.run(
             "MATCH (scope:OBSERVATION_SCOPE) "
@@ -67,16 +75,19 @@ def _reset_migration_fixture(driver, database):
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_migration_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_repository_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_profile_fixture' "
+            "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_inspection_fixture' "
             "DETACH DELETE scope"
         ).consume()
         session.run(
             "MATCH (port:PORT) "
-            "WHERE port.IP_ADDRESS IN ['192.0.2.10', '198.51.100.20'] "
+            "WHERE port.IP_ADDRESS IN ["
+            "'192.0.2.10', '198.51.100.20', '203.0.113.30'] "
             "DETACH DELETE port"
         ).consume()
         session.run(
             "MATCH (address:IP_ADDRESS) "
-            "WHERE address.IP_ADDRESS IN ['192.0.2.10', '198.51.100.20'] "
+            "WHERE address.IP_ADDRESS IN ["
+            "'192.0.2.10', '198.51.100.20', '203.0.113.30'] "
             "DETACH DELETE address"
         ).consume()
         session.run("MATCH (n:JAWS_SCHEMA_MIGRATION) DETACH DELETE n").consume()
@@ -237,6 +248,15 @@ def test_enrichment_and_profile_repositories_follow_shared_contract(
     repositories = Neo4jRepositories.connect(driver, database)
 
     assert_enrichment_and_profile_repository_contract(repositories)
+
+
+def test_inspection_repository_follows_shared_contract(disposable_migration_database):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+
+    repositories = Neo4jRepositories.connect(driver, database)
+
+    assert_inspection_repository_contract(repositories)
 
 
 def test_profile_history_repository_orders_opaque_ids_by_capture_time(

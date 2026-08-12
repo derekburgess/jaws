@@ -35,6 +35,7 @@ from .identifiers import (
     RunId,
     SchemaVersion,
 )
+from .inspection import EndpointInspection, EndpointPacketSample, EndpointPeerTraffic
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
 from .packets import PacketRecord
 from .profiles import EndpointProfile, ProfileScopeSummary
@@ -75,6 +76,9 @@ __all__ = [
     "EntityId",
     "EntityType",
     "EndpointProfile",
+    "EndpointInspection",
+    "EndpointPacketSample",
+    "EndpointPeerTraffic",
     "EnrichmentRecord",
     "EntityMetadata",
     "EnrichmentStatus",

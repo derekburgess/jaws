@@ -34,10 +34,11 @@ beside the contracts because service unit tests need the same lightweight instal
 `jaws.storage` is an outer infrastructure package. It depends inward on domain and port
 contracts; its repository adapters accept driver-compatible objects without importing the
 optional Neo4j package, so migration and repository records remain importable in a core
-installation. Schema and evidence Cypher belong here. Capture, enrichment, compute, and
-finder now consume the repository bundle for their graph operations; none of those command
-modules owns Cypher. MCP inspection still has direct queries and is the next compatibility
-adapter to move behind the same boundary.
+installation. Schema and evidence Cypher belong here. Capture, enrichment, compute, finder,
+and MCP inspection now consume the repository bundle for their graph operations; none of
+those interface modules owns Cypher. The remaining direct administration queries in
+`jaws_utils.py` move behind guarded retention/export/administration services in the next
+Milestone 2 slices.
 
 `jaws.adapters` contains outer implementations of inward ports. Its standard runtime clock
 and UUID capture-ID generator import only domain contracts and the standard library; later

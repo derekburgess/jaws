@@ -24,6 +24,7 @@ from .fakes import (
     SequenceIdGenerator,
     SequencePacketSource,
 )
+from .inspection_fakes import InMemoryInspectionRepository
 from .profile_fakes import InMemoryEnrichmentRepository, InMemoryProfileRepository
 from .repositories import (
     CaptureNotFoundError,
@@ -33,6 +34,7 @@ from .repositories import (
     EnrichmentRepository,
     EntityNotFoundError,
     InactiveCaptureError,
+    InspectionRepository,
     PacketRepository,
     ProfileRepository,
     ProfileScopeConflictError,
@@ -65,9 +67,11 @@ __all__ = [
     "InMemoryCaptureRepository",
     "InMemoryEvidenceStore",
     "InMemoryEnrichmentRepository",
+    "InMemoryInspectionRepository",
     "InMemoryPacketRepository",
     "InMemoryProfileRepository",
     "InactiveCaptureError",
+    "InspectionRepository",
     "PacketSource",
     "PacketRepository",
     "ProfileRepository",
