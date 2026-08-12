@@ -23,7 +23,9 @@ no packets. Writes to missing or terminal captures fail. An empty append is a no
 
 Reads require an `ObservationWindow`, preserve its declared capture order, sort packets by
 original observation time within each capture, and apply inclusive optional start/end
-bounds. The repository does not infer an imported capture's host perspective.
+bounds. `read_all` is the explicit pooled-evidence operation and returns a deterministic
+global evidence-time order, including packets whose capture catalog entry is unavailable.
+The repository does not infer an imported capture's host perspective.
 
 `PacketRecord` normalizes IPv4/IPv6 text, uses aware UTC datetimes, expresses missing
 transport ports as `None`, and retains the existing payload text when present. The Neo4j
@@ -49,6 +51,11 @@ provider records, researcher annotations, and targeted legacy-`Unknown` cleanup.
 records distinguish successful, not-applicable, not-found, transient-failure, and
 permanent-failure outcomes. Only transient failures remain pending after a recorded
 attempt. Provider fields and researcher annotations are never merged into one record.
+
+`list_metadata` is a compatibility read projection for organization, hostname, location,
+and coordinates already attached to IP entities. It may include local-host or legacy
+ownership labels with no provider provenance, so it is never returned as or promoted into
+an `EnrichmentRecord`.
 
 The compatibility adapter continues to write `OWNERSHIP`, `HOSTNAME`, `LOCATION`, and
 `COORDINATES`, while also storing provider ID/revision, acquisition time, outcome, ASN,

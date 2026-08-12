@@ -14,9 +14,11 @@ from jaws.config import (
     get_openai_client,
 )
 from jaws.domain import (
+    CaptureId,
     EndpointProfile,
     EntityId,
     ObservationScopeId,
+    ObservationWindow,
     ProfileIdentity,
     ProfileStatus,
 )
@@ -32,27 +34,35 @@ from jaws.optional_dependencies import require_module
 from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 
-def fetch_packets(driver, database, capture_id=None):
+def fetch_packets(driver, database, capture_id=None, repository=None):
     # PACKET nodes carry the 5-tuple + size as properties, so per-IP aggregation
     # reads straight off them (one scan) — no traversal needed. `capture_id` scopes
     # the scan to one session; None means every packet in the graph (--session all,
     # or a legacy graph with no CAPTURE nodes).
-    query = """
-    MATCH (p:PACKET)
-    WHERE $capture_id IS NULL OR p.CAPTURE_ID = $capture_id
-    RETURN p.SRC_IP AS src_ip, p.DST_IP AS dst_ip,
-           p.SRC_PORT AS src_port, p.DST_PORT AS dst_port,
-           p.SIZE AS size, p.PROTOCOL AS protocol,
-           p.TIMESTAMP.epochMillis AS ts_ms,
-           p.CAPTURE_ID AS capture_id
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query, capture_id=capture_id)
-        df = pd.DataFrame([record.data() for record in result])
-    return df
+    repository = repository or Neo4jRepositories.connect(driver, database).packets
+    records = (
+        repository.read(ObservationWindow(capture_ids=(CaptureId(capture_id),)))
+        if capture_id is not None
+        else repository.read_all()
+    )
+    return pd.DataFrame(
+        [
+            {
+                "src_ip": record.source_ip,
+                "dst_ip": record.destination_ip,
+                "src_port": record.source_port,
+                "dst_port": record.destination_port,
+                "size": record.size_bytes,
+                "protocol": record.protocol,
+                "ts_ms": int(record.observed_at.timestamp() * 1000),
+                "capture_id": record.capture_id.value,
+            }
+            for record in records
+        ]
+    )
 
 
-def resolve_session(driver, database, session_arg):
+def resolve_session(driver, database, session_arg, repository=None):
     """Turn --session (latest | all | <capture id>) into a concrete packet scope.
 
     Returns (capture_id, session_ids): `capture_id` is the concrete session to filter
@@ -60,9 +70,15 @@ def resolve_session(driver, database, session_arg):
     nodes); `session_ids` is every session in the graph, oldest first, so callers can
     report what was available. Raises ValueError for an explicit id that doesn't exist.
     """
-    query = "MATCH (c:CAPTURE) RETURN c.CAPTURE_ID AS id ORDER BY c.STARTED"
-    with driver.session(database=database) as session:
-        session_ids = [record["id"] for record in session.run(query)]
+    repository = repository or Neo4jRepositories.connect(driver, database).captures
+    captures = sorted(
+        repository.list_all(),
+        key=lambda record: (
+            record.started_at or record.registered_at,
+            record.capture_id.value,
+        ),
+    )
+    session_ids = [record.capture_id.value for record in captures]
     if session_arg == "all":
         return None, session_ids
     if session_arg == "latest":
@@ -76,20 +92,19 @@ def resolve_session(driver, database, session_arg):
     return session_arg, session_ids
 
 
-def fetch_ip_metadata(driver, database):
+def fetch_ip_metadata(driver, database, repository=None):
     # Org/hostname/location per IP, set by jaws_ipinfo (org name on the org node,
     # hostname/location on the IP node).
-    query = """
-    MATCH (ip:IP_ADDRESS)
-    OPTIONAL MATCH (ip)<-[:OWNERSHIP]-(org:ORGANIZATION)
-    RETURN ip.IP_ADDRESS AS ip_address,
-           org.ORGANIZATION AS org,
-           ip.HOSTNAME AS hostname,
-           ip.LOCATION AS location
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query)
-        return {record["ip_address"]: record.data() for record in result}
+    repository = repository or Neo4jRepositories.connect(driver, database).enrichment
+    return {
+        record.ip_address: {
+            "ip_address": record.ip_address,
+            "org": record.organization,
+            "hostname": record.hostname,
+            "location": record.location,
+        }
+        for record in repository.list_metadata()
+    }
 
 
 def endpoint_timing(ts_groups):
@@ -394,14 +409,16 @@ def main():
         return
 
     try:
-        profile_repository = Neo4jRepositories.connect(driver, args.database).profiles
+        repositories = Neo4jRepositories.connect(driver, args.database)
     except Exception as e:
         reporter.error("ERROR", str(e))
         driver.close()
         return
 
     try:
-        capture_id, session_ids = resolve_session(driver, args.database, args.session)
+        capture_id, session_ids = resolve_session(
+            driver, args.database, args.session, repositories.captures
+        )
     except ValueError as e:
         reporter.error("ERROR", str(e))
         driver.close()
@@ -413,8 +430,8 @@ def main():
         "CONFIG", f"Profiling session: {session_scope} ({len(session_ids)} session(s) in graph)"
     )
 
-    packets = fetch_packets(driver, args.database, capture_id)
-    metadata = fetch_ip_metadata(driver, args.database)
+    packets = fetch_packets(driver, args.database, capture_id, repositories.packets)
+    metadata = fetch_ip_metadata(driver, args.database, repositories.enrichment)
     profiles = build_endpoint_profiles(packets, metadata)
 
     model_name = PACKET_MODELS[args.model] if args.api == "transformers" else OPENAI_EMBEDDING_MODEL
@@ -461,12 +478,12 @@ def main():
             model_name,
             driver,
             args.database,
-            profile_repository,
+            repositories.profiles,
         )
 
         # Retention runs after the write so this run's own set is always among the kept.
         pruned, pruned_scopes = prune_profile_sessions(
-            driver, args.database, args.retain_profiles, profile_repository
+            driver, args.database, args.retain_profiles, repositories.profiles
         )
         if pruned:
             reporter.info(
@@ -476,7 +493,7 @@ def main():
 
         # Profile sets now in the graph — how much per-endpoint history jaws-finder can
         # baseline against (1 means this run only: no history yet, baseline is a no-op).
-        profiled_scopes = count_profile_sessions(driver, args.database, profile_repository)
+        profiled_scopes = count_profile_sessions(driver, args.database, repositories.profiles)
         reporter.result(
             {
                 "database": args.database,

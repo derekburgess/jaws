@@ -8,7 +8,7 @@ from .captures import (
     ProfileIdentity,
     capture_scope_id,
 )
-from .enrichment import EnrichmentRecord, ResearcherAnnotation, normalized_ip
+from .enrichment import EnrichmentRecord, EntityMetadata, ResearcherAnnotation, normalized_ip
 from .enums import (
     CaptureSourceKind,
     CaptureState,
@@ -76,6 +76,7 @@ __all__ = [
     "EntityType",
     "EndpointProfile",
     "EnrichmentRecord",
+    "EntityMetadata",
     "EnrichmentStatus",
     "ErrorCategory",
     "EvidencePointer",

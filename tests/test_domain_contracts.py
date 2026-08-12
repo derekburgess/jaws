@@ -20,6 +20,7 @@ from jaws.domain import (
     EnrichmentStatus,
     EntityDefinition,
     EntityId,
+    EntityMetadata,
     EntityType,
     EvidencePointer,
     ExperimentSpec,
@@ -188,6 +189,12 @@ def test_enrichment_and_profile_records_separate_provider_and_researcher_evidenc
     )
 
     assert enrichment.ip_address == "2001:db8::1"
+    metadata = EntityMetadata(
+        entity_id=entity_id,
+        ip_address="2001:0db8::1",
+        organization=" Example ",
+    )
+    assert metadata.organization == "Example"
     assert annotation.ground_truth
     assert profile.protocols == ("TCP",)
     assert profile.out_ports == (443,)

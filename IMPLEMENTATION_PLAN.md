@@ -3,7 +3,7 @@
 | Plan field | Value |
 | --- | --- |
 | Status | Active |
-| Last reviewed | 2026-08-05 |
+| Last reviewed | 2026-08-12 |
 | Integration branch | `codex/readme-research-workbench` |
 | Starting documentation revision | `497f15a` |
 | Starting code revision | `0b68a8c` (the two later commits change only `README.md`) |
@@ -71,9 +71,9 @@ This inventory is the baseline for the plan. It should be updated when a milesto
 | Operation | Current implementation | Primary coupling |
 | --- | --- | --- |
 | Capture/import | `jaws/jaws_capture.py` | PyShark, local host discovery, Neo4j writes, CLI rendering |
-| Enrichment | `jaws/jaws_ipinfo.py` | IPinfo client, endpoint classification, Neo4j writes |
-| Profile/embed | `jaws/jaws_compute.py` | Neo4j reads/writes, pandas, feature aggregation, local/OpenAI embeddings, retention |
-| Compare/rank/explain | `jaws/jaws_finder.py` | Neo4j queries, feature engineering, historical reference logic, PCA/DBSCAN, scoring, explanations, plots, CLI |
+| Enrichment | `jaws/jaws_ipinfo.py` | IPinfo client, endpoint classification, repository writes |
+| Profile/embed | `jaws/jaws_compute.py` | Repositories, pandas, feature aggregation, local/OpenAI embeddings, retention |
+| Compare/rank/explain | `jaws/jaws_finder.py` | Repositories, feature engineering, historical reference logic, PCA/DBSCAN, scoring, explanations, plots, CLI |
 | Inspect/orchestrate | `jaws_mcp/server.py` | FastMCP, CLI subprocesses, direct Cypher, duplicated interface documentation |
 | Configuration/schema/admin | `jaws/config.py`, `jaws/jaws_utils.py` | environment loading, clients, output, schema creation, model download, destructive reset |
 | Runtime | `harbor/Dockerfile`, `ocean/Dockerfile` | unpinned images, build-time secrets, source cloned from `main`, idle process |
@@ -1225,10 +1225,26 @@ ownership plus database versions 1–3 now cover evidence identity, lifecycle, e
 provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
-implementations. The next active Milestone 2 slice is retention/export/administration and
-the remaining Cypher centralization needed by finder inspection and MCP.
+implementations. Capture, enrichment, compute, and finder contain no Cypher. The next
+active Milestone 2 slice is MCP inspection/query centralization, followed by declared
+retention, export/import, and guarded administration.
 
 ## Change log
+
+### 2026-08-12 — Milestone 2 CLI read-side repository centralization
+
+- Added a provider-neutral `EntityMetadata` compatibility projection without promoting
+  legacy/local ownership labels into provider enrichment claims.
+- Extended packet repositories with deterministic pooled reads and enrichment
+  repositories with metadata projections; the shared fake/Neo4j contracts cover both.
+- Routed compute capture selection, packet reads, and metadata reads through repositories.
+  Routed finder profile populations, port plotting evidence, and host-outbound packet
+  aggregation through the same bundle. Both CLI modules now contain zero Cypher.
+- Kept aggregation and directionality deterministic in Python, added offline parity tests
+  for opaque capture chronology and local/remote traffic, and retained every frozen CLI
+  envelope.
+- Passed 157 offline tests, strict types, Ruff format/lint, report-only Recall@3 at 5/5,
+  and seven integration tests against disposable pinned Neo4j 5.26.28.
 
 ### 2026-08-12 — Milestone 2 enrichment and profile repositories
 

@@ -82,6 +82,9 @@ def assert_enrichment_and_profile_repository_contract(repositories):
     )
     repositories.enrichment.put(enrichment)
     assert repositories.enrichment.get(first_entity) == enrichment
+    metadata = {record.entity_id: record for record in repositories.enrichment.list_metadata()}
+    assert metadata[first_entity].organization == "Example Networks"
+    assert metadata[first_entity].hostname == "fixture.example"
 
     transient = EnrichmentRecord(
         entity_id=second_entity,

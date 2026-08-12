@@ -99,3 +99,28 @@ class ResearcherAnnotation:
                 raise ValueError(f"annotation {field_name} cannot be empty")
             object.__setattr__(self, field_name, value)
         object.__setattr__(self, "recorded_at", normalize_utc(self.recorded_at))
+
+
+@dataclass(frozen=True, slots=True)
+class EntityMetadata:
+    """Compatibility projection of display metadata attached to one IP entity.
+
+    This view is deliberately not an enrichment observation: legacy ownership and local
+    host markers may have no provider provenance. Provider claims remain authoritative in
+    :class:`EnrichmentRecord`.
+    """
+
+    entity_id: EntityId
+    ip_address: str
+    organization: str | None = None
+    hostname: str | None = None
+    location: str | None = None
+    coordinates: str | None = None
+
+    def __post_init__(self) -> None:
+        address = normalized_ip(self.ip_address)
+        if self.entity_id != EntityId(f"ip:{address}"):
+            raise ValueError("metadata entity_id must match its normalized IP address")
+        object.__setattr__(self, "ip_address", address)
+        for field_name in ("organization", "hostname", "location", "coordinates"):
+            object.__setattr__(self, field_name, _optional_text(getattr(self, field_name)))

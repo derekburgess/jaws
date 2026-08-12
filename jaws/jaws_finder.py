@@ -11,7 +11,14 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
-from jaws.domain import EntityId, ObservationScopeId, OutlierStatus, ProfileStatus
+from jaws.domain import (
+    CaptureId,
+    EntityId,
+    ObservationScopeId,
+    ObservationWindow,
+    OutlierStatus,
+    ProfileStatus,
+)
 from jaws.jaws_utils import (
     MIN_TIMING_PACKETS,
     NON_CONVERSATIONAL_TYPES,
@@ -680,97 +687,86 @@ def fetch_endpoint_history(driver, database, scope, repository=None):
     return history
 
 
-def fetch_data_for_dbscan(driver, database, include_local=False, scope=None):
+def fetch_data_for_dbscan(
+    driver,
+    database,
+    include_local=False,
+    scope=None,
+    profile_repository=None,
+    enrichment_repository=None,
+):
     # Scoped to ONE profile set: profiles accumulate per session, so an unscoped match
     # would return the same IP once per session it was ever seen in and cluster an
     # endpoint against its own past selves. scope=None only happens on a legacy graph
     # whose profiles predate session stamping, where one generation is all there is.
-    query = """
-    MATCH (endpoint:ENDPOINT)
-    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
-    WITH endpoint
-    WHERE coalesce(endpoint.PROFILE_STATUS, 'legacy_unversioned') <> 'legacy_quarantined'
-    OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
-    RETURN endpoint.IP_ADDRESS AS ip_address,
-           endpoint.CAPTURE_ID AS capture_id,
-           COALESCE(endpoint.ORGANIZATION, org.ORGANIZATION, 'Unknown') AS org,
-           COALESCE(endpoint.HOSTNAME, ip.HOSTNAME, 'Unknown') AS hostname,
-           COALESCE(endpoint.LOCATION, ip.LOCATION, 'Unknown') AS location,
-           endpoint.BYTES_OUT AS bytes_out,
-           endpoint.PACKETS_OUT AS packets_out,
-           endpoint.OUT_PEERS AS out_peers,
-           endpoint.BYTES_IN AS bytes_in,
-           endpoint.PACKETS_IN AS packets_in,
-           endpoint.IN_PEERS AS in_peers,
-           endpoint.INTERVAL_MEAN AS interval_mean,
-           endpoint.INTERVAL_CV AS interval_cv,
-           endpoint.EMBEDDING AS embedding
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query, scope=scope)
-        embeddings = []
-        data = []
-        excluded_local = 0
-        excluded_non_conversational = []
-        for record in result:
-            if record["embedding"] is not None:  # Only process endpoints with embeddings
-                if not include_local and record["org"] == LOCAL_ORG:
-                    excluded_local += 1
-                    continue
-                ip_address = record["ip_address"] or "Unknown"
-                # Multicast/broadcast destinations never reply, so their profiles are
-                # one-way protocol chatter (SSDP/mDNS) whose out/in shape reads as
-                # exfil. They stay in the graph (tagged, inspectable) but are not
-                # clustered or ranked. Classified here from the IP rather than the
-                # stored ENDPOINT_TYPE so graphs computed before the tag existed are
-                # filtered too.
-                endpoint_type = classify_endpoint(ip_address)
-                if endpoint_type in NON_CONVERSATIONAL_TYPES:
-                    excluded_non_conversational.append(
-                        {"ip_address": ip_address, "endpoint_type": endpoint_type}
-                    )
-                    continue
-                embeddings.append(np.array(record["embedding"]))
-                data.append(
-                    {
-                        "ip_address": ip_address,
-                        "endpoint_type": endpoint_type,
-                        # Session scope this profile was computed from ('all', a concrete
-                        # CAPTURE_ID, or None on graphs computed before sessions existed).
-                        "capture_id": record["capture_id"],
-                        "org": record["org"] or "Unknown",
-                        "hostname": record["hostname"] or "Unknown",
-                        "location": record["location"] or "Unknown",
-                        "bytes_out": record["bytes_out"] or 0,
-                        "packets_out": record["packets_out"] or 0,
-                        "out_peers": record["out_peers"] or 0,
-                        "bytes_in": record["bytes_in"] or 0,
-                        "packets_in": record["packets_in"] or 0,
-                        "in_peers": record["in_peers"] or 0,
-                        # None when the endpoint had too few packets to time — kept as
-                        # None so build_numeric_features median-imputes it.
-                        "interval_mean": record["interval_mean"],
-                        "interval_cv": record["interval_cv"],
-                    }
-                )
-        return embeddings, data, excluded_local, excluded_non_conversational
+    profile_repository = profile_repository or Neo4jProfileRepository(driver, database)
+    enrichment_repository = (
+        enrichment_repository or Neo4jRepositories.connect(driver, database).enrichment
+    )
+    metadata = {record.entity_id: record for record in enrichment_repository.list_metadata()}
+    embeddings = []
+    data = []
+    excluded_local = 0
+    excluded_non_conversational = []
+    for profile in profile_repository.read_scope(profile_scope_id(scope)):
+        if profile.status is ProfileStatus.LEGACY_QUARANTINED or not profile.embedding:
+            continue
+        context = metadata.get(profile.identity.entity_id)
+        organization = profile.organization or (
+            context.organization if context is not None else None
+        )
+        if not include_local and organization == LOCAL_ORG:
+            excluded_local += 1
+            continue
+        ip_address = profile.identity.entity_id.value.removeprefix("ip:")
+        endpoint_type = classify_endpoint(ip_address)
+        if endpoint_type in NON_CONVERSATIONAL_TYPES:
+            excluded_non_conversational.append(
+                {"ip_address": ip_address, "endpoint_type": endpoint_type}
+            )
+            continue
+        embeddings.append(np.array(profile.embedding))
+        data.append(
+            {
+                "ip_address": ip_address,
+                "endpoint_type": endpoint_type,
+                "capture_id": profile.legacy_scope,
+                "org": organization or "Unknown",
+                "hostname": profile.hostname
+                or (context.hostname if context is not None else None)
+                or "Unknown",
+                "location": profile.location
+                or (context.location if context is not None else None)
+                or "Unknown",
+                "bytes_out": profile.bytes_out,
+                "packets_out": profile.packets_out,
+                "out_peers": profile.out_peers,
+                "bytes_in": profile.bytes_in,
+                "packets_in": profile.packets_in,
+                "in_peers": profile.in_peers,
+                "interval_mean": profile.interval_mean,
+                "interval_cv": profile.interval_cv,
+            }
+        )
+    return embeddings, data, excluded_local, excluded_non_conversational
 
 
-def fetch_data_for_portsize(driver, database):
-    query = """
-    MATCH (src_port:PORT)-[:SENT]->(packet:PACKET)-[:RECEIVED]->(dst_port:PORT)
-    RETURN packet.SIZE AS size, src_port.PORT AS src_port, dst_port.PORT AS dst_port
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query)
-        plot_data = [
-            {"size": record["size"], "src_port": record["src_port"], "dst_port": record["dst_port"]}
-            for record in result
-        ]
-    return plot_data
+def fetch_data_for_portsize(driver, database, repository=None):
+    repository = repository or Neo4jRepositories.connect(driver, database).packets
+    return [
+        {
+            "size": record.size_bytes,
+            "src_port": record.source_port,
+            "dst_port": record.destination_port,
+        }
+        for record in repository.read_all()
+        if record.source_port is not None and record.destination_port is not None
+    ]
 
 
-def fetch_host_outbound(driver, database, capture_id=None):
+def fetch_host_outbound(
+    driver, database, capture_id=None, packet_repository=None, enrichment_repository=None
+):
     """Aggregate the capture host's outbound traffic per destination, from raw packets.
 
     Finds the host IP(s) (owned by LOCAL_ORG), then for every peer the host exchanged
@@ -783,44 +779,60 @@ def fetch_host_outbound(driver, database, capture_id=None):
     (e.g. an imported pcap with no local endpoint), in which case rows is empty too and
     the caller surfaces an empty host-outbound view rather than crashing.
     """
-    local_query = """
-    MATCH (org:ORGANIZATION {ORGANIZATION: $local_org})-[:OWNERSHIP]->(ip:IP_ADDRESS)
-    RETURN collect(ip.IP_ADDRESS) AS local_ips
-    """
-    # peer = the non-local side of each packet; outbound = the host was the source. Group
-    # by peer, split bytes/packets by direction, then join the peer's OSINT metadata.
-    peer_query = """
-    MATCH (p:PACKET)
-    WHERE (p.SRC_IP IN $local_ips OR p.DST_IP IN $local_ips)
-      AND ($capture_id IS NULL OR p.CAPTURE_ID = $capture_id)
-    WITH p,
-         CASE WHEN p.SRC_IP IN $local_ips THEN p.DST_IP ELSE p.SRC_IP END AS peer,
-         (p.SRC_IP IN $local_ips) AS outbound
-    WHERE NOT peer IN $local_ips AND peer <> '0.0.0.0'
-    WITH peer,
-         sum(CASE WHEN outbound THEN p.SIZE ELSE 0 END) AS upload_bytes,
-         sum(CASE WHEN outbound THEN 1 ELSE 0 END) AS upload_packets,
-         sum(CASE WHEN NOT outbound THEN p.SIZE ELSE 0 END) AS download_bytes,
-         sum(CASE WHEN NOT outbound THEN 1 ELSE 0 END) AS download_packets
-    WHERE upload_packets > 0
-    OPTIONAL MATCH (pip:IP_ADDRESS {IP_ADDRESS: peer})<-[:OWNERSHIP]-(porg:ORGANIZATION)
-    RETURN peer AS ip_address,
-           COALESCE(porg.ORGANIZATION, 'Unknown') AS org,
-           COALESCE(pip.HOSTNAME, 'Unknown') AS hostname,
-           COALESCE(pip.LOCATION, 'Unknown') AS location,
-           upload_bytes, upload_packets, download_bytes, download_packets
-    ORDER BY upload_bytes DESC
-    """
-    with driver.session(database=database) as session:
-        local_ips = session.run(local_query, {"local_org": LOCAL_ORG}).single()["local_ips"]
-        if not local_ips:
-            return [], []
-        rows = [
-            record.data()
-            for record in session.run(
-                peer_query, {"local_ips": local_ips, "capture_id": capture_id}
-            )
-        ]
+    repositories = None
+    if packet_repository is None or enrichment_repository is None:
+        repositories = Neo4jRepositories.connect(driver, database)
+    packet_repository = packet_repository or repositories.packets
+    enrichment_repository = enrichment_repository or repositories.enrichment
+    metadata_records = enrichment_repository.list_metadata()
+    metadata = {record.ip_address: record for record in metadata_records}
+    local_ips = sorted(
+        record.ip_address for record in metadata_records if record.organization == LOCAL_ORG
+    )
+    if not local_ips:
+        return [], []
+    local_set = set(local_ips)
+    packets = (
+        packet_repository.read(ObservationWindow(capture_ids=(CaptureId(capture_id),)))
+        if capture_id is not None
+        else packet_repository.read_all()
+    )
+    by_peer = {}
+    for packet in packets:
+        outbound = packet.source_ip in local_set
+        inbound = packet.destination_ip in local_set
+        if not outbound and not inbound:
+            continue
+        peer = packet.destination_ip if outbound else packet.source_ip
+        if peer in local_set or peer == "0.0.0.0":
+            continue
+        row = by_peer.setdefault(
+            peer,
+            {
+                "ip_address": peer,
+                "upload_bytes": 0,
+                "upload_packets": 0,
+                "download_bytes": 0,
+                "download_packets": 0,
+            },
+        )
+        direction = "upload" if outbound else "download"
+        row[f"{direction}_bytes"] += packet.size_bytes
+        row[f"{direction}_packets"] += 1
+    rows = []
+    for peer, row in by_peer.items():
+        if not row["upload_packets"]:
+            continue
+        context = metadata.get(peer)
+        row.update(
+            {
+                "org": context.organization if context and context.organization else "Unknown",
+                "hostname": context.hostname if context and context.hostname else "Unknown",
+                "location": context.location if context and context.location else "Unknown",
+            }
+        )
+        rows.append(row)
+    rows.sort(key=lambda row: (-row["upload_bytes"], row["ip_address"]))
     return local_ips, rows
 
 
@@ -1096,7 +1108,7 @@ def main():
         return
 
     try:
-        profile_repository = Neo4jRepositories.connect(driver, args.database).profiles
+        repositories = Neo4jRepositories.connect(driver, args.database)
     except Exception as e:
         reporter.error("ERROR", str(e))
         driver.close()
@@ -1106,7 +1118,7 @@ def main():
     # this has to be pinned before anything reads the ENDPOINT layer.
     try:
         scope, profiled_scopes = resolve_profile_scope(
-            driver, args.database, args.session, profile_repository
+            driver, args.database, args.session, repositories.profiles
         )
     except ValueError as e:
         reporter.error("ERROR", str(e))
@@ -1119,7 +1131,12 @@ def main():
         )
 
     embeddings, data, excluded_local, excluded_nc = fetch_data_for_dbscan(
-        driver, args.database, args.include_local, scope
+        driver,
+        args.database,
+        args.include_local,
+        scope,
+        repositories.profiles,
+        repositories.enrichment,
     )
     if excluded_local:
         reporter.info(
@@ -1166,7 +1183,7 @@ def main():
         driver.close()
         return
 
-    plot_data = fetch_data_for_portsize(driver, args.database)
+    plot_data = fetch_data_for_portsize(driver, args.database, repositories.packets)
     portsize_info_message = "The below plot shows the packet size over ports.\nIt is useful for identifying ports that are sending or receiving large amounts of data."
     if not reporter.agent:
         reporter.info("INFO", portsize_info_message)
@@ -1394,7 +1411,7 @@ def main():
         )
     else:
         skipped_because = None
-        history = fetch_endpoint_history(driver, args.database, scope, profile_repository)
+        history = fetch_endpoint_history(driver, args.database, scope, repositories.profiles)
 
     ranked_endpoints = score_endpoints(data, clusters, history)
     flagged = [e for e in ranked_endpoints if e["is_outlier"]]
@@ -1415,7 +1432,7 @@ def main():
         driver,
         args.database,
         scope,
-        profile_repository,
+        repositories.profiles,
     )
 
     # First-class host-outbound view: outbound FROM the capture host, per destination,
@@ -1427,7 +1444,13 @@ def main():
     # set describes, so both views cover the same traffic. The pooled 'all' scope (and a
     # legacy graph's unstamped profiles) means scan everything.
     packet_scope = None if scope == POOLED_SCOPE else scope
-    local_ips, host_rows = fetch_host_outbound(driver, args.database, packet_scope)
+    local_ips, host_rows = fetch_host_outbound(
+        driver,
+        args.database,
+        packet_scope,
+        repositories.packets,
+        repositories.enrichment,
+    )
     # Multicast/broadcast "destinations" (SSDP/mDNS announcements) never reply, so
     # their upload_download_ratio is structurally huge — drop them before ranking
     # rather than let protocol chatter read as exfil-shaped.

@@ -10,6 +10,7 @@ from jaws.domain import (
     EnrichmentRecord,
     EnrichmentStatus,
     EntityId,
+    EntityMetadata,
     ObservationScopeId,
     OutlierStatus,
     ProfileScopeSummary,
@@ -27,6 +28,7 @@ class InMemoryEnrichmentRepository:
 
     addresses: tuple[str, ...] = ()
     legacy_unknown_address_set: set[str] = field(default_factory=set)
+    metadata_records: tuple[EntityMetadata, ...] = ()
     _records: dict[EntityId, EnrichmentRecord] = field(default_factory=dict)
     _annotations: dict[EntityId, list[ResearcherAnnotation]] = field(default_factory=dict)
 
@@ -35,6 +37,8 @@ class InMemoryEnrichmentRepository:
         self.legacy_unknown_address_set = {
             normalized_ip(value) for value in self.legacy_unknown_address_set
         }
+        if any(record.ip_address not in self.addresses for record in self.metadata_records):
+            raise ValueError("metadata records must identify stored addresses")
 
     def count_entities(self) -> int:
         return len(self.addresses)
@@ -59,6 +63,19 @@ class InMemoryEnrichmentRepository:
 
     def get(self, entity_id: EntityId) -> EnrichmentRecord | None:
         return self._records.get(entity_id)
+
+    def list_metadata(self) -> tuple[EntityMetadata, ...]:
+        metadata = {record.entity_id: record for record in self.metadata_records}
+        for record in self._records.values():
+            metadata[record.entity_id] = EntityMetadata(
+                entity_id=record.entity_id,
+                ip_address=record.ip_address,
+                organization=record.organization,
+                hostname=record.hostname,
+                location=record.location,
+                coordinates=record.coordinates,
+            )
+        return tuple(sorted(metadata.values(), key=lambda record: record.ip_address))
 
     def put(self, record: EnrichmentRecord) -> None:
         if record.ip_address not in self.addresses:

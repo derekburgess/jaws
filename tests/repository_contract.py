@@ -92,6 +92,7 @@ def assert_capture_and_packet_repository_contract(repositories):
     assert repositories.packets.append(first_id, ()) == 0
     assert repositories.packets.append(first_id, (first_late, first_early)) == 2
     assert repositories.packets.append(second_id, (second_packet,)) == 1
+    assert repositories.packets.read_all() == (first_early, second_packet, first_late)
     with pytest.raises(ValueError):
         repositories.packets.append(first_id, (first_early, second_packet))
     assert repositories.packets.read(ObservationWindow(capture_ids=(first_id,))) == (

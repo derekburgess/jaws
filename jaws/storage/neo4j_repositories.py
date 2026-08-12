@@ -207,6 +207,20 @@ RETURN packet.CAPTURE_ID AS capture_id,
 ORDER BY packet.TIMESTAMP, packet.CAPTURE_ID, elementId(packet)
 """
 
+_READ_ALL_PACKETS_QUERY = """
+MATCH (packet:PACKET)
+RETURN packet.CAPTURE_ID AS capture_id,
+       toString(packet.TIMESTAMP) AS observed_at,
+       packet.PROTOCOL AS protocol,
+       packet.SIZE AS size_bytes,
+       packet.SRC_IP AS source_ip,
+       packet.DST_IP AS destination_ip,
+       packet.SRC_PORT AS source_port,
+       packet.DST_PORT AS destination_port,
+       packet.PAYLOAD AS payload
+ORDER BY packet.TIMESTAMP, packet.CAPTURE_ID, elementId(packet)
+"""
+
 
 def _required_text(value: object, field_name: str) -> str:
     if not isinstance(value, str) or not value:
@@ -222,6 +236,20 @@ def _payload(value: object) -> str | None:
     if value is None or isinstance(value, str):
         return value
     raise RepositorySchemaError("stored packet payload must be text or null")
+
+
+def _packet_from_record(row: _Record) -> PacketRecord:
+    return PacketRecord(
+        capture_id=CaptureId(_required_text(row["capture_id"], "CAPTURE_ID")),
+        observed_at=_datetime(row["observed_at"], "TIMESTAMP"),
+        protocol=_required_text(row["protocol"], "PROTOCOL"),
+        size_bytes=int(row["size_bytes"]),
+        source_ip=_required_text(row["source_ip"], "SRC_IP"),
+        destination_ip=_required_text(row["destination_ip"], "DST_IP"),
+        source_port=_stored_port(row["source_port"]),
+        destination_port=_stored_port(row["destination_port"]),
+        payload=_payload(row["payload"]),
+    )
 
 
 def _stored_port(value: object) -> int | None:
@@ -435,20 +463,7 @@ class Neo4jPacketRepository:
         }
         with self._driver.session(database=self.database) as session:
             rows = session.run(_READ_PACKETS_QUERY, parameters)
-            records = [
-                PacketRecord(
-                    capture_id=CaptureId(_required_text(row["capture_id"], "CAPTURE_ID")),
-                    observed_at=_datetime(row["observed_at"], "TIMESTAMP"),
-                    protocol=_required_text(row["protocol"], "PROTOCOL"),
-                    size_bytes=int(row["size_bytes"]),
-                    source_ip=_required_text(row["source_ip"], "SRC_IP"),
-                    destination_ip=_required_text(row["destination_ip"], "DST_IP"),
-                    source_port=_stored_port(row["source_port"]),
-                    destination_port=_stored_port(row["destination_port"]),
-                    payload=_payload(row["payload"]),
-                )
-                for row in rows
-            ]
+            records = [_packet_from_record(row) for row in rows]
         positions = {capture_id: index for index, capture_id in enumerate(window.capture_ids)}
         return tuple(
             sorted(
@@ -456,6 +471,10 @@ class Neo4jPacketRepository:
                 key=lambda record: (positions[record.capture_id], record.observed_at),
             )
         )
+
+    def read_all(self) -> tuple[PacketRecord, ...]:
+        with self._driver.session(database=self.database) as session:
+            return tuple(_packet_from_record(row) for row in session.run(_READ_ALL_PACKETS_QUERY))
 
 
 @dataclass(frozen=True, slots=True)

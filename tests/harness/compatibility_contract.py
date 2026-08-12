@@ -275,7 +275,12 @@ def _compute_success_case() -> dict[str, Any]:
             patch.object(
                 compute.Neo4jRepositories,
                 "connect",
-                return_value=SimpleNamespace(profiles=object()),
+                return_value=SimpleNamespace(
+                    captures=object(),
+                    packets=object(),
+                    enrichment=object(),
+                    profiles=object(),
+                ),
             ),
             patch.object(
                 compute,
@@ -500,7 +505,7 @@ def _rank_success_case() -> dict[str, Any]:
         patch.object(
             finder.Neo4jRepositories,
             "connect",
-            return_value=SimpleNamespace(profiles=object()),
+            return_value=SimpleNamespace(packets=object(), enrichment=object(), profiles=object()),
         ),
         patch.object(
             finder,
@@ -580,7 +585,7 @@ def _compute_unknown_session_case() -> dict[str, Any]:
             patch.object(
                 compute.Neo4jRepositories,
                 "connect",
-                return_value=SimpleNamespace(profiles=object()),
+                return_value=SimpleNamespace(captures=object(), profiles=object()),
             ),
             patch.object(
                 compute,

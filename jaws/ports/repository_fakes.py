@@ -110,3 +110,11 @@ class InMemoryPacketRepository:
             )
             selected.extend(sorted(bounded, key=lambda record: record.observed_at))
         return tuple(selected)
+
+    def read_all(self) -> tuple[PacketRecord, ...]:
+        return tuple(
+            sorted(
+                (record for records in self._records.values() for record in records),
+                key=lambda record: (record.observed_at, record.capture_id.value),
+            )
+        )

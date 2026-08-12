@@ -11,6 +11,7 @@ from jaws.domain import (
     EnrichmentRecord,
     EnrichmentStatus,
     EntityId,
+    EntityMetadata,
     ObservationScopeId,
     OutlierStatus,
     ProfileIdentity,
@@ -308,6 +309,32 @@ class Neo4jEnrichmentRepository:
             confidence=float(row["confidence"]) if row["confidence"] is not None else None,
             failure_code=_optional_text(row["failure_code"]),
         )
+
+    def list_metadata(self) -> tuple[EntityMetadata, ...]:
+        query = """
+        MATCH (address:IP_ADDRESS)
+        OPTIONAL MATCH (organization:ORGANIZATION)-[:OWNERSHIP]->(address)
+        WITH address, organization
+        ORDER BY organization.ORGANIZATION
+        RETURN address.IP_ADDRESS AS ip_address,
+               head(collect(organization.ORGANIZATION)) AS organization,
+               address.HOSTNAME AS hostname,
+               address.LOCATION AS location,
+               address.COORDINATES AS coordinates
+        ORDER BY ip_address
+        """
+        with self._driver.session(database=self.database) as session:
+            return tuple(
+                EntityMetadata(
+                    entity_id=EntityId(f"ip:{_text(row['ip_address'], 'IP_ADDRESS')}"),
+                    ip_address=_text(row["ip_address"], "IP_ADDRESS"),
+                    organization=_optional_text(row["organization"]),
+                    hostname=_optional_text(row["hostname"]),
+                    location=_optional_text(row["location"]),
+                    coordinates=_optional_text(row["coordinates"]),
+                )
+                for row in session.run(query)
+            )
 
     def put(self, record: EnrichmentRecord) -> None:
         parameters: dict[str, object] = {

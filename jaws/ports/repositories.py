@@ -12,6 +12,7 @@ from jaws.domain import (
     EndpointProfile,
     EnrichmentRecord,
     EntityId,
+    EntityMetadata,
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
@@ -90,6 +91,8 @@ class PacketRepository(Protocol):
 
     def read(self, window: ObservationWindow) -> tuple[PacketRecord, ...]: ...
 
+    def read_all(self) -> tuple[PacketRecord, ...]: ...
+
 
 class EnrichmentRepository(Protocol):
     """Provider observations and researcher annotations for stored IP entities."""
@@ -99,6 +102,8 @@ class EnrichmentRepository(Protocol):
     def pending_addresses(self) -> tuple[str, ...]: ...
 
     def get(self, entity_id: EntityId) -> EnrichmentRecord | None: ...
+
+    def list_metadata(self) -> tuple[EntityMetadata, ...]: ...
 
     def put(self, record: EnrichmentRecord) -> None: ...
 
