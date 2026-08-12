@@ -78,8 +78,14 @@ class CaptureRecord:
             raise ValueError("capture ended before it started")
         if self.state in ACTIVE_CAPTURE_STATES and self.started_at is None:
             raise ValueError("active capture requires started_at")
-        if self.state in TERMINAL_CAPTURE_STATES and self.ended_at is None:
-            raise ValueError("terminal capture requires ended_at")
+        if (
+            self.state in TERMINAL_CAPTURE_STATES
+            and self.ended_at is None
+            and self.source_kind is not CaptureSourceKind.LEGACY_UNKNOWN
+        ):
+            raise ValueError(
+                "terminal capture requires ended_at unless legacy provenance is unknown"
+            )
         if (
             self.state is CaptureState.RUNNING
             and self.source_kind is not CaptureSourceKind.LIVE_INTERFACE

@@ -11,8 +11,13 @@ from types import SimpleNamespace
 
 from jaws import jaws_capture as capture
 from jaws import jaws_finder as finder
-from jaws.domain import CaptureId
-from jaws.ports import FrozenClock, SequenceIdGenerator
+from jaws.domain import CaptureId, ObservationWindow
+from jaws.ports import (
+    FrozenClock,
+    InMemoryCaptureRepository,
+    InMemoryPacketRepository,
+    SequenceIdGenerator,
+)
 
 
 @dataclass
@@ -102,20 +107,23 @@ def _runtime(monkeypatch, driver, reporter):
     monkeypatch.setattr(capture, "initialize_schema", lambda *args: None)
     monkeypatch.setattr(capture, "get_local_ip", lambda: "10.0.0.2")
     monkeypatch.setattr(capture, "capture_tool_versions", lambda: {"jaws": "2.0.0"})
-
-
-def _finalization(driver):
-    return next(
-        parameters
-        for query, parameters in reversed(driver.calls)
-        if query.startswith("MATCH (c:CAPTURE {CAPTURE_ID: $capture_id})")
+    captures = InMemoryCaptureRepository()
+    repositories = SimpleNamespace(
+        captures=captures,
+        packets=InMemoryPacketRepository(captures),
     )
+    monkeypatch.setattr(
+        capture,
+        "Neo4jRepositories",
+        SimpleNamespace(connect=lambda driver, database: repositories),
+    )
+    return repositories
 
 
 def test_interrupted_live_capture_is_finalized_as_cancelled(monkeypatch):
     driver = RecordingDriver()
     reporter = SilentReporter()
-    _runtime(monkeypatch, driver, reporter)
+    repositories = _runtime(monkeypatch, driver, reporter)
     monkeypatch.setattr(capture, "list_interfaces", lambda: ["eth0"])
     monkeypatch.setattr(
         capture,
@@ -130,10 +138,10 @@ def test_interrupted_live_capture_is_finalized_as_cancelled(monkeypatch):
 
     capture.main()
 
-    finalization = _finalization(driver)
-    assert finalization["state"] == "cancelled"
-    assert finalization["packet_count"] == 0
-    assert finalization["failure_code"] == "capture_cancelled"
+    finalization = repositories.captures.get(CaptureId("cap_fixture"))
+    assert finalization.state.value == "cancelled"
+    assert finalization.packet_count == 0
+    assert finalization.failure_code == "capture_cancelled"
     assert reporter.errors == [("CANCELLED", "Capture cancelled.")]
     assert driver.closed
 
@@ -143,7 +151,7 @@ def test_failed_import_flushes_available_evidence_and_is_partial(monkeypatch, tm
     capture_path.write_bytes(b"fixture evidence")
     driver = RecordingDriver()
     reporter = SilentReporter()
-    _runtime(monkeypatch, driver, reporter)
+    repositories = _runtime(monkeypatch, driver, reporter)
     monkeypatch.setattr(
         capture,
         "require_module",
@@ -174,17 +182,14 @@ def test_failed_import_flushes_available_evidence_and_is_partial(monkeypatch, tm
 
     capture.main()
 
-    registration = next(
-        parameters
-        for query, parameters in driver.calls
-        if query.startswith("CREATE (capture:CAPTURE")
-    )
-    assert registration["content_sha256"] == hashlib.sha256(b"fixture evidence").hexdigest()
-    assert registration["perspective_ip"] is None
-    finalization = _finalization(driver)
-    assert finalization["state"] == "partial"
-    assert finalization["packet_count"] == 1
-    assert finalization["failure_code"] == "RuntimeError"
+    finalization = repositories.captures.get(CaptureId("cap_fixture"))
+    assert str(finalization.content_digest) == hashlib.sha256(b"fixture evidence").hexdigest()
+    assert finalization.perspective is None
+    assert finalization.state.value == "partial"
+    assert finalization.packet_count == 1
+    assert finalization.failure_code == "RuntimeError"
+    packets = repositories.packets.read(ObservationWindow(capture_ids=(CaptureId("cap_fixture"),)))
+    assert len(packets) == 1
     assert reporter.errors == [("ERROR", "fixture import failure")]
     assert driver.closed
 

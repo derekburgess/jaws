@@ -10,14 +10,13 @@ from rich.console import Group
 from jaws.adapters import SystemClock, UuidCaptureIdGenerator
 from jaws.config import CONSOLE, DATABASE
 from jaws.domain import (
+    ACTIVE_CAPTURE_STATES,
     CanonicalDigest,
     CaptureRecord,
     CaptureSourceKind,
     CaptureState,
     EntityId,
-    ObservationScope,
-    canonical_json,
-    utc_text,
+    PacketRecord,
 )
 from jaws.jaws_utils import (
     Reporter,
@@ -27,6 +26,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.storage import Neo4jRepositories
 from jaws.storage.migrations import MigrationError
 
 
@@ -66,102 +66,6 @@ def list_interfaces():
 BATCH_SIZE = 100
 
 
-# Every capture/import run is one SESSION, recorded as a CAPTURE node and stamped on
-# each of its PACKETs (a property join, like the rest of the packet schema — no
-# per-packet edges). Sessions are what make an accumulating graph analyzable: without
-# them, profiles aggregate "all traffic ever in this graph" and inter-packet timing
-# spans the dead gap between two capture runs, so a real beacon's interval_cv is
-# inflated by a 20-minute pause. jaws_compute scopes to a session ('latest' by
-# default), which is why drop_database between captures is optional, not required.
-def register_capture(driver, database, record):
-    """Create one collision-resistant capture and its explicit observation scope."""
-
-    scope = ObservationScope.for_capture(
-        record.capture_id,
-        record.registered_at,
-        perspective=record.perspective,
-        filters=(record.capture_filter,) if record.capture_filter else (),
-    )
-    query = """
-    CREATE (capture:CAPTURE {
-        CAPTURE_ID: $capture_id,
-        LEGACY_CAPTURE_ID: $legacy_capture_id,
-        STATE: $state,
-        SOURCE_KIND: $source_kind,
-        SOURCE_NAME: $source_name,
-        CONTENT_SHA256: $content_sha256,
-        REGISTERED_AT: datetime($registered_at),
-        STARTED_AT: datetime($started_at),
-        STARTED: datetime($started_at),
-        PACKET_COUNT: 0,
-        PACKETS: 0,
-        PERSPECTIVE_IP: $perspective_ip,
-        CAPTURE_FILTER: $capture_filter,
-        TOOL_VERSIONS_JSON: $tool_versions_json,
-        SOURCE: $source_name
-    })
-    CREATE (scope:OBSERVATION_SCOPE {
-        SCOPE_ID: $scope_id,
-        KIND: $scope_kind,
-        CREATED_AT: datetime($registered_at),
-        PERSPECTIVE_IP: $perspective_ip,
-        FILTERS: $filters
-    })
-    CREATE (scope)-[:INCLUDES]->(capture)
-    """
-    assert record.started_at is not None
-    parameters = {
-        "capture_id": record.capture_id.value,
-        "legacy_capture_id": record.legacy_capture_id,
-        "state": record.state.value,
-        "source_kind": record.source_kind.value,
-        "source_name": record.source_name,
-        "content_sha256": str(record.content_digest) if record.content_digest else None,
-        "registered_at": utc_text(record.registered_at),
-        "started_at": utc_text(record.started_at),
-        "perspective_ip": record.perspective.value if record.perspective else None,
-        "capture_filter": record.capture_filter,
-        "tool_versions_json": canonical_json(record.tool_versions),
-        "scope_id": scope.scope_id.value,
-        "scope_kind": scope.kind.value,
-        "filters": list(scope.filters),
-    }
-    with driver.session(database=database) as session:
-        session.run(query, parameters).consume()
-
-
-def finalize_capture(driver, database, record):
-    """Persist one terminal capture snapshot without changing compatibility identity."""
-
-    if record.state not in {
-        CaptureState.COMPLETE,
-        CaptureState.PARTIAL,
-        CaptureState.FAILED,
-        CaptureState.CANCELLED,
-    }:
-        raise ValueError("finalize_capture requires a terminal capture record")
-    assert record.ended_at is not None
-    query = """
-    MATCH (c:CAPTURE {CAPTURE_ID: $capture_id})
-    SET c.PACKETS = $packet_count,
-        c.PACKET_COUNT = $packet_count,
-        c.STATE = $state,
-        c.ENDED_AT = datetime($ended_at),
-        c.FAILURE_CODE = $failure_code
-    """
-    with driver.session(database=database) as session:
-        session.run(
-            query,
-            {
-                "capture_id": record.capture_id.value,
-                "packet_count": record.packet_count,
-                "state": record.state.value,
-                "ended_at": utc_text(record.ended_at),
-                "failure_code": record.failure_code,
-            },
-        ).consume()
-
-
 def file_sha256(path):
     digest = hashlib.sha256()
     with open(path, "rb") as capture_file:
@@ -178,44 +82,6 @@ def capture_tool_versions():
         except PackageNotFoundError:
             versions[distribution.lower()] = "unknown"
     return versions
-
-
-def add_packets_to_database(driver, packets_batch, database):
-    with driver.session(database=database) as session:
-        session.execute_write(
-            lambda tx: tx.run(
-                """
-        UNWIND $packets AS packet
-        MERGE (src_ip_address:IP_ADDRESS {IP_ADDRESS: packet.src_ip_address})
-        MERGE (dst_ip_address:IP_ADDRESS {IP_ADDRESS: packet.dst_ip_address})
-
-        CREATE (p:PACKET {
-            PROTOCOL: packet.protocol,
-            SIZE: packet.size,
-            PAYLOAD: packet.payload,
-            TIMESTAMP: datetime(packet.timestamp),
-            CAPTURE_ID: packet.capture_id,
-            SRC_IP: packet.src_ip_address,
-            DST_IP: packet.dst_ip_address,
-            SRC_PORT: packet.src_port,
-            DST_PORT: packet.dst_port
-        })
-
-        // Port 0 is the placeholder for non-TCP/UDP packets — don't materialize it
-        // as a PORT node. The FOREACH-over-CASE is Cypher's conditional write: the
-        // list has one element (run the MERGE/CREATE) or none (skip).
-        FOREACH (_ IN CASE WHEN packet.src_port <> 0 THEN [1] ELSE [] END |
-            MERGE (src_ip_address)-[:PORT]->(src_port:PORT {PORT: packet.src_port, IP_ADDRESS: packet.src_ip_address})
-            CREATE (src_port)-[:SENT]->(p)
-        )
-        FOREACH (_ IN CASE WHEN packet.dst_port <> 0 THEN [1] ELSE [] END |
-            MERGE (dst_ip_address)-[:PORT]->(dst_port:PORT {PORT: packet.dst_port, IP_ADDRESS: packet.dst_ip_address})
-            CREATE (p)-[:RECEIVED]->(dst_port)
-        )
-        """,
-                packets=packets_batch,
-            )
-        )
 
 
 def process_packet(packet):
@@ -248,6 +114,30 @@ def process_packet(packet):
 
     packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['protocol']}({packet_data['size']}) ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']}"
     return packet_data, packet_string
+
+
+def packet_record(capture_id, packet_data):
+    """Translate the legacy PyShark parse shape into typed repository evidence."""
+
+    timestamp = packet_data["timestamp"]
+    if not isinstance(timestamp, datetime):
+        timestamp = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+
+    def port(value):
+        parsed = int(value)
+        return parsed or None
+
+    return PacketRecord(
+        capture_id=capture_id,
+        observed_at=timestamp,
+        protocol=str(packet_data["protocol"]),
+        size_bytes=int(packet_data["size"]),
+        source_ip=str(packet_data["src_ip_address"]),
+        destination_ip=str(packet_data["dst_ip_address"]),
+        source_port=port(packet_data["src_port"]),
+        destination_port=port(packet_data["dst_port"]),
+        payload=packet_data["payload"],
+    )
 
 
 def main():
@@ -298,14 +188,16 @@ def main():
     stored_packet_count = 0
     clock = SystemClock()
     capture_ids = UuidCaptureIdGenerator()
+    repositories = None
 
     def flush_batch():
         nonlocal stored_packet_count
         if batch:
-            pending = len(batch)
-            add_packets_to_database(driver, batch, args.database)
+            if repositories is None:
+                raise RuntimeError("capture repositories are not initialized")
+            written = repositories.packets.append(capture_id, batch)
             batch.clear()
-            stored_packet_count += pending
+            stored_packet_count += written
 
     def close_capture():
         if capture is not None:
@@ -340,6 +232,7 @@ def main():
                 )
                 return
 
+        repositories = Neo4jRepositories.connect(driver, args.database)
         source = args.capture_file if args.capture_file else args.interface
         pyshark = require_module("pyshark", "capture", "Packet capture and import")
         registered_at = clock.now()
@@ -361,7 +254,7 @@ def main():
             perspective=perspective,
             tool_versions=capture_tool_versions(),
         ).transition(active_state, clock.now())
-        register_capture(driver, args.database, capture_record)
+        repositories.captures.add(capture_record)
 
         if args.capture_file:
             config_message = (
@@ -383,8 +276,7 @@ def main():
 
             def on_packet(packet):
                 packet_data, packet_string = process_packet(packet)
-                packet_data["capture_id"] = capture_id.value
-                batch.append(packet_data)
+                batch.append(packet_record(capture_id, packet_data))
                 packets.append(packet_string)
                 if len(batch) >= BATCH_SIZE:
                     flush_batch()
@@ -411,7 +303,10 @@ def main():
             clock.now(),
             packet_count=stored_packet_count,
         )
-        finalize_capture(driver, args.database, completed_record)
+        repositories.captures.transition(
+            completed_record,
+            expected_state=capture_record.state,
+        )
         capture_record = completed_record
 
         reporter.result(
@@ -427,18 +322,25 @@ def main():
         return
 
     except KeyboardInterrupt:
-        if capture_record is not None:
+        if capture_record is not None and capture_record.state in ACTIVE_CAPTURE_STATES:
             try:
                 flush_batch()
             except Exception:
                 pass
+            previous_state = capture_record.state
             capture_record = capture_record.transition(
                 CaptureState.CANCELLED,
                 clock.now(),
                 packet_count=stored_packet_count,
                 failure_code="capture_cancelled",
             )
-            finalize_capture(driver, args.database, capture_record)
+            try:
+                repositories.captures.transition(
+                    capture_record,
+                    expected_state=previous_state,
+                )
+            except Exception as finalize_error:
+                reporter.info("WARNING", f"Could not finalize cancelled capture: {finalize_error}")
         reporter.error("CANCELLED", "Capture cancelled.")
         return
 
@@ -447,12 +349,13 @@ def main():
         return
 
     except Exception as error:
-        if capture_record is not None:
+        if capture_record is not None and capture_record.state in ACTIVE_CAPTURE_STATES:
             try:
                 flush_batch()
             except Exception:
                 pass
             target = CaptureState.PARTIAL if stored_packet_count else CaptureState.FAILED
+            previous_state = capture_record.state
             capture_record = capture_record.transition(
                 target,
                 clock.now(),
@@ -460,7 +363,10 @@ def main():
                 failure_code=type(error).__name__,
             )
             try:
-                finalize_capture(driver, args.database, capture_record)
+                repositories.captures.transition(
+                    capture_record,
+                    expected_state=previous_state,
+                )
             except Exception as finalize_error:
                 reporter.info("WARNING", f"Could not finalize failed capture: {finalize_error}")
         reporter.error("ERROR", str(error))

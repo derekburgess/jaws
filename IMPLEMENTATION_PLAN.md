@@ -498,8 +498,8 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 #### Repository implementations
 
-- [ ] Implement `CaptureRepository` for lifecycle and catalog operations.
-- [ ] Implement `PacketRepository` for batched evidence writes and scoped reads.
+- [x] Implement `CaptureRepository` for lifecycle and catalog operations ([repository contract](docs/storage/repositories.md)).
+- [x] Implement `PacketRepository` for batched evidence writes and scoped reads ([repository contract](docs/storage/repositories.md)).
 - [ ] Implement `EnrichmentRepository` for metadata and annotations.
 - [ ] Implement `ProfileRepository` for versioned profile sets and histories.
 - [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
@@ -1222,11 +1222,29 @@ Milestone 1 is complete: dependency/package boundaries, quality automation, type
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
 ownership plus database versions 1 and 2 now cover evidence identity, lifecycle,
-provenance, observation scope, profile uniqueness, and legacy lookup compatibility. The
-next active work is repository implementation, beginning with `CaptureRepository` and
-`PacketRepository` contracts, deterministic fakes, and Neo4j adapters.
+provenance, observation scope, profile uniqueness, and legacy lookup compatibility.
+`CaptureRepository` and `PacketRepository` now provide tested in-memory and Neo4j
+implementations. The next active repository slice is `EnrichmentRepository` and
+`ProfileRepository`, including the legacy profile migration cases they expose.
 
 ## Change log
+
+### 2026-08-11 — Milestone 2 capture and packet repositories
+
+- Added immutable `PacketRecord` evidence with UTC timestamps, normalized IPv4/IPv6 text,
+  explicit optional transport ports, byte size, protocol, payload, and capture ownership.
+- Added inward-facing `CaptureRepository` and `PacketRepository` contracts plus stable
+  errors for duplicates, missing captures, optimistic state conflicts, inactive captures,
+  and unsupported schema state.
+- Added deterministic in-memory implementations and Neo4j adapters for registration,
+  canonical/legacy lookup, chronological catalog listing, guarded lifecycle transitions,
+  atomic bounded packet batches, and capture/time-scoped reads.
+- Moved capture and packet Cypher out of `jaws_capture.py`; the legacy CLI now translates
+  PyShark rows into typed records and delegates writes while retaining its exact frozen
+  success/error envelopes and legacy graph properties.
+- Ran one shared repository behavior contract against the in-memory adapters and pinned
+  Neo4j 5.26.28. It covers empty/missing/duplicate cases, immutable metadata, optimistic
+  conflicts, mixed-capture rejection, scoped ordering, and terminal capture protection.
 
 ### 2026-08-10 — Milestone 2 capture identity, lifecycle, and scope
 

@@ -75,3 +75,10 @@ def test_inner_packages_follow_documented_import_directions():
 def test_architecture_policy_names_every_enforced_layer():
     policy = (REPO_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
     assert set(LAYERS) <= {package for package in LAYERS if f"`{package}`" in policy}
+
+
+def test_capture_cli_delegates_cypher_to_storage_adapters():
+    source = (REPO_ROOT / "jaws" / "jaws_capture.py").read_text(encoding="utf-8")
+    assert not any(
+        token in source for token in ("MATCH (", "MERGE (", "CREATE (", "UNWIND $", "session.run(")
+    )

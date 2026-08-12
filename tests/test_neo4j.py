@@ -4,8 +4,9 @@ import os
 from datetime import UTC, datetime
 
 import pytest
+from repository_contract import assert_capture_and_packet_repository_contract
 
-from jaws import jaws_capture, jaws_finder
+from jaws import jaws_finder
 from jaws.config import DATABASE, NEO4J_PASSWORD, get_neo4j_driver
 from jaws.domain import (
     CaptureId,
@@ -14,6 +15,8 @@ from jaws.domain import (
     CaptureState,
     EntityId,
 )
+from jaws.ports import DuplicateCaptureError
+from jaws.storage import Neo4jRepositories
 from jaws.storage.migrations import MIGRATIONS, manager
 
 pytestmark = pytest.mark.neo4j
@@ -46,13 +49,30 @@ def _reset_migration_fixture(driver, database):
         session.run(
             "MATCH (capture:CAPTURE) "
             "WHERE capture.CAPTURE_ID STARTS WITH 'cap_migration_fixture' "
+            "   OR capture.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
             "DETACH DELETE capture"
+        ).consume()
+        session.run(
+            "MATCH (packet:PACKET) "
+            "WHERE packet.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
+            "DETACH DELETE packet"
         ).consume()
         session.run(
             "MATCH (scope:OBSERVATION_SCOPE) "
             "WHERE scope.MIGRATED_FROM_SCHEMA_VERSION = 2 "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_migration_fixture' "
+            "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_repository_fixture' "
             "DETACH DELETE scope"
+        ).consume()
+        session.run(
+            "MATCH (port:PORT) "
+            "WHERE port.IP_ADDRESS IN ['192.0.2.10', '198.51.100.20'] "
+            "DETACH DELETE port"
+        ).consume()
+        session.run(
+            "MATCH (address:IP_ADDRESS) "
+            "WHERE address.IP_ADDRESS IN ['192.0.2.10', '198.51.100.20'] "
+            "DETACH DELETE address"
         ).consume()
         session.run("MATCH (n:JAWS_SCHEMA_MIGRATION) DETACH DELETE n").consume()
         for migration in reversed(MIGRATIONS):
@@ -142,10 +162,22 @@ def test_collision_resistant_capture_identity_rejects_duplicate_starts(
         tool_versions={"jaws": "2.0.0"},
     ).transition(CaptureState.RUNNING, registered_at)
 
-    jaws_capture.register_capture(driver, database, record)
-    with pytest.raises(Exception) as error:
-        jaws_capture.register_capture(driver, database, record)
-    assert "Constraint" in type(error.value).__name__
+    repositories = Neo4jRepositories.connect(driver, database)
+    repositories.captures.add(record)
+    with pytest.raises(DuplicateCaptureError) as error:
+        repositories.captures.add(record)
+    assert "already exists" in str(error.value)
+
+
+def test_capture_and_packet_repositories_follow_shared_contract(
+    disposable_migration_database,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+
+    repositories = Neo4jRepositories.connect(driver, database)
+
+    assert_capture_and_packet_repository_contract(repositories)
 
 
 def test_historical_profile_query_orders_opaque_ids_by_capture_time(

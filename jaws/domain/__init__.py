@@ -33,6 +33,7 @@ from .identifiers import (
     SchemaVersion,
 )
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
+from .packets import PacketRecord
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
@@ -83,6 +84,7 @@ __all__ = [
     "ObservationScopeId",
     "ObservationScopeKind",
     "OutlierStatus",
+    "PacketRecord",
     "RankedFinding",
     "RankerSpec",
     "ReferenceKind",

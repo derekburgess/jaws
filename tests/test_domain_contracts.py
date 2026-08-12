@@ -1,6 +1,6 @@
 """Typed-domain identity, immutability, time, unit, and ranking contracts."""
 
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime, timedelta, timezone
 from uuid import UUID
 
@@ -25,6 +25,7 @@ from jaws.domain import (
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
+    PacketRecord,
     ProfileIdentity,
     RankedFinding,
     RankerSpec,
@@ -121,6 +122,27 @@ def test_capture_record_tracks_live_and_import_lifecycle_without_inferred_perspe
     assert imported.perspective is None
     with pytest.raises(ValueError, match="invalid lifecycle transition"):
         complete.transition(CaptureState.RUNNING, registered_at + timedelta(seconds=12))
+
+
+def test_packet_evidence_normalizes_addresses_and_requires_valid_units():
+    packet = PacketRecord(
+        capture_id=CaptureId("capture-a"),
+        observed_at=datetime(2026, 8, 11, 12, tzinfo=timezone.utc),
+        protocol=" TCP ",
+        size_bytes=64,
+        source_ip="2001:0db8::1",
+        destination_ip="192.0.2.1",
+        source_port=443,
+    )
+
+    assert packet.protocol == "TCP"
+    assert packet.source_ip == "2001:db8::1"
+    with pytest.raises(ValueError, match="IP address"):
+        replace(packet, source_ip="not-an-address")
+    with pytest.raises(ValueError, match="port"):
+        replace(packet, destination_port=0)
+    with pytest.raises(ValueError, match="size"):
+        replace(packet, size_bytes=-1)
 
 
 def test_observation_scope_and_profile_identity_are_explicit_and_stable():

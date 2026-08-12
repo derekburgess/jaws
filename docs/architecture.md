@@ -31,11 +31,12 @@ OpenAI, sentence-transformers, CLI, and MCP code implement or consume these cont
 outer layers; none belongs in `jaws.domain` or `jaws.ports`. The deterministic fakes live
 beside the contracts because service unit tests need the same lightweight install boundary.
 
-`jaws.storage` is an outer infrastructure package. It may depend inward on domain and port
-contracts and may eventually import the optional Neo4j driver, but the migration registry
-and its public status/planning records currently remain importable without that dependency.
-Cypher owned by versioned migrations belongs there; legacy commands may call the migration
-manager during the ratcheted transition but must not redefine schema objects themselves.
+`jaws.storage` is an outer infrastructure package. It depends inward on domain and port
+contracts; its repository adapters accept driver-compatible objects without importing the
+optional Neo4j package, so migration and repository records remain importable in a core
+installation. Schema and evidence Cypher belong here. The capture command now consumes
+`CaptureRepository` and `PacketRepository`; it no longer owns database queries. Remaining
+legacy commands move their Cypher behind repositories incrementally under the same ratchet.
 
 `jaws.adapters` contains outer implementations of inward ports. Its standard runtime clock
 and UUID capture-ID generator import only domain contracts and the standard library; later

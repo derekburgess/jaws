@@ -24,14 +24,29 @@ from .fakes import (
     SequenceIdGenerator,
     SequencePacketSource,
 )
+from .repositories import (
+    CaptureNotFoundError,
+    CaptureRepository,
+    CaptureStateConflictError,
+    DuplicateCaptureError,
+    InactiveCaptureError,
+    PacketRepository,
+    RepositoryError,
+    RepositorySchemaError,
+)
+from .repository_fakes import InMemoryCaptureRepository, InMemoryPacketRepository
 
 __all__ = [
     "ArtifactStore",
+    "CaptureNotFoundError",
+    "CaptureRepository",
+    "CaptureStateConflictError",
     "Clock",
     "EmbeddingProvider",
     "EnrichmentProvider",
     "Evaluator",
     "EvidenceStore",
+    "DuplicateCaptureError",
     "FakeEmbeddingProvider",
     "FakeEnrichmentProvider",
     "FakeEvaluator",
@@ -40,10 +55,16 @@ __all__ = [
     "FrozenClock",
     "IdGenerator",
     "InMemoryArtifactStore",
+    "InMemoryCaptureRepository",
     "InMemoryEvidenceStore",
+    "InMemoryPacketRepository",
+    "InactiveCaptureError",
     "PacketSource",
+    "PacketRepository",
     "Ranker",
     "ReferenceBuilder",
+    "RepositoryError",
+    "RepositorySchemaError",
     "SequenceIdGenerator",
     "SequencePacketSource",
 ]

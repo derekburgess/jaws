@@ -97,6 +97,10 @@ backed `CAPTURE_ID` values while legacy captures retain their original identity.
 `SOURCE`, `STARTED`, and `PACKETS` remain dual-written compatibility fields. New code must
 not use `LEGACY_CAPTURE_ID` or UUID lexicographic order as chronology.
 
+Capture catalog/lifecycle and packet batch/read behavior is defined separately by the
+[repository contract](repositories.md). Its Neo4j adapter owns the corresponding Cypher
+and refuses writes unless the managed migration history and required schema are current.
+
 ### Observation scopes and profiles
 
 | Label/property | Contract |
