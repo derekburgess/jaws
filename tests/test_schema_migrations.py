@@ -81,8 +81,10 @@ class FakeNeo4j:
                 }
             )
             return FakeResult()
-        if normalized.startswith("MATCH (capture:CAPTURE)") or normalized.startswith(
-            "MATCH (endpoint:ENDPOINT)"
+        if (
+            normalized.startswith("MATCH (capture:CAPTURE)")
+            or normalized.startswith("MATCH (endpoint:ENDPOINT")
+            or normalized.startswith("MERGE (scope:OBSERVATION_SCOPE")
         ):
             self.writes.append(normalized)
             return FakeResult()
@@ -154,6 +156,26 @@ def test_version_two_adds_identity_lifecycle_scope_and_profile_contracts():
     }
 
 
+def test_version_three_adds_enrichment_provenance_and_profile_scope_semantics():
+    migration = MIGRATIONS[2]
+    assert migration.version == 3
+    assert len(migration.checksum) == 64
+    assert migration.reversible is True
+    assert {item.name for item in migration.required_schema if item.kind == "constraint"} == {
+        "entity_annotation_key_unique"
+    }
+    assert {item.name for item in migration.required_schema if item.kind == "index"} == {
+        "endpoint_scope_computed_index",
+        "ip_enrichment_status_index",
+    }
+    source = " ".join(" ".join(statement.query.split()) for statement in migration.statements)
+    assert "scope_pooled_all" in source
+    assert "scope_legacy_unstamped" in source
+    assert "legacy_quarantined" in source
+    assert "not_scored" in source
+    assert "DETACH DELETE endpoint" not in source
+
+
 def test_legacy_utility_delegates_schema_ownership_to_migrations():
     utility_source = Path("jaws/jaws_utils.py").read_text(encoding="utf-8")
     migration_source = Path("jaws/storage/migrations/v0001_adopt_legacy_schema.py").read_text(
@@ -171,16 +193,16 @@ def test_fresh_database_dry_run_is_read_only_and_migration_is_idempotent(clock):
 
     status = migration_manager.status()
     assert status.current_version is None
-    assert status.pending_versions == (1, 2)
+    assert status.pending_versions == (1, 2, 3)
     plan = migration_manager.dry_run()
     assert plan.current_version is None
-    assert plan.target_version == 2
+    assert plan.target_version == 3
     assert plan.pending == MIGRATIONS
     assert len(plan.statements) == sum(len(migration.statements) for migration in MIGRATIONS)
     assert graph.writes == []
 
     result = migration_manager.migrate()
-    assert result.applied_versions == (1, 2)
+    assert result.applied_versions == (1, 2, 3)
     assert result.status.is_current
     assert graph.applied == [
         {
@@ -241,7 +263,7 @@ def test_partial_schema_application_writes_no_version_and_can_retry(clock):
     graph.fail_on = None
     result = migration_manager.migrate()
     assert result.status.is_current
-    assert len(graph.applied) == 2
+    assert len(graph.applied) == 3
 
 
 def test_applied_checksum_drift_blocks_validation_and_migration(clock):

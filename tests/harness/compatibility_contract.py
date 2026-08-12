@@ -273,6 +273,11 @@ def _compute_success_case() -> dict[str, Any]:
             patch.object(compute, "Reporter", _agent_reporter),
             patch.object(compute, "dbms_connection", return_value=driver),
             patch.object(
+                compute.Neo4jRepositories,
+                "connect",
+                return_value=SimpleNamespace(profiles=object()),
+            ),
+            patch.object(
                 compute,
                 "resolve_session",
                 return_value=("20260102T000000Z", ["20260101T000000Z", "20260102T000000Z"]),
@@ -286,8 +291,7 @@ def _compute_success_case() -> dict[str, Any]:
                 "compute_openai_embeddings",
                 return_value=[[0.1, 0.2], [0.3, 0.4]],
             ),
-            patch.object(compute, "clear_session_profiles", return_value=2),
-            patch.object(compute, "add_endpoint_to_database", return_value=None),
+            patch.object(compute, "replace_session_profiles", return_value=2),
             patch.object(compute, "prune_profile_sessions", return_value=(0, [])),
             patch.object(compute, "count_profile_sessions", return_value=2),
         ),
@@ -494,6 +498,11 @@ def _rank_success_case() -> dict[str, Any]:
         patch.object(finder, "Reporter", _agent_reporter),
         patch.object(finder, "dbms_connection", return_value=driver),
         patch.object(
+            finder.Neo4jRepositories,
+            "connect",
+            return_value=SimpleNamespace(profiles=object()),
+        ),
+        patch.object(
             finder,
             "resolve_profile_scope",
             return_value=(
@@ -568,6 +577,11 @@ def _compute_unknown_session_case() -> dict[str, Any]:
         patchers=(
             patch.object(compute, "Reporter", _agent_reporter),
             patch.object(compute, "dbms_connection", return_value=driver),
+            patch.object(
+                compute.Neo4jRepositories,
+                "connect",
+                return_value=SimpleNamespace(profiles=object()),
+            ),
             patch.object(
                 compute,
                 "resolve_session",

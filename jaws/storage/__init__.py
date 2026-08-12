@@ -11,6 +11,10 @@ from .migrations import (
     SchemaObject,
     SchemaStatus,
 )
+from .neo4j_profile_repositories import (
+    Neo4jEnrichmentRepository,
+    Neo4jProfileRepository,
+)
 from .neo4j_repositories import (
     Neo4jCaptureRepository,
     Neo4jPacketRepository,
@@ -28,6 +32,8 @@ __all__ = [
     "Neo4jCaptureRepository",
     "Neo4jPacketRepository",
     "Neo4jRepositories",
+    "Neo4jEnrichmentRepository",
+    "Neo4jProfileRepository",
     "SchemaObject",
     "SchemaStatus",
 ]

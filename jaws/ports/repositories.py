@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureState,
+    EndpointProfile,
+    EnrichmentRecord,
+    EntityId,
+    ObservationScopeId,
     ObservationWindow,
+    OutlierStatus,
     PacketRecord,
+    ProfileScopeSummary,
+    ResearcherAnnotation,
 )
 
 
@@ -54,6 +61,14 @@ class InactiveCaptureError(RepositoryError):
     """Packet evidence cannot be appended to a terminal capture."""
 
 
+class EntityNotFoundError(RepositoryError):
+    """No stored entity exists for enrichment or annotation."""
+
+
+class ProfileScopeConflictError(RepositoryError):
+    """A profile batch does not consistently identify one observation scope."""
+
+
 class CaptureRepository(Protocol):
     """Lifecycle and catalog operations for immutable capture snapshots."""
 
@@ -74,3 +89,43 @@ class PacketRepository(Protocol):
     def append(self, capture_id: CaptureId, records: Sequence[PacketRecord]) -> int: ...
 
     def read(self, window: ObservationWindow) -> tuple[PacketRecord, ...]: ...
+
+
+class EnrichmentRepository(Protocol):
+    """Provider observations and researcher annotations for stored IP entities."""
+
+    def count_entities(self) -> int: ...
+
+    def pending_addresses(self) -> tuple[str, ...]: ...
+
+    def get(self, entity_id: EntityId) -> EnrichmentRecord | None: ...
+
+    def put(self, record: EnrichmentRecord) -> None: ...
+
+    def add_annotation(self, annotation: ResearcherAnnotation) -> None: ...
+
+    def annotations(self, entity_id: EntityId) -> tuple[ResearcherAnnotation, ...]: ...
+
+    def legacy_unknown_addresses(self) -> tuple[str, ...]: ...
+
+    def remove_legacy_unknown_ownership(self, addresses: Sequence[str]) -> int: ...
+
+
+class ProfileRepository(Protocol):
+    """Atomic versioned profile sets, histories, verdicts, and retention."""
+
+    def replace_scope(
+        self, scope_id: ObservationScopeId, records: Sequence[EndpointProfile]
+    ) -> int: ...
+
+    def read_scope(self, scope_id: ObservationScopeId) -> tuple[EndpointProfile, ...]: ...
+
+    def read_history(self, scope_id: ObservationScopeId) -> tuple[EndpointProfile, ...]: ...
+
+    def list_scopes(self) -> tuple[ProfileScopeSummary, ...]: ...
+
+    def set_outliers(
+        self, scope_id: ObservationScopeId, verdicts: Mapping[EntityId, OutlierStatus]
+    ) -> int: ...
+
+    def prune(self, retain: int) -> tuple[int, tuple[ObservationScopeId, ...]]: ...

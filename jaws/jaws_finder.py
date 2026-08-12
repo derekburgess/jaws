@@ -11,6 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
+from jaws.domain import EntityId, ObservationScopeId, OutlierStatus, ProfileStatus
 from jaws.jaws_utils import (
     MIN_TIMING_PACKETS,
     NON_CONVERSATIONAL_TYPES,
@@ -19,6 +20,7 @@ from jaws.jaws_utils import (
     dbms_connection,
 )
 from jaws.optional_dependencies import require_module
+from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 plt = None
 plotille = None
@@ -588,7 +590,15 @@ def build_feature_matrix(embeddings, data, components, whiten, feature_weight):
 POOLED_SCOPE = "all"
 
 
-def resolve_profile_scope(driver, database, session_arg):
+def profile_scope_id(scope):
+    if scope == POOLED_SCOPE:
+        return ObservationScopeId("scope_pooled_all")
+    if scope is None:
+        return ObservationScopeId("scope_legacy_unstamped")
+    return ObservationScopeId(f"scope_{scope}")
+
+
+def resolve_profile_scope(driver, database, session_arg, repository=None):
     """Pick which stored profile set (one per compute run) to analyze.
 
     Profile sets accumulate — one ENDPOINT per IP per session — so unlike the old
@@ -599,14 +609,13 @@ def resolve_profile_scope(driver, database, session_arg):
     TIMESTAMP), which is what the pipeline just produced. Raises ValueError for an
     explicit scope that has no profiles.
     """
-    query = """
-    MATCH (e:ENDPOINT)
-    RETURN e.CAPTURE_ID AS scope, max(e.TIMESTAMP) AS computed, count(e) AS endpoints
-    ORDER BY computed DESC
-    """
-    with driver.session(database=database) as session:
-        rows = [record.data() for record in session.run(query)]
-    available = [r["scope"] for r in rows]
+    repository = repository or Neo4jProfileRepository(driver, database)
+    summaries = tuple(
+        summary
+        for summary in repository.list_scopes()
+        if summary.status is not ProfileStatus.LEGACY_QUARANTINED
+    )
+    available = [summary.legacy_scope for summary in summaries]
     if not available:
         return None, []
     if session_arg == "latest":
@@ -619,39 +628,7 @@ def resolve_profile_scope(driver, database, session_arg):
     return session_arg, available
 
 
-# Every numeric input the baseline needs, read from profile sets whose CAPTURE started
-# before the one being analyzed. Identity is deliberately opaque from schema version 2,
-# so chronology must come from stored evidence time rather than CAPTURE_ID text. This also
-# keeps an older session prior when it is re-profiled after a newer one.
-_HISTORY_QUERY = """
-MATCH (e:ENDPOINT)
-OPTIONAL MATCH (historical_capture:CAPTURE {CAPTURE_ID: e.CAPTURE_ID})
-OPTIONAL MATCH (target_capture:CAPTURE {CAPTURE_ID: $scope})
-WITH e,
-     coalesce(historical_capture.STARTED_AT, historical_capture.STARTED) AS historical_started,
-     coalesce(target_capture.STARTED_AT, target_capture.STARTED) AS target_started
-WHERE e.CAPTURE_ID IS NOT NULL
-  AND e.CAPTURE_ID <> $scope
-  AND e.CAPTURE_ID <> $pooled
-  AND ($scope = $pooled OR (
-      historical_started IS NOT NULL
-      AND target_started IS NOT NULL
-      AND historical_started < target_started
-  ))
-RETURN e.IP_ADDRESS AS ip_address,
-       e.CAPTURE_ID AS capture_id,
-       e.BYTES_OUT AS bytes_out,
-       e.PACKETS_OUT AS packets_out,
-       e.OUT_PEERS AS out_peers,
-       e.BYTES_IN AS bytes_in,
-       e.PACKETS_IN AS packets_in,
-       e.IN_PEERS AS in_peers,
-       e.INTERVAL_MEAN AS interval_mean,
-       e.INTERVAL_CV AS interval_cv
-"""
-
-
-def fetch_endpoint_history(driver, database, scope):
+def fetch_endpoint_history(driver, database, scope, repository=None):
     """Per-IP feature medians over the profile sets preceding `scope`.
 
     Returns ip_address -> {"sessions": n, "medians": {feature: value}}, where the
@@ -660,13 +637,25 @@ def fetch_endpoint_history(driver, database, scope):
     assembled identically). An IP absent from the map has never been profiled before —
     the `first_seen` case.
     """
-    if scope is None:
+    if scope is None or scope == POOLED_SCOPE:
         return {}
-    with driver.session(database=database) as session:
-        rows = [
-            record.data()
-            for record in session.run(_HISTORY_QUERY, scope=scope, pooled=POOLED_SCOPE)
-        ]
+    repository = repository or Neo4jProfileRepository(driver, database)
+    profiles = repository.read_history(profile_scope_id(scope))
+    rows = [
+        {
+            "ip_address": profile.identity.entity_id.value.removeprefix("ip:"),
+            "capture_id": profile.legacy_scope,
+            "bytes_out": profile.bytes_out,
+            "packets_out": profile.packets_out,
+            "out_peers": profile.out_peers,
+            "bytes_in": profile.bytes_in,
+            "packets_in": profile.packets_in,
+            "in_peers": profile.in_peers,
+            "interval_mean": profile.interval_mean,
+            "interval_cv": profile.interval_cv,
+        }
+        for profile in profiles
+    ]
     if not rows:
         return {}
 
@@ -699,6 +688,8 @@ def fetch_data_for_dbscan(driver, database, include_local=False, scope=None):
     query = """
     MATCH (endpoint:ENDPOINT)
     WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
+    WITH endpoint
+    WHERE coalesce(endpoint.PROFILE_STATUS, 'legacy_unversioned') <> 'legacy_quarantined'
     OPTIONAL MATCH (ip:IP_ADDRESS {IP_ADDRESS: endpoint.IP_ADDRESS})<-[:OWNERSHIP]-(org:ORGANIZATION)
     RETURN endpoint.IP_ADDRESS AS ip_address,
            endpoint.CAPTURE_ID AS capture_id,
@@ -833,7 +824,9 @@ def fetch_host_outbound(driver, database, capture_id=None):
     return local_ips, rows
 
 
-def add_outlier_to_database(scored_list, flagged_list, driver, database, scope=None):
+def add_outlier_to_database(
+    scored_list, flagged_list, driver, database, scope=None, repository=None
+):
     # Stamp an explicit OUTLIER verdict on every endpoint that was scored this run:
     # false by default, true for the flagged subset. This makes the property
     # three-state for readers (fetch_traffic / inspect_endpoint): true = flagged,
@@ -842,21 +835,15 @@ def add_outlier_to_database(scored_list, flagged_list, driver, database, scope=N
     # from a previous run on the same graph.
     # Scoped to the analyzed profile set: matching on IP alone would overwrite the
     # verdicts stored on that IP's other sessions, rewriting history from one run.
-    reset_query = """
-    UNWIND $scored AS ip
-    MATCH (endpoint:ENDPOINT {IP_ADDRESS: ip})
-    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
-    SET endpoint.OUTLIER = false
-    """
-    flag_query = """
-    UNWIND $outliers AS outlier
-    MATCH (endpoint:ENDPOINT {IP_ADDRESS: outlier.ip_address})
-    WHERE $scope IS NULL OR endpoint.CAPTURE_ID = $scope
-    SET endpoint.OUTLIER = true
-    """
-    with driver.session(database=database) as session:
-        session.run(reset_query, {"scored": [e["ip_address"] for e in scored_list], "scope": scope})
-        session.run(flag_query, {"outliers": flagged_list, "scope": scope})
+    flagged = {item["ip_address"] for item in flagged_list}
+    verdicts = {
+        EntityId(f"ip:{item['ip_address']}"): (
+            OutlierStatus.OUTLIER if item["ip_address"] in flagged else OutlierStatus.INLIER
+        )
+        for item in scored_list
+    }
+    repository = repository or Neo4jProfileRepository(driver, database)
+    repository.set_outliers(profile_scope_id(scope), verdicts)
 
 
 def plot_size_over_ports(plot_data, jaws_finder_endpoint):
@@ -1108,10 +1095,19 @@ def main():
     if driver is None:
         return
 
+    try:
+        profile_repository = Neo4jRepositories.connect(driver, args.database).profiles
+    except Exception as e:
+        reporter.error("ERROR", str(e))
+        driver.close()
+        return
+
     # Which stored profile set this run analyzes. Profiles accumulate per session, so
     # this has to be pinned before anything reads the ENDPOINT layer.
     try:
-        scope, profiled_scopes = resolve_profile_scope(driver, args.database, args.session)
+        scope, profiled_scopes = resolve_profile_scope(
+            driver, args.database, args.session, profile_repository
+        )
     except ValueError as e:
         reporter.error("ERROR", str(e))
         driver.close()
@@ -1398,7 +1394,7 @@ def main():
         )
     else:
         skipped_because = None
-        history = fetch_endpoint_history(driver, args.database, scope)
+        history = fetch_endpoint_history(driver, args.database, scope, profile_repository)
 
     ranked_endpoints = score_endpoints(data, clusters, history)
     flagged = [e for e in ranked_endpoints if e["is_outlier"]]
@@ -1413,7 +1409,14 @@ def main():
             f"(>= {MIN_BASELINE_SESSIONS} prior sessions); {len(new_endpoints)} never seen in a prior session.",
         )
 
-    add_outlier_to_database(ranked_endpoints, flagged, driver, args.database, scope)
+    add_outlier_to_database(
+        ranked_endpoints,
+        flagged,
+        driver,
+        args.database,
+        scope,
+        profile_repository,
+    )
 
     # First-class host-outbound view: outbound FROM the capture host, per destination,
     # isolated from raw packets (host as source). The remote-endpoint ranking above is

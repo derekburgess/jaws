@@ -8,14 +8,17 @@ from .captures import (
     ProfileIdentity,
     capture_scope_id,
 )
+from .enrichment import EnrichmentRecord, ResearcherAnnotation, normalized_ip
 from .enums import (
     CaptureSourceKind,
     CaptureState,
+    EnrichmentStatus,
     EntityType,
     ErrorCategory,
     MeasurementUnit,
     ObservationScopeKind,
     OutlierStatus,
+    ProfileStatus,
     ReferenceKind,
     RunState,
     ScoreDirection,
@@ -34,6 +37,7 @@ from .identifiers import (
 )
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
 from .packets import PacketRecord
+from .profiles import EndpointProfile, ProfileScopeSummary
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
@@ -70,6 +74,9 @@ __all__ = [
     "EntityDefinition",
     "EntityId",
     "EntityType",
+    "EndpointProfile",
+    "EnrichmentRecord",
+    "EnrichmentStatus",
     "ErrorCategory",
     "EvidencePointer",
     "ExperimentId",
@@ -98,6 +105,9 @@ __all__ = [
     "ScoreDirection",
     "ScoredEntity",
     "ProfileIdentity",
+    "ProfileStatus",
+    "ProfileScopeSummary",
+    "ResearcherAnnotation",
     "Secret",
     "Success",
     "TERMINAL_CAPTURE_STATES",
@@ -111,6 +121,7 @@ __all__ = [
     "legacy_failure",
     "legacy_success",
     "normalize_utc",
+    "normalized_ip",
     "packet_count",
     "primitive",
     "ratio",

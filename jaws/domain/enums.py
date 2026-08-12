@@ -26,6 +26,20 @@ class ObservationScopeKind(StrEnum):
     LEGACY = "legacy"
 
 
+class EnrichmentStatus(StrEnum):
+    SUCCEEDED = "succeeded"
+    NOT_APPLICABLE = "not_applicable"
+    NOT_FOUND = "not_found"
+    TRANSIENT_FAILURE = "transient_failure"
+    PERMANENT_FAILURE = "permanent_failure"
+
+
+class ProfileStatus(StrEnum):
+    CURRENT = "current"
+    LEGACY_UNVERSIONED = "legacy_unversioned"
+    LEGACY_QUARANTINED = "legacy_quarantined"
+
+
 class RunState(StrEnum):
     CREATED = "created"
     RUNNING = "running"

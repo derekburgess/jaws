@@ -1,4 +1,4 @@
-# Capture and packet repositories
+# Evidence repositories
 
 Milestone 2 stores capture metadata and packet evidence behind inward-facing repository
 contracts. Application and interface code depends on `jaws.ports`; Neo4j-specific Cypher
@@ -41,3 +41,29 @@ the [schema contract](neo4j-schema.md).
 Repository errors distinguish duplicates, missing captures, optimistic state conflicts,
 inactive captures, and unsupported schema state without exposing Neo4j exception types to
 application code.
+
+## EnrichmentRepository
+
+`EnrichmentRepository` owns the IP inventory count, deterministic pending-address order,
+provider records, researcher annotations, and targeted legacy-`Unknown` cleanup. Provider
+records distinguish successful, not-applicable, not-found, transient-failure, and
+permanent-failure outcomes. Only transient failures remain pending after a recorded
+attempt. Provider fields and researcher annotations are never merged into one record.
+
+The compatibility adapter continues to write `OWNERSHIP`, `HOSTNAME`, `LOCATION`, and
+`COORDINATES`, while also storing provider ID/revision, acquisition time, outcome, ASN,
+confidence, and failure code. Re-enrichment replaces prior provider ownership instead of
+accumulating contradictory provider organizations.
+
+## ProfileRepository
+
+`ProfileRepository` atomically replaces all profiles in one explicit observation scope,
+reads a scope, reads earlier concrete scopes by capture evidence time, lists computed
+scopes, applies complete tri-state outlier verdict batches, and prunes whole profile sets.
+Missing scope/entity/profile validation occurs before destructive writes in the same
+transaction.
+
+Pooled `all` is represented by `scope_pooled_all` and returns no history. Unstamped legacy
+profiles are retained in `scope_legacy_unstamped` with `legacy_quarantined` status.
+Version-aware writers require a computation timestamp and canonical `PROFILE_KEY`; readers
+may expose quarantined/unversioned records without inventing missing provenance.

@@ -4,9 +4,9 @@ import os
 from datetime import UTC, datetime
 
 import pytest
+from profile_repository_contract import assert_enrichment_and_profile_repository_contract
 from repository_contract import assert_capture_and_packet_repository_contract
 
-from jaws import jaws_finder
 from jaws.config import DATABASE, NEO4J_PASSWORD, get_neo4j_driver
 from jaws.domain import (
     CaptureId,
@@ -14,6 +14,7 @@ from jaws.domain import (
     CaptureSourceKind,
     CaptureState,
     EntityId,
+    ObservationScopeId,
 )
 from jaws.ports import DuplicateCaptureError
 from jaws.storage import Neo4jRepositories
@@ -29,7 +30,8 @@ def test_neo4j_connectivity():
 
     driver = get_neo4j_driver()
     driver.verify_connectivity()
-    with driver.session(database=DATABASE) as session:
+    database = os.environ.get("JAWS_NEO4J_MIGRATION_TEST_DATABASE", DATABASE)
+    with driver.session(database=database) as session:
         assert session.run("RETURN 1 AS value").single()["value"] == 1
 
 
@@ -50,6 +52,7 @@ def _reset_migration_fixture(driver, database):
             "MATCH (capture:CAPTURE) "
             "WHERE capture.CAPTURE_ID STARTS WITH 'cap_migration_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
+            "   OR capture.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
             "DETACH DELETE capture"
         ).consume()
         session.run(
@@ -60,8 +63,10 @@ def _reset_migration_fixture(driver, database):
         session.run(
             "MATCH (scope:OBSERVATION_SCOPE) "
             "WHERE scope.MIGRATED_FROM_SCHEMA_VERSION = 2 "
+            "   OR scope.MIGRATED_FROM_SCHEMA_VERSION = 3 "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_migration_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_repository_fixture' "
+            "   OR scope.SCOPE_ID STARTS WITH 'scope_profile_fixture' "
             "DETACH DELETE scope"
         ).consume()
         session.run(
@@ -99,7 +104,7 @@ def test_fresh_database_reaches_managed_schema(disposable_migration_database):
 
     result = manager(driver, database).migrate()
 
-    assert result.applied_versions == (1, 2)
+    assert result.applied_versions == (1, 2, 3)
     assert result.status.is_current
     assert manager(driver, database).migrate().applied_versions == ()
 
@@ -118,7 +123,11 @@ def test_starting_revision_schema_is_adopted_without_losing_evidence(
             "CAPTURE_ID: $capture_id, PACKETS: 3, SOURCE: 'legacy.pcap', "
             "STARTED: datetime('2026-08-10T15:30:00Z')}) "
             "CREATE (:JAWS_MIGRATION_TEST_FIXTURE:ENDPOINT {"
-            "IP_ADDRESS: '8.8.8.8', CAPTURE_ID: $capture_id})",
+            "IP_ADDRESS: '8.8.8.8', CAPTURE_ID: $capture_id, OUTLIER: false}) "
+            "CREATE (:JAWS_MIGRATION_TEST_FIXTURE:ENDPOINT {"
+            "IP_ADDRESS: '1.1.1.1', CAPTURE_ID: 'all', OUTLIER: true}) "
+            "CREATE (:JAWS_MIGRATION_TEST_FIXTURE:ENDPOINT {"
+            "IP_ADDRESS: '192.0.2.1'})",
             {"capture_id": "legacy-migration-fixture"},
         ).consume()
 
@@ -143,6 +152,25 @@ def test_starting_revision_schema_is_adopted_without_losing_evidence(
         assert record["packet_count"] == 3
         assert record["scope_id"] == "scope_legacy-migration-fixture"
         assert record["endpoint_scope_id"] == record["scope_id"]
+        legacy_profiles = {
+            row["ip_address"]: row.data()
+            for row in session.run(
+                "MATCH (endpoint:JAWS_MIGRATION_TEST_FIXTURE:ENDPOINT) "
+                "RETURN endpoint.IP_ADDRESS AS ip_address, "
+                "endpoint.SCOPE_ID AS scope_id, "
+                "endpoint.PROFILE_STATUS AS profile_status, "
+                "endpoint.OUTLIER_STATUS AS outlier_status, "
+                "endpoint.OUTLIER AS legacy_outlier"
+            )
+        }
+        assert legacy_profiles["8.8.8.8"]["profile_status"] == "legacy_unversioned"
+        assert legacy_profiles["8.8.8.8"]["outlier_status"] == "inlier"
+        assert legacy_profiles["8.8.8.8"]["legacy_outlier"] is False
+        assert legacy_profiles["1.1.1.1"]["scope_id"] == "scope_pooled_all"
+        assert legacy_profiles["1.1.1.1"]["outlier_status"] == "outlier"
+        assert legacy_profiles["192.0.2.1"]["scope_id"] == "scope_legacy_unstamped"
+        assert legacy_profiles["192.0.2.1"]["profile_status"] == "legacy_quarantined"
+        assert legacy_profiles["192.0.2.1"]["outlier_status"] == "not_scored"
 
 
 def test_collision_resistant_capture_identity_rejects_duplicate_starts(
@@ -180,7 +208,38 @@ def test_capture_and_packet_repositories_follow_shared_contract(
     assert_capture_and_packet_repository_contract(repositories)
 
 
-def test_historical_profile_query_orders_opaque_ids_by_capture_time(
+def test_enrichment_and_profile_repositories_follow_shared_contract(
+    disposable_migration_database,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    with driver.session(database=database) as session:
+        session.run(
+            "MATCH (unknown:ORGANIZATION {ORGANIZATION: 'Unknown'}) DETACH DELETE unknown"
+        ).consume()
+        session.run(
+            "CREATE (first:IP_ADDRESS {IP_ADDRESS: '192.0.2.10'}) "
+            "CREATE (second:IP_ADDRESS {IP_ADDRESS: '198.51.100.20'}) "
+            "CREATE (unknown:ORGANIZATION {ORGANIZATION: 'Unknown'}) "
+            "CREATE (unknown)-[:OWNERSHIP]->(first) "
+            "CREATE (first_capture:CAPTURE {"
+            "CAPTURE_ID: 'cap_profile_fixture_first', "
+            "STARTED_AT: datetime('2026-08-12T12:00:00Z')}) "
+            "CREATE (second_capture:CAPTURE {"
+            "CAPTURE_ID: 'cap_profile_fixture_second', "
+            "STARTED_AT: datetime('2026-08-12T12:00:01Z')}) "
+            "CREATE (first_scope:OBSERVATION_SCOPE {"
+            "SCOPE_ID: 'scope_profile_fixture_first'})-[:INCLUDES]->(first_capture) "
+            "CREATE (second_scope:OBSERVATION_SCOPE {"
+            "SCOPE_ID: 'scope_profile_fixture_second'})-[:INCLUDES]->(second_capture)"
+        ).consume()
+
+    repositories = Neo4jRepositories.connect(driver, database)
+
+    assert_enrichment_and_profile_repository_contract(repositories)
+
+
+def test_profile_history_repository_orders_opaque_ids_by_capture_time(
     disposable_migration_database,
 ):
     driver, database = disposable_migration_database
@@ -197,11 +256,22 @@ def test_historical_profile_query_orders_opaque_ids_by_capture_time(
             "IP_ADDRESS: '8.8.8.8', CAPTURE_ID: $historical_id})",
             {"historical_id": historical_id, "target_id": target_id},
         ).consume()
-        rows = list(
-            session.run(
-                jaws_finder._HISTORY_QUERY,
-                {"scope": target_id, "pooled": "all"},
-            )
-        )
+        session.run(
+            "MATCH (historical_capture:CAPTURE {CAPTURE_ID: $historical_id}) "
+            "MATCH (target_capture:CAPTURE {CAPTURE_ID: $target_id}) "
+            "CREATE (historical_scope:OBSERVATION_SCOPE {"
+            "SCOPE_ID: 'scope_' + $historical_id})-[:INCLUDES]->(historical_capture) "
+            "CREATE (target_scope:OBSERVATION_SCOPE {"
+            "SCOPE_ID: 'scope_' + $target_id})-[:INCLUDES]->(target_capture) "
+            "WITH historical_scope "
+            "MATCH (endpoint:ENDPOINT {CAPTURE_ID: $historical_id}) "
+            "SET endpoint.SCOPE_ID = historical_scope.SCOPE_ID, "
+            "endpoint.PROFILE_STATUS = 'legacy_unversioned'",
+            {"historical_id": historical_id, "target_id": target_id},
+        ).consume()
 
-    assert [record["capture_id"] for record in rows] == [historical_id]
+    rows = Neo4jRepositories.connect(driver, database).profiles.read_history(
+        ObservationScopeId(f"scope_{target_id}")
+    )
+
+    assert [record.legacy_scope for record in rows] == [historical_id]

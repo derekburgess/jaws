@@ -10,7 +10,6 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from jaws import jaws_capture as capture
-from jaws import jaws_finder as finder
 from jaws.domain import CaptureId, ObservationWindow
 from jaws.ports import (
     FrozenClock,
@@ -202,5 +201,8 @@ def test_file_sha256_reads_content_in_bounded_chunks(tmp_path):
 
 
 def test_historical_profiles_order_by_capture_time_not_opaque_identity():
-    assert "historical_started < target_started" in finder._HISTORY_QUERY
-    assert "e.CAPTURE_ID < $scope" not in finder._HISTORY_QUERY
+    from jaws.storage.neo4j_profile_repositories import _READ_HISTORY
+
+    assert "historical_capture.STARTED" in _READ_HISTORY
+    assert "< target_started" in _READ_HISTORY
+    assert "CAPTURE_ID < $scope" not in _READ_HISTORY

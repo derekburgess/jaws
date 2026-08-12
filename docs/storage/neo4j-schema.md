@@ -133,6 +133,38 @@ kind explicitly, and creates `scope_` plus `CAPTURE_ID` for each legacy capture.
 markers bound the conditional rollback described by
 [ADR-0013](../adr/0013-capture-identity-lifecycle-and-observation-scope.md).
 
+## Managed target: database schema version 3
+
+Version 3 adds provider enrichment provenance, separate researcher annotations, and
+explicit legacy-profile semantics. It retains all version-1 and version-2 objects.
+
+| Label/property | Contract |
+| --- | --- |
+| `IP_ADDRESS.ENRICHMENT_STATUS` | `succeeded`, `not_applicable`, `not_found`, `transient_failure`, or `permanent_failure` |
+| `IP_ADDRESS.ENRICHED_AT` | Provider acquisition UTC datetime |
+| `IP_ADDRESS.ENRICHMENT_PROVIDER_ID`, `ENRICHMENT_PROVIDER_REVISION` | Provider identity and revision reported by the adapter |
+| `IP_ADDRESS.ENRICHMENT_ORGANIZATION`, `ENRICHMENT_ASN`, `ENRICHMENT_CONFIDENCE`, `ENRICHMENT_FAILURE_CODE` | Provider-derived metadata or explicit outcome details |
+| `ENTITY_ANNOTATION.ANNOTATION_KEY` | Canonical unique entity/key identity for researcher-authored metadata |
+| `ENDPOINT.PROFILE_STATUS` | `current`, `legacy_unversioned`, or `legacy_quarantined` |
+| `ENDPOINT.OUTLIER_STATUS` | `outlier`, `inlier`, or `not_scored`; legacy `OUTLIER` remains dual-written |
+
+`(:IP_ADDRESS)-[:ANNOTATED_WITH]->(:ENTITY_ANNOTATION)` keeps annotations separate from
+provider ownership. `scope_pooled_all` has kind `pooled`. Unstamped legacy profiles move
+to `scope_legacy_unstamped`, kind `legacy`, with `QUARANTINED=true`; no endpoint is deleted.
+Capture-scoped legacy profiles remain unversioned because their representation/model
+identity cannot be recovered.
+
+### Version-3 constraints and indexes
+
+| Kind | Name | Label/properties |
+| --- | --- | --- |
+| Uniqueness constraint | `entity_annotation_key_unique` | `ENTITY_ANNOTATION(ANNOTATION_KEY)` |
+| Range index | `ip_enrichment_status_index` | `IP_ADDRESS(ENRICHMENT_STATUS)` |
+| Range index | `endpoint_scope_computed_index` | `ENDPOINT(SCOPE_ID, TIMESTAMP)` |
+
+The repository behavior and conditional rollback are detailed in
+[ADR-0014](../adr/0014-enrichment-provenance-and-versioned-profile-sets.md).
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -156,9 +188,7 @@ runtime argument; URI, username, and password retain their existing settings beh
 
 ## Later Milestone 2 versions
 
-Versions 1 and 2 establish ownership and evidence identity, not the complete storage
-redesign. Later migrations own legacy-profile quarantine, pooled `all` semantics,
-historical ordering, unknown-ownership cleanup, and tri-state outlier preservation. Each
-will add its target contract here before implementation, state backup and rollback
-behavior, and retain Benchmark 0 compatibility until repository and interface parity gates
-pass.
+Versions 1–3 do not complete retention declarations, export/import, administration,
+finding indexes, experiment indexes, or removal of every remaining interface-owned Cypher
+query. Later versions must document those contracts before implementation and retain
+Benchmark 0 compatibility until their parity gates pass.

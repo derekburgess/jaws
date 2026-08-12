@@ -500,12 +500,12 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 - [x] Implement `CaptureRepository` for lifecycle and catalog operations ([repository contract](docs/storage/repositories.md)).
 - [x] Implement `PacketRepository` for batched evidence writes and scoped reads ([repository contract](docs/storage/repositories.md)).
-- [ ] Implement `EnrichmentRepository` for metadata and annotations.
-- [ ] Implement `ProfileRepository` for versioned profile sets and histories.
+- [x] Implement `EnrichmentRepository` for metadata and annotations ([ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
+- [x] Implement `ProfileRepository` for versioned profile sets and histories ([ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
 - [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
 - [ ] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph.
 - [ ] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher.
-- [ ] Add repository contract tests that run against both fakes and a pinned Neo4j test instance.
+- [x] Add repository contract tests that run against both fakes and a pinned Neo4j test instance.
 
 #### Retention, export, and administration
 
@@ -517,11 +517,11 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 #### Legacy migration cases
 
-- [ ] Migrate or explicitly quarantine profiles with no session stamp.
-- [ ] Preserve pooled `all` scope semantics without treating it as a chronological session.
-- [ ] Preserve old endpoint history order even if an older capture is re-profiled later.
-- [ ] Remove or migrate legacy `Unknown` ownership relationships for non-public IPs.
-- [ ] Preserve tri-state outlier meaning: true, false, and never scored.
+- [x] Migrate or explicitly quarantine profiles with no session stamp.
+- [x] Preserve pooled `all` scope semantics without treating it as a chronological session.
+- [x] Preserve old endpoint history order even if an older capture is re-profiled later.
+- [x] Remove or migrate legacy `Unknown` ownership relationships for non-public IPs.
+- [x] Preserve tri-state outlier meaning: true, false, and never scored.
 
 ### Completion gate
 
@@ -1221,13 +1221,32 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
-ownership plus database versions 1 and 2 now cover evidence identity, lifecycle,
-provenance, observation scope, profile uniqueness, and legacy lookup compatibility.
-`CaptureRepository` and `PacketRepository` now provide tested in-memory and Neo4j
-implementations. The next active repository slice is `EnrichmentRepository` and
-`ProfileRepository`, including the legacy profile migration cases they expose.
+ownership plus database versions 1–3 now cover evidence identity, lifecycle, enrichment
+provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
+tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
+`EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
+implementations. The next active Milestone 2 slice is retention/export/administration and
+the remaining Cypher centralization needed by finder inspection and MCP.
 
 ## Change log
+
+### 2026-08-12 — Milestone 2 enrichment and profile repositories
+
+- Added [ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md),
+  immutable provider-enrichment/researcher-annotation/profile records, explicit provider
+  and profile outcome statuses, and repository errors for missing entities and mixed
+  scopes.
+- Added deterministic in-memory and Neo4j enrichment/profile repositories for provider
+  caching, annotations, atomic profile-set replacement, chronological history, tri-state
+  outlier verdicts, and whole-scope retention.
+- Added migration version 3: pooled `all` now has an explicit nonchronological scope,
+  unstamped profiles are quarantined rather than deleted, unversioned evidence is labeled
+  honestly, and absent/false/true outlier values remain distinguishable.
+- Routed legacy enrichment plus compute profile writes and finder scope/history/verdict
+  operations through repositories without changing frozen CLI envelopes. Compute now
+  publishes a profile set only after every embedding succeeds.
+- Ran the shared contract against fakes and a disposable pinned Neo4j 5.26.28 instance;
+  the offline suite and compatibility contract remain green.
 
 ### 2026-08-11 — Milestone 2 capture and packet repositories
 

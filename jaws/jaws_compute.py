@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from rich.console import Group
 
+from jaws.adapters import SystemClock
 from jaws.config import (
     CONSOLE,
     DATABASE,
@@ -11,6 +12,13 @@ from jaws.config import (
     OPENAI_EMBEDDING_MODEL,
     PACKET_MODELS,
     get_openai_client,
+)
+from jaws.domain import (
+    EndpointProfile,
+    EntityId,
+    ObservationScopeId,
+    ProfileIdentity,
+    ProfileStatus,
 )
 from jaws.jaws_utils import (
     MIN_TIMING_PACKETS,
@@ -21,6 +29,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 
 def fetch_packets(driver, database, capture_id=None):
@@ -216,26 +225,60 @@ def build_endpoint_description(p):
     )
 
 
-# An ENDPOINT profile belongs to ONE session scope, and the profile sets ACCUMULATE:
-# each compute run rebuilds only its own scope and leaves every other session's
-# profiles in place, so the same IP has one profile per session it appeared in. That
-# per-IP history is what jaws_finder baselines against (is this endpoint unusual for
-# ITSELF, not just versus its peers right now). Clearing the scope being recomputed
-# still matters — otherwise an IP seen in an earlier run of the SAME session would
-# survive with stale numbers — but it is a scoped delete, never the whole layer.
-def clear_session_profiles(driver, database, session_scope):
-    # Unstamped profiles are also dropped: a graph computed before session stamping has
-    # ENDPOINTs with no CAPTURE_ID, which the scoped MERGE below never matches (so they
-    # are never refreshed) and retention never reaches (`null IN [...]` is never true in
-    # Cypher). Left alone they would shadow the real profile sets forever.
-    query = """
-    MATCH (e:ENDPOINT)
-    WHERE e.CAPTURE_ID = $session_scope OR e.CAPTURE_ID IS NULL
-    DETACH DELETE e
-    RETURN count(e) AS cleared
-    """
-    with driver.session(database=database) as session:
-        return session.run(query, session_scope=session_scope).single()["cleared"]
+def profile_scope_id(session_scope):
+    if session_scope == "all":
+        return ObservationScopeId("scope_pooled_all")
+    return ObservationScopeId(f"scope_{session_scope}")
+
+
+def replace_session_profiles(
+    profiles,
+    embeddings,
+    session_scope,
+    model_name,
+    driver,
+    database,
+    repository=None,
+):
+    """Atomically replace one complete, explicitly versioned profile set."""
+
+    scope_id = profile_scope_id(session_scope)
+    computed_at = SystemClock().now()
+    records = tuple(
+        EndpointProfile(
+            identity=ProfileIdentity(
+                entity_id=EntityId(f"ip:{profile['ip_address']}"),
+                scope_id=scope_id,
+                representation_id="endpoint-description",
+                representation_version="legacy-v1",
+                model_id=model_name,
+                # The legacy CLI accepts mutable provider/model names but no immutable
+                # revision. Record that limitation explicitly rather than inventing one.
+                model_revision="runtime-unpinned",
+            ),
+            legacy_scope=session_scope,
+            computed_at=computed_at,
+            address_classification=profile["endpoint_type"],
+            organization=profile["org"],
+            hostname=profile["hostname"],
+            location=profile["location"],
+            bytes_out=profile["bytes_out"],
+            packets_out=profile["packets_out"],
+            out_peers=profile["out_peers"],
+            out_ports=tuple(profile["out_ports"]),
+            bytes_in=profile["bytes_in"],
+            packets_in=profile["packets_in"],
+            in_peers=profile["in_peers"],
+            in_ports=tuple(profile["in_ports"]),
+            protocols=tuple(profile["protocols"]),
+            interval_mean=profile.get("interval_mean"),
+            interval_cv=profile.get("interval_cv"),
+            embedding=tuple(embedding),
+        )
+        for profile, embedding in zip(profiles, embeddings, strict=True)
+    )
+    repository = repository or Neo4jProfileRepository(driver, database)
+    return repository.replace_scope(scope_id, records)
 
 
 # Profiles are cheap per row but each carries an embedding vector, so an unbounded
@@ -243,82 +286,21 @@ def clear_session_profiles(driver, database, session_scope):
 # most recently computed scopes (by compute TIMESTAMP) — far more history than the
 # baseline needs — and drops the rest. PACKET/CAPTURE history is never touched: an
 # older session can always be re-profiled with --session <capture_id>.
-def prune_profile_sessions(driver, database, retain):
+def prune_profile_sessions(driver, database, retain, repository=None):
     if retain is None or retain <= 0:
         return 0, []
-    scopes_query = """
-    MATCH (e:ENDPOINT)
-    RETURN e.CAPTURE_ID AS scope, max(e.TIMESTAMP) AS computed
-    ORDER BY computed DESC
-    """
-    delete_query = """
-    MATCH (e:ENDPOINT)
-    WHERE e.CAPTURE_ID IN $scopes
-    DETACH DELETE e
-    RETURN count(e) AS pruned
-    """
-    with driver.session(database=database) as session:
-        scopes = [record["scope"] for record in session.run(scopes_query)]
-        stale = scopes[retain:]
-        if not stale:
-            return 0, []
-        pruned = session.run(delete_query, scopes=stale).single()["pruned"]
-    return pruned, stale
+    repository = repository or Neo4jProfileRepository(driver, database)
+    summaries = {summary.scope_id: summary.legacy_scope for summary in repository.list_scopes()}
+    pruned, stale = repository.prune(retain)
+    return pruned, [summaries[scope_id] for scope_id in stale]
 
 
-def count_profile_sessions(driver, database):
-    query = "MATCH (e:ENDPOINT) RETURN count(DISTINCT e.CAPTURE_ID) AS scopes"
-    with driver.session(database=database) as session:
-        return session.run(query).single()["scopes"]
-
-
-def add_endpoint_to_database(profile, embedding, session_scope, driver, database):
-    # MERGE on the COMPOSITE key (IP, session): merging on IP alone would overwrite the
-    # previous session's profile for that IP and destroy the history the finder
-    # baselines against.
-    query = """
-    MATCH (ip:IP_ADDRESS {IP_ADDRESS: $ip_address})
-    MERGE (ip)-[:PROFILE]->(endpoint:ENDPOINT {IP_ADDRESS: $ip_address, CAPTURE_ID: $session_scope})
-    SET endpoint.EMBEDDING = $embedding,
-        endpoint.ENDPOINT_TYPE = $endpoint_type,
-        endpoint.ORGANIZATION = $org,
-        endpoint.HOSTNAME = $hostname,
-        endpoint.LOCATION = $location,
-        endpoint.BYTES_OUT = $bytes_out,
-        endpoint.PACKETS_OUT = $packets_out,
-        endpoint.OUT_PEERS = $out_peers,
-        endpoint.OUT_PORTS = $out_ports,
-        endpoint.BYTES_IN = $bytes_in,
-        endpoint.PACKETS_IN = $packets_in,
-        endpoint.IN_PEERS = $in_peers,
-        endpoint.IN_PORTS = $in_ports,
-        endpoint.PROTOCOLS = $protocols,
-        endpoint.INTERVAL_MEAN = $interval_mean,
-        endpoint.INTERVAL_CV = $interval_cv,
-        endpoint.TIMESTAMP = datetime()
-    """
-    with driver.session(database=database) as session:
-        session.run(
-            query,
-            ip_address=profile["ip_address"],
-            embedding=embedding,
-            session_scope=session_scope,
-            endpoint_type=profile["endpoint_type"],
-            org=profile["org"],
-            hostname=profile["hostname"],
-            location=profile["location"],
-            bytes_out=profile["bytes_out"],
-            packets_out=profile["packets_out"],
-            out_peers=profile["out_peers"],
-            out_ports=profile["out_ports"],
-            bytes_in=profile["bytes_in"],
-            packets_in=profile["packets_in"],
-            in_peers=profile["in_peers"],
-            in_ports=profile["in_ports"],
-            protocols=profile["protocols"],
-            interval_mean=profile.get("interval_mean"),
-            interval_cv=profile.get("interval_cv"),
-        )
+def count_profile_sessions(driver, database, repository=None):
+    repository = repository or Neo4jProfileRepository(driver, database)
+    return sum(
+        summary.status is not ProfileStatus.LEGACY_QUARANTINED
+        for summary in repository.list_scopes()
+    )
 
 
 def _local_embedding_runtime():
@@ -412,6 +394,13 @@ def main():
         return
 
     try:
+        profile_repository = Neo4jRepositories.connect(driver, args.database).profiles
+    except Exception as e:
+        reporter.error("ERROR", str(e))
+        driver.close()
+        return
+
+    try:
         capture_id, session_ids = resolve_session(driver, args.database, args.session)
     except ValueError as e:
         reporter.error("ERROR", str(e))
@@ -459,18 +448,26 @@ def main():
         else:
             embeddings = compute_openai_embeddings(get_openai_client(), descriptions)
 
-        # Only THIS scope's previous profiles go — other sessions' profile sets stay as
-        # the per-endpoint history the finder baselines against (see clear_session_profiles).
-        clear_session_profiles(driver, args.database, session_scope)
         with reporter.activity(render) as update:
             for profile, description, embedding in zip(profiles, descriptions, embeddings):
-                add_endpoint_to_database(profile, embedding, session_scope, driver, args.database)
                 embedding_strings.append(description)
                 embedding_tensors.append(embedding)
                 update()
 
+        replace_session_profiles(
+            profiles,
+            embeddings,
+            session_scope,
+            model_name,
+            driver,
+            args.database,
+            profile_repository,
+        )
+
         # Retention runs after the write so this run's own set is always among the kept.
-        pruned, pruned_scopes = prune_profile_sessions(driver, args.database, args.retain_profiles)
+        pruned, pruned_scopes = prune_profile_sessions(
+            driver, args.database, args.retain_profiles, profile_repository
+        )
         if pruned:
             reporter.info(
                 "CONFIG",
@@ -479,7 +476,7 @@ def main():
 
         # Profile sets now in the graph — how much per-endpoint history jaws-finder can
         # baseline against (1 means this run only: no history yet, baseline is a no-op).
-        profiled_scopes = count_profile_sessions(driver, args.database)
+        profiled_scopes = count_profile_sessions(driver, args.database, profile_repository)
         reporter.result(
             {
                 "database": args.database,

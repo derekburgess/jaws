@@ -1,8 +1,11 @@
 import argparse
+from importlib.metadata import PackageNotFoundError, version
 
 from rich.console import Group
 
+from jaws.adapters import SystemClock
 from jaws.config import CONSOLE, DATABASE, get_ipinfo_api_key
+from jaws.domain import EnrichmentRecord, EnrichmentStatus, EntityId
 from jaws.jaws_utils import (
     Reporter,
     classify_endpoint,
@@ -11,6 +14,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.storage import Neo4jEnrichmentRepository, Neo4jRepositories
 
 
 def get_ipinfo(handler, ip_address, reporter):
@@ -24,24 +28,17 @@ def get_ipinfo(handler, ip_address, reporter):
         return None
 
 
-def fetch_data_for_organization(driver, database):
-    query = """
-    MATCH (ip_address:IP_ADDRESS)
-    WHERE NOT (ip_address)<-[:OWNERSHIP]-(:ORGANIZATION)
-    RETURN DISTINCT ip_address.IP_ADDRESS AS ip_address
-    """
-    with driver.session(database=database) as session:
-        result = session.run(query)
-        return [record["ip_address"] for record in result]
+def fetch_data_for_organization(driver, database, repository=None):
+    repository = repository or Neo4jEnrichmentRepository(driver, database)
+    return list(repository.pending_addresses())
 
 
-def fetch_total_addresses(driver, database):
-    query = "MATCH (ip_address:IP_ADDRESS) RETURN count(ip_address) AS total"
-    with driver.session(database=database) as session:
-        return session.run(query).single()["total"]
+def fetch_total_addresses(driver, database, repository=None):
+    repository = repository or Neo4jEnrichmentRepository(driver, database)
+    return repository.count_entities()
 
 
-def cleanup_legacy_unknown(driver, database):
+def cleanup_legacy_unknown(driver, database, repository=None):
     """Detach non-public IPs from the legacy 'Unknown' organization.
 
     Before the non-public skip existed, bogon lookups all merged into a single
@@ -50,24 +47,13 @@ def cleanup_legacy_unknown(driver, database):
     happens here (classify_endpoint is Python); the org node is deleted when the
     detach orphans it. Returns how many IPs were detached.
     """
-    fetch_query = """
-    MATCH (:ORGANIZATION {ORGANIZATION: 'Unknown'})-[:OWNERSHIP]->(ip:IP_ADDRESS)
-    RETURN ip.IP_ADDRESS AS ip_address
-    """
-    detach_query = """
-    MATCH (org:ORGANIZATION {ORGANIZATION: 'Unknown'})-[r:OWNERSHIP]->(ip:IP_ADDRESS)
-    WHERE ip.IP_ADDRESS IN $ips
-    DELETE r
-    WITH DISTINCT org
-    WHERE NOT (org)-[:OWNERSHIP]->()
-    DELETE org
-    """
-    with driver.session(database=database) as session:
-        documented = [r["ip_address"] for r in session.run(fetch_query)]
-        stale = [ip for ip in documented if classify_endpoint(ip) != "public"]
-        if stale:
-            session.run(detach_query, {"ips": stale})
-    return len(stale)
+    repository = repository or Neo4jEnrichmentRepository(driver, database)
+    stale = [
+        address
+        for address in repository.legacy_unknown_addresses()
+        if classify_endpoint(address) != "public"
+    ]
+    return repository.remove_legacy_unknown_ownership(stale)
 
 
 def format_location(ipinfo):
@@ -82,30 +68,37 @@ def format_location(ipinfo):
     return ", ".join(parts) if parts else ipinfo.get("loc", "Unknown")
 
 
-def add_organization_to_database(ip_address, ipinfo, driver, database):
-    query = """
-    MATCH (ip_address:IP_ADDRESS {IP_ADDRESS: $ip_address})
-    MERGE (org:ORGANIZATION {ORGANIZATION: $org})
-    MERGE (ip_address)<-[:OWNERSHIP]-(org)
-    SET ip_address.HOSTNAME = $hostname, ip_address.LOCATION = $location,
-        ip_address.COORDINATES = $coordinates
-    """
-    with driver.session(database=database) as session:
-        session.run(
-            query,
-            {
-                "ip_address": ip_address,
-                "org": ipinfo.get(
-                    "org",
-                    ipinfo.get("company", {}).get(
-                        "name", ipinfo.get("asn", {}).get("name", "Unknown")
-                    ),
-                ),
-                "hostname": ipinfo.get("hostname", "Unknown"),
-                "location": format_location(ipinfo),
-                "coordinates": ipinfo.get("loc", "Unknown"),
-            },
+def organization_name(ipinfo):
+    return ipinfo.get(
+        "org",
+        ipinfo.get("company", {}).get("name", ipinfo.get("asn", {}).get("name", "Unknown")),
+    )
+
+
+def ipinfo_revision():
+    try:
+        return version("ipinfo")
+    except PackageNotFoundError:
+        return "runtime-unreported"
+
+
+def add_organization_to_database(ip_address, ipinfo, driver, database, repository=None):
+    repository = repository or Neo4jEnrichmentRepository(driver, database)
+    repository.put(
+        EnrichmentRecord(
+            entity_id=EntityId(f"ip:{ip_address}"),
+            ip_address=ip_address,
+            status=EnrichmentStatus.SUCCEEDED,
+            acquired_at=SystemClock().now(),
+            provider_id="ipinfo",
+            provider_revision=ipinfo_revision(),
+            organization=organization_name(ipinfo),
+            asn=ipinfo.get("asn", {}).get("asn"),
+            hostname=ipinfo.get("hostname", "Unknown"),
+            location=format_location(ipinfo),
+            coordinates=ipinfo.get("loc", "Unknown"),
         )
+    )
 
 
 def main():
@@ -123,12 +116,19 @@ def main():
     if driver is None:
         return
 
+    try:
+        enrichment_repository = Neo4jRepositories.connect(driver, args.database).enrichment
+    except Exception as e:
+        reporter.error("ERROR", str(e))
+        driver.close()
+        return
+
     # Old graphs carry OWNERSHIP edges from non-public IPs to a legacy 'Unknown' org
     # (created before the non-public skip existed); detach them first so those IPs
     # count as skipped below rather than silently reading as already-documented.
-    cleanup_legacy_unknown(driver, args.database)
-    total_addresses = fetch_total_addresses(driver, args.database)
-    undocumented = fetch_data_for_organization(driver, args.database)
+    cleanup_legacy_unknown(driver, args.database, enrichment_repository)
+    total_addresses = fetch_total_addresses(driver, args.database, enrichment_repository)
+    undocumented = fetch_data_for_organization(driver, args.database, enrichment_repository)
     # Every IP_ADDRESS node is accounted for in the result: scanned + skipped +
     # already_documented == the graph's total, so the counters are auditable.
     already_documented = total_addresses - len(undocumented)
@@ -170,13 +170,14 @@ def main():
             for ip_address in ip_addresses:
                 ipinfo_details = get_ipinfo(handler, ip_address, reporter)
                 if ipinfo_details:
-                    add_organization_to_database(ip_address, ipinfo_details, driver, args.database)
-                    org_name = ipinfo_details.get(
-                        "org",
-                        ipinfo_details.get("company", {}).get(
-                            "name", ipinfo_details.get("asn", {}).get("name", "Unknown")
-                        ),
+                    add_organization_to_database(
+                        ip_address,
+                        ipinfo_details,
+                        driver,
+                        args.database,
+                        enrichment_repository,
                     )
+                    org_name = organization_name(ipinfo_details)
                     # The full org→IP→hostname→loc detail is queryable via fetch_traffic;
                     # here we only stream a human view (pretty mode) and return a count.
                     org_string = f"{org_name} ➜ {ip_address}\n{ipinfo_details.get('hostname', 'Unknown')}, {format_location(ipinfo_details)}\n"

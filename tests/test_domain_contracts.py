@@ -15,6 +15,9 @@ from jaws.domain import (
     CaptureRecord,
     CaptureSourceKind,
     CaptureState,
+    EndpointProfile,
+    EnrichmentRecord,
+    EnrichmentStatus,
     EntityDefinition,
     EntityId,
     EntityType,
@@ -31,6 +34,7 @@ from jaws.domain import (
     RankerSpec,
     ReferenceSpec,
     RepresentationSpec,
+    ResearcherAnnotation,
     RunState,
     Score,
     ScoredEntity,
@@ -143,6 +147,55 @@ def test_packet_evidence_normalizes_addresses_and_requires_valid_units():
         replace(packet, destination_port=0)
     with pytest.raises(ValueError, match="size"):
         replace(packet, size_bytes=-1)
+
+
+def test_enrichment_and_profile_records_separate_provider_and_researcher_evidence():
+    observed_at = datetime(2026, 8, 12, 12, tzinfo=UTC)
+    entity_id = EntityId("ip:2001:db8::1")
+    enrichment = EnrichmentRecord(
+        entity_id=entity_id,
+        ip_address="2001:0db8::1",
+        status=EnrichmentStatus.SUCCEEDED,
+        acquired_at=observed_at,
+        provider_id="fixture",
+        provider_revision="1",
+        organization="Example",
+    )
+    annotation = ResearcherAnnotation(
+        entity_id=entity_id,
+        key="label",
+        value="benign",
+        author="researcher",
+        recorded_at=observed_at,
+        ground_truth=True,
+    )
+    identity = ProfileIdentity(
+        entity_id=entity_id,
+        scope_id=ObservationScopeId("scope-a"),
+        representation_id="description",
+        representation_version="1",
+        model_id="model",
+        model_revision="revision",
+    )
+    profile = EndpointProfile(
+        identity=identity,
+        legacy_scope="capture-a",
+        computed_at=observed_at,
+        address_classification="documentation",
+        protocols=("TCP", "TCP"),
+        out_ports=(443, 443),
+        embedding=(0.0, 1.0),
+    )
+
+    assert enrichment.ip_address == "2001:db8::1"
+    assert annotation.ground_truth
+    assert profile.protocols == ("TCP",)
+    assert profile.out_ports == (443,)
+    assert profile.outlier is OutlierStatus.NOT_SCORED
+    with pytest.raises(ValueError, match="unsuccessful"):
+        replace(enrichment, status=EnrichmentStatus.NOT_FOUND)
+    with pytest.raises(ValueError, match="successful enrichment requires"):
+        replace(enrichment, organization="   ")
 
 
 def test_observation_scope_and_profile_identity_are_explicit_and_stable():
