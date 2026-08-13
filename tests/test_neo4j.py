@@ -4,6 +4,7 @@ import os
 from datetime import UTC, datetime
 
 import pytest
+from evidence_contract import OBSERVED_AT, evidence_fixture
 from inspection_repository_contract import assert_inspection_repository_contract
 from profile_repository_contract import assert_enrichment_and_profile_repository_contract
 from repository_contract import assert_capture_and_packet_repository_contract
@@ -18,7 +19,8 @@ from jaws.domain import (
     EntityId,
     ObservationScopeId,
 )
-from jaws.ports import DuplicateCaptureError
+from jaws.ports import DuplicateCaptureError, FrozenClock
+from jaws.services import EvidenceTransferService
 from jaws.storage import Neo4jRepositories
 from jaws.storage.migrations import MIGRATIONS, manager
 
@@ -49,6 +51,10 @@ def _migration_test_database() -> str:
 
 def _reset_migration_fixture(driver, database):
     with driver.session(database=database) as session:
+        # This fixture runs only against the explicitly named disposable migration-test
+        # database. Clear every data node so strict empty-target contracts cannot inherit
+        # orphaned derived nodes from an earlier repository contract.
+        session.run("MATCH (node) DETACH DELETE node").consume()
         session.run("MATCH (n:JAWS_MIGRATION_TEST_FIXTURE) DETACH DELETE n").consume()
         session.run(
             "MATCH (capture:CAPTURE) "
@@ -57,6 +63,7 @@ def _reset_migration_fixture(driver, database):
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
+            "   OR capture.CAPTURE_ID STARTS WITH 'cap_evidence_fixture' "
             "DETACH DELETE capture"
         ).consume()
         session.run(
@@ -64,6 +71,7 @@ def _reset_migration_fixture(driver, database):
             "WHERE packet.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
             "   OR packet.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
             "   OR packet.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
+            "   OR packet.CAPTURE_ID STARTS WITH 'cap_evidence_fixture' "
             "DETACH DELETE packet"
         ).consume()
         session.run(
@@ -71,6 +79,9 @@ def _reset_migration_fixture(driver, database):
             "WHERE endpoint.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
             "   OR endpoint.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
             "   OR endpoint.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
+            "   OR endpoint.CAPTURE_ID STARTS WITH 'cap_evidence_fixture' "
+            "   OR endpoint.SCOPE_ID IN ["
+            "'scope_cap_evidence_fixture', 'scope_legacy_unstamped'] "
             "DETACH DELETE endpoint"
         ).consume()
         session.run(
@@ -82,7 +93,16 @@ def _reset_migration_fixture(driver, database):
             "   OR scope.SCOPE_ID STARTS WITH 'scope_profile_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_inspection_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_retention_fixture' "
+            "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_evidence_fixture' "
+            "   OR scope.SCOPE_ID IN ['scope_pooled_all', 'scope_legacy_unstamped'] "
             "DETACH DELETE scope"
+        ).consume()
+        session.run("MATCH (annotation:ENTITY_ANNOTATION) DETACH DELETE annotation").consume()
+        session.run(
+            "MATCH (organization:ORGANIZATION) "
+            "WHERE organization.ORGANIZATION IN ["
+            "'Evidence Fixture Networks', 'Legacy Fixture Networks'] "
+            "DETACH DELETE organization"
         ).consume()
         session.run(
             "MATCH (port:PORT) "
@@ -272,6 +292,31 @@ def test_retention_service_follows_shared_contract(disposable_migration_database
     repositories = Neo4jRepositories.connect(driver, database)
 
     assert_retention_service_contract(repositories)
+
+
+def test_evidence_export_import_round_trip_preserves_snapshot(
+    disposable_migration_database,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    repositories = Neo4jRepositories.connect(driver, database)
+    repositories.evidence.restore(evidence_fixture())
+    service = EvidenceTransferService(repositories.evidence, FrozenClock(OBSERVED_AT))
+
+    bundle = service.export()
+    assert bundle.evidence == evidence_fixture()
+    with driver.session(database=database) as session:
+        session.run(
+            "MATCH (node) WHERE NOT node:JAWS_SCHEMA_MIGRATION DETACH DELETE node"
+        ).consume()
+
+    plan = service.plan_import(bundle)
+    assert plan.target_empty
+    result = service.apply_import(bundle, plan)
+
+    assert result.applied
+    assert repositories.evidence.snapshot() == bundle.evidence
+    assert repositories.evidence.snapshot().content_checksum == bundle.evidence.content_checksum
 
 
 def test_profile_history_repository_orders_opaque_ids_by_capture_time(

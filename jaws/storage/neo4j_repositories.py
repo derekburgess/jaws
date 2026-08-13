@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Protocol, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, Self, TypeVar, cast
 
 from jaws.domain import (
     ACTIVE_CAPTURE_STATES,
@@ -36,6 +36,9 @@ from jaws.ports.repositories import capture_metadata
 from .migrations import manager
 from .neo4j_inspection_repository import Neo4jInspectionRepository
 from .neo4j_profile_repositories import Neo4jEnrichmentRepository, Neo4jProfileRepository
+
+if TYPE_CHECKING:
+    from .neo4j_evidence_repository import Neo4jEvidenceRepository
 
 ResultT = TypeVar("ResultT")
 
@@ -487,9 +490,12 @@ class Neo4jRepositories:
     enrichment: Neo4jEnrichmentRepository
     profiles: Neo4jProfileRepository
     inspection: Neo4jInspectionRepository
+    evidence: Neo4jEvidenceRepository
 
     @classmethod
     def connect(cls, driver: object, database: str) -> Self:
+        from .neo4j_evidence_repository import Neo4jEvidenceRepository
+
         status = manager(driver, database).validate()
         if not status.is_current:
             detail = "; ".join(status.issues) or "schema version is not current"
@@ -500,4 +506,5 @@ class Neo4jRepositories:
             enrichment=Neo4jEnrichmentRepository(driver, database),
             profiles=Neo4jProfileRepository(driver, database),
             inspection=Neo4jInspectionRepository(driver, database),
+            evidence=Neo4jEvidenceRepository(driver, database),
         )

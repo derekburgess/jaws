@@ -15,6 +15,8 @@ from jaws.domain import (
     EnrichmentRecord,
     EntityId,
     EntityMetadata,
+    EvidenceSchemaProvenance,
+    EvidenceSnapshot,
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
@@ -74,6 +76,14 @@ class ProfileScopeConflictError(RepositoryError):
 
 class RetentionConflictError(RepositoryError):
     """Retained data changed after a dry-run plan was created."""
+
+
+class EvidenceSchemaConflictError(RepositoryError):
+    """An evidence bundle and target database have different schema provenance."""
+
+
+class EvidenceImportConflictError(RepositoryError):
+    """An evidence import target is not empty or changed after planning."""
 
 
 class CaptureRepository(Protocol):
@@ -140,6 +150,18 @@ class ProfileRepository(Protocol):
     ) -> int: ...
 
     def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int: ...
+
+
+class EvidenceRepository(Protocol):
+    """Exact versioned evidence snapshots and empty-target atomic restoration."""
+
+    def schema_provenance(self) -> EvidenceSchemaProvenance: ...
+
+    def snapshot(self) -> EvidenceSnapshot: ...
+
+    def is_empty(self) -> bool: ...
+
+    def restore(self, evidence: EvidenceSnapshot) -> None: ...
 
 
 class InspectionRepository(Protocol):

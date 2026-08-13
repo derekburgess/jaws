@@ -119,3 +119,46 @@ jaws-retention apply --retain-profiles 20
 The legacy `jaws-compute --retain-profiles` flag constructs and applies the same complete
 policy after a successful profile replacement, preserving its result envelope during the
 compatibility period. Raw packet and capture history remain explicitly `keep_all`.
+
+## Evidence export and import
+
+`EvidenceRepository` exposes an exact typed snapshot of the managed evidence contract:
+captures, observation scopes, packets, IP entities and all ownership organizations,
+provider enrichments, researcher annotations, and current or legacy endpoint profiles.
+The snapshot also carries the ordered managed migration version, names, and checksums.
+`EvidenceTransferService` builds and verifies the portable bundle independently of Neo4j
+and file-system details.
+
+Create and validate a bundle:
+
+```bash
+jaws-evidence export /secure/backups/jaws-evidence.json --database neo4j
+jaws-evidence validate /secure/backups/jaws-evidence.json
+```
+
+The export is canonical JSON with per-section record counts/checksums and a whole-content
+checksum. Publication is atomic and refuses to overwrite an existing path. Validation is
+offline and does not load JAWS settings or contact Neo4j.
+
+Restore only into a fresh database after applying the matching managed migrations:
+
+```bash
+jaws-schema migrate --database jaws-restored
+jaws-evidence import /secure/backups/jaws-evidence.json \
+  --database jaws-restored --dry-run
+jaws-evidence import /secure/backups/jaws-evidence.json \
+  --database jaws-restored
+```
+
+Dry-run does not write. Apply repeats exact schema-provenance and empty-target checks inside
+the restore transaction; only the two schema-created empty system scopes are ignored, so
+any other node makes the target nonempty. A populated target or changed plan fails closed.
+Statement batches share one transaction, so a failure does not leave a partial import.
+After commit, the service re-exports and compares the content checksum before reporting
+success.
+
+Evidence bundles include retained packet payload text and enriched metadata. Treat them as
+sensitive research evidence, restrict their filesystem and transport access, and do not
+commit them to the source repository. Application secrets are not part of the managed
+evidence snapshot. The bundle is not a general Neo4j dump: unmanaged labels, properties,
+and relationships require a separate database-native backup if they must be preserved.

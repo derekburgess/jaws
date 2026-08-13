@@ -512,7 +512,7 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 - [x] Define independent policies for raw packets, capture metadata, profiles/embeddings, experiment indexes, and external artifact bundles ([ADR-0015](docs/adr/0015-declared-retention-plan-before-apply.md)).
 - [x] Make retention a declared policy with dry-run output, not an incidental post-compute side effect (`jaws-retention`; the legacy compute flag delegates to the same service during compatibility).
-- [ ] Add export/import procedures that preserve schema version, provenance, IDs, and checksums.
+- [x] Add export/import procedures that preserve schema version, provenance, IDs, and checksums ([ADR-0016](docs/adr/0016-portable-evidence-bundles-and-empty-target-import.md); `jaws-evidence`).
 - [ ] Replace unguarded agent-mode database deletion with an explicit administrative operation requiring exact target and confirmation semantics.
 - [ ] Record deletions/retention actions in an audit log without recording secrets or packet payloads unnecessarily.
 
@@ -1228,10 +1228,25 @@ tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
 implementations. Capture, enrichment, compute, finder, and MCP inspection contain no
 Cypher. Retention now uses a complete five-resource policy, mutation-free dry-run plans,
-and stale-plan-safe apply semantics. The next active Milestone 2 slice is export/import,
-followed by guarded administration and audit logging.
+and stale-plan-safe apply semantics. Managed evidence has portable, checksummed export and
+empty-target atomic import. The next active Milestone 2 slice is guarded administration and
+audit logging.
 
 ## Change log
+
+### 2026-08-13 — Milestone 2 portable evidence export/import
+
+- Added [ADR-0016](docs/adr/0016-portable-evidence-bundles-and-empty-target-import.md) and
+  typed schema/snapshot/bundle records covering captures, scopes, packets, entities and all
+  ownership edges, enrichment, annotations, and current or legacy profiles.
+- Added canonical JSON bundles with exact migration provenance, deterministic section
+  counts and SHA-256 checksums, a whole-content checksum, atomic no-overwrite publication,
+  and database-free validation.
+- Added `jaws-evidence export|validate|import`; import dry-run is mutation-free, and apply
+  requires matching schema history plus an empty target before repeating both checks inside
+  one atomic restore transaction and verifying the restored checksum.
+- Passed 172 offline tests and ten integration tests against disposable pinned Neo4j
+  5.26.28; strict types, Ruff format/lint, compatibility tests, and Recall@3 remained green.
 
 ### 2026-08-12 — Milestone 2 declared retention planning and apply
 

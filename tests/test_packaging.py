@@ -98,6 +98,10 @@ def test_retention_entry_point_is_packaged():
     assert PROJECT["scripts"]["jaws-retention"] == "jaws.retention_cli:main"
 
 
+def test_evidence_entry_point_is_packaged():
+    assert PROJECT["scripts"]["jaws-evidence"] == "jaws.evidence_cli:main"
+
+
 def test_missing_capability_error_names_the_install_extra():
     try:
         require_module(

@@ -79,6 +79,7 @@ def test_lint_and_type_boundaries_are_explicit_ratchets():
         "jaws/services/",
         "jaws/storage/",
         "jaws/retention_cli.py",
+        "jaws/evidence_cli.py",
         "jaws/settings.py",
         "jaws/optional_dependencies.py",
         "scripts/benchmark_smoke.py",

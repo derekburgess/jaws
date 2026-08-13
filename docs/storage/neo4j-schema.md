@@ -188,7 +188,8 @@ runtime argument; URI, username, and password retain their existing settings beh
 
 ## Later Milestone 2 versions
 
-Versions 1–3 do not complete retention declarations, export/import, administration,
-finding indexes, experiment indexes, or removal of every remaining interface-owned Cypher
-query. Later versions must document those contracts before implementation and retain
-Benchmark 0 compatibility until their parity gates pass.
+Versions 1–3 do not complete administration, finding indexes, experiment indexes, or
+removal of every remaining interface-owned Cypher query. Retention and portable managed-
+evidence export/import operate over version 3 without changing graph schema. Later versions
+must document their contracts before implementation and retain Benchmark 0 compatibility
+until their parity gates pass.

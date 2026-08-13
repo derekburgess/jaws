@@ -12,6 +12,7 @@ from .contracts import (
     Ranker,
     ReferenceBuilder,
 )
+from .evidence_fakes import InMemoryEvidenceRepository
 from .fakes import (
     FakeEmbeddingProvider,
     FakeEnrichmentProvider,
@@ -33,6 +34,9 @@ from .repositories import (
     DuplicateCaptureError,
     EnrichmentRepository,
     EntityNotFoundError,
+    EvidenceImportConflictError,
+    EvidenceRepository,
+    EvidenceSchemaConflictError,
     InactiveCaptureError,
     InspectionRepository,
     PacketRepository,
@@ -55,6 +59,9 @@ __all__ = [
     "Evaluator",
     "EvidenceStore",
     "DuplicateCaptureError",
+    "EvidenceImportConflictError",
+    "EvidenceRepository",
+    "EvidenceSchemaConflictError",
     "EnrichmentRepository",
     "EntityNotFoundError",
     "FakeEmbeddingProvider",
@@ -66,6 +73,7 @@ __all__ = [
     "IdGenerator",
     "InMemoryArtifactStore",
     "InMemoryCaptureRepository",
+    "InMemoryEvidenceRepository",
     "InMemoryEvidenceStore",
     "InMemoryEnrichmentRepository",
     "InMemoryInspectionRepository",

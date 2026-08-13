@@ -27,6 +27,7 @@ the research-workbench rollout.
 | [0013](0013-capture-identity-lifecycle-and-observation-scope.md) | Accepted | Separate capture identity, lifecycle, and observation scope |
 | [0014](0014-enrichment-provenance-and-versioned-profile-sets.md) | Accepted | Separate enrichment provenance, annotations, and versioned profile sets |
 | [0015](0015-declared-retention-plan-before-apply.md) | Accepted | Require a declared retention plan before apply |
+| [0016](0016-portable-evidence-bundles-and-empty-target-import.md) | Accepted | Use checksummed evidence bundles and empty-target import |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In

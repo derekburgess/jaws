@@ -290,6 +290,23 @@ The current finite policy applies only to computed profile sets. Raw packets and
 metadata remain retained. `jaws-compute --retain-profiles` delegates to the same policy for
 2.0 compatibility; use `0` to keep all profile sets.
 
+Create a checksummed managed-evidence backup, validate it offline, and inspect a restore
+into a separate freshly migrated database before applying it:
+
+```bash
+jaws-evidence export /secure/backups/jaws-evidence.json --database neo4j
+jaws-evidence validate /secure/backups/jaws-evidence.json
+jaws-schema migrate --database jaws-restored
+jaws-evidence import /secure/backups/jaws-evidence.json \
+  --database jaws-restored --dry-run
+jaws-evidence import /secure/backups/jaws-evidence.json \
+  --database jaws-restored
+```
+
+Import refuses populated or schema-incompatible targets. Evidence bundles may contain raw
+packet payloads and enriched metadata; handle them as sensitive evidence and do not commit
+them to the repository.
+
 ### 6. Run the MCP server
 
 For a spawn-based MCP client:
