@@ -21,7 +21,7 @@ from jaws.domain import (
     canonical_digest,
     utc_text,
 )
-from jaws.ports import EntityNotFoundError, ProfileScopeConflictError
+from jaws.ports import EntityNotFoundError, ProfileScopeConflictError, RetentionConflictError
 
 ResultT = TypeVar("ResultT")
 
@@ -620,27 +620,63 @@ class Neo4jProfileRepository:
         with self._driver.session(database=self.database) as session:
             return session.execute_write(write)
 
-    def prune(self, retain: int) -> tuple[int, tuple[ObservationScopeId, ...]]:
-        if retain <= 0:
-            return 0, ()
-        scopes = tuple(
-            summary
-            for summary in self.list_scopes()
-            if summary.status is not ProfileStatus.LEGACY_QUARANTINED
-        )
-        stale = tuple(summary.scope_id for summary in scopes[retain:])
-        if not stale:
-            return 0, ()
-        query = """
+    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int:
+        requested = tuple(expected)
+        if not requested:
+            return 0
+        if len({summary.scope_id for summary in requested}) != len(requested):
+            raise ValueError("retention scope identities must be unique")
+        values = [
+            {
+                "scope_id": summary.scope_id.value,
+                "legacy_scope": summary.legacy_scope,
+                "computed_at": utc_text(summary.computed_at) if summary.computed_at else None,
+                "profile_count": summary.profile_count,
+                "status": summary.status.value,
+            }
+            for summary in requested
+        ]
+        validate_query = """
+        UNWIND $scopes AS expected
+        OPTIONAL MATCH (endpoint:ENDPOINT {SCOPE_ID: expected.scope_id})
+        RETURN expected.scope_id AS scope_id,
+               head(collect(endpoint.CAPTURE_ID)) AS legacy_scope,
+               toString(max(endpoint.TIMESTAMP)) AS computed_at,
+               count(endpoint) AS profile_count,
+               head(collect(endpoint.PROFILE_STATUS)) AS profile_status
+        ORDER BY scope_id
+        """
+        delete_query = """
         MATCH (endpoint:ENDPOINT)
         WHERE endpoint.SCOPE_ID IN $scope_ids
         DETACH DELETE endpoint
-        RETURN count(endpoint) AS pruned
+        RETURN count(endpoint) AS deleted
         """
-        with self._driver.session(database=self.database) as session:
-            row = session.execute_write(
-                lambda transaction: transaction.run(
-                    query, {"scope_ids": [scope.value for scope in stale]}
-                ).single()
+
+        def write(transaction: _Transaction) -> int:
+            rows = transaction.run(validate_query, {"scopes": values})
+            current = tuple(
+                sorted(
+                    (
+                        ProfileScopeSummary(
+                            scope_id=ObservationScopeId(_text(row["scope_id"], "SCOPE_ID")),
+                            legacy_scope=_optional_text(row["legacy_scope"]) or "legacy_unstamped",
+                            computed_at=_datetime(row["computed_at"]),
+                            profile_count=int(row["profile_count"]),
+                            status=_profile_status(row["profile_status"]),
+                        )
+                        for row in rows
+                    ),
+                    key=lambda summary: summary.scope_id.value,
+                )
             )
-        return (int(row["pruned"]) if row else 0), stale
+            if current != tuple(sorted(requested, key=lambda summary: summary.scope_id.value)):
+                raise RetentionConflictError("profile scopes changed after retention was planned")
+            deleted = transaction.run(
+                delete_query,
+                {"scope_ids": [summary.scope_id.value for summary in requested]},
+            ).single()
+            return int(deleted["deleted"]) if deleted else 0
+
+        with self._driver.session(database=self.database) as session:
+            return session.execute_write(write)

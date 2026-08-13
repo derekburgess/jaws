@@ -510,8 +510,8 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 
 #### Retention, export, and administration
 
-- [ ] Define independent policies for raw packets, capture metadata, profiles/embeddings, experiment indexes, and external artifact bundles.
-- [ ] Make retention a declared policy with dry-run output, not an incidental post-compute side effect.
+- [x] Define independent policies for raw packets, capture metadata, profiles/embeddings, experiment indexes, and external artifact bundles ([ADR-0015](docs/adr/0015-declared-retention-plan-before-apply.md)).
+- [x] Make retention a declared policy with dry-run output, not an incidental post-compute side effect (`jaws-retention`; the legacy compute flag delegates to the same service during compatibility).
 - [ ] Add export/import procedures that preserve schema version, provenance, IDs, and checksums.
 - [ ] Replace unguarded agent-mode database deletion with an explicit administrative operation requiring exact target and confirmation semantics.
 - [ ] Record deletions/retention actions in an audit log without recording secrets or packet payloads unnecessarily.
@@ -1227,10 +1227,26 @@ provenance, observation scope, versioned profiles, legacy quarantine, pooled sco
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
 implementations. Capture, enrichment, compute, finder, and MCP inspection contain no
-Cypher. The next active Milestone 2 slice is declared retention with dry-run behavior,
-followed by export/import and guarded administration.
+Cypher. Retention now uses a complete five-resource policy, mutation-free dry-run plans,
+and stale-plan-safe apply semantics. The next active Milestone 2 slice is export/import,
+followed by guarded administration and audit logging.
 
 ## Change log
+
+### 2026-08-12 — Milestone 2 declared retention planning and apply
+
+- Added [ADR-0015](docs/adr/0015-declared-retention-plan-before-apply.md) and typed policies
+  that independently declare raw-packet, capture-metadata, profile-set, experiment-index,
+  and artifact-bundle retention. Unsupported finite rules fail closed.
+- Added the deterministic `RetentionService`: dry-run returns exact retained/deleted/
+  protected scope summaries without mutation; apply rejects a changed plan and validates
+  every planned scope inside the deletion transaction.
+- Replaced repository `prune(retain)` with exact planned-scope deletion, protected
+  quarantined legacy profiles, and added `jaws-retention dry-run|apply` JSON operations.
+- Routed the legacy compute flag through the same service while preserving its arguments,
+  automatic compatibility behavior, messages, and result fields.
+- Passed 166 offline tests and nine integration tests against disposable pinned Neo4j
+  5.26.28; strict types, Ruff format/lint, compatibility tests, and Recall@3 remained green.
 
 ### 2026-08-12 — Milestone 2 MCP inspection repository centralization
 

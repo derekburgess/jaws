@@ -96,6 +96,7 @@ jaws-compute = "jaws.jaws_compute:main"
 jaws-finder = "jaws.jaws_finder:main"
 jaws-utils = "jaws.jaws_utils:main"
 jaws-schema = "jaws.storage.cli:main"
+jaws-retention = "jaws.retention_cli:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
@@ -104,6 +105,7 @@ packages = [
     "jaws.adapters",
     "jaws.domain",
     "jaws.ports",
+    "jaws.services",
     "jaws.storage",
     "jaws.storage.migrations",
     "jaws_mcp",
@@ -137,7 +139,9 @@ files = [
     "jaws/adapters/",
     "jaws/domain/",
     "jaws/ports/",
+    "jaws/services/",
     "jaws/storage/",
+    "jaws/retention_cli.py",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

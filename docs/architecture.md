@@ -19,9 +19,10 @@ interfaces / adapters / infrastructure
 | --- | --- | --- |
 | `jaws.domain` | `jaws.domain` only | Ports, services, adapters, legacy commands, infrastructure, interfaces |
 | `jaws.ports` | `jaws.domain`, `jaws.ports` | Services, adapters, legacy commands, concrete providers/storage, interfaces |
+| `jaws.services` | `jaws.domain`, `jaws.ports`, `jaws.services` | Adapters, legacy commands, concrete providers/storage, interfaces |
 | `jaws.settings` | `jaws.domain` | Ports, services, adapters, concrete providers/storage, interfaces |
 
-All three layers may import the Python standard library. They may not import third-party
+All four layers may import the Python standard library. They may not import third-party
 packages. The architecture test parses imports rather than importing modules, so an
 optional dependency cannot hide an invalid direction merely because it is unavailable in
 the test environment.
@@ -30,6 +31,11 @@ The protocols are intentionally provider- and storage-neutral. Neo4j, PyShark, I
 OpenAI, sentence-transformers, CLI, and MCP code implement or consume these contracts from
 outer layers; none belongs in `jaws.domain` or `jaws.ports`. The deterministic fakes live
 beside the contracts because service unit tests need the same lightweight install boundary.
+
+`jaws.services` contains deterministic use-case coordination over inward ports. Retention
+planning is the first enforced service: it consumes typed policies and profile summaries,
+produces a mutation-free dry-run plan, and applies only an unchanged exact plan. It does not
+import Neo4j, configuration, CLI, or reporting code.
 
 `jaws.storage` is an outer infrastructure package. It depends inward on domain and port
 contracts; its repository adapters accept driver-compatible objects without importing the

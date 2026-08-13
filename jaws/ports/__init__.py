@@ -40,6 +40,7 @@ from .repositories import (
     ProfileScopeConflictError,
     RepositoryError,
     RepositorySchemaError,
+    RetentionConflictError,
 )
 from .repository_fakes import InMemoryCaptureRepository, InMemoryPacketRepository
 
@@ -80,6 +81,7 @@ __all__ = [
     "ReferenceBuilder",
     "RepositoryError",
     "RepositorySchemaError",
+    "RetentionConflictError",
     "SequenceIdGenerator",
     "SequencePacketSource",
 ]

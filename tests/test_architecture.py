@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LAYERS = {
     "jaws.domain": {"jaws.domain"},
     "jaws.ports": {"jaws.domain", "jaws.ports"},
+    "jaws.services": {"jaws.domain", "jaws.ports", "jaws.services"},
     "jaws.settings": {"jaws.domain", "jaws.settings"},
 }
 

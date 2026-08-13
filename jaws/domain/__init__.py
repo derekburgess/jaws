@@ -42,6 +42,14 @@ from .profiles import EndpointProfile, ProfileScopeSummary
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
+from .retention import (
+    RetentionMode,
+    RetentionPlan,
+    RetentionPolicy,
+    RetentionResource,
+    RetentionResult,
+    RetentionRule,
+)
 from .secrets import REDACTED, UNSET, Secret
 from .serialization import canonical_digest, canonical_json, primitive
 from .specifications import (
@@ -113,6 +121,12 @@ __all__ = [
     "ProfileStatus",
     "ProfileScopeSummary",
     "ResearcherAnnotation",
+    "RetentionMode",
+    "RetentionPlan",
+    "RetentionPolicy",
+    "RetentionResource",
+    "RetentionResult",
+    "RetentionRule",
     "Secret",
     "Success",
     "TERMINAL_CAPTURE_STATES",

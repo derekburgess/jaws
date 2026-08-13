@@ -7,6 +7,7 @@ import pytest
 from inspection_repository_contract import assert_inspection_repository_contract
 from profile_repository_contract import assert_enrichment_and_profile_repository_contract
 from repository_contract import assert_capture_and_packet_repository_contract
+from retention_contract import assert_retention_service_contract
 
 from jaws.config import DATABASE, NEO4J_PASSWORD, get_neo4j_driver
 from jaws.domain import (
@@ -55,17 +56,21 @@ def _reset_migration_fixture(driver, database):
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
             "   OR capture.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
+            "   OR capture.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
             "DETACH DELETE capture"
         ).consume()
         session.run(
             "MATCH (packet:PACKET) "
             "WHERE packet.CAPTURE_ID STARTS WITH 'cap_repository_fixture' "
             "   OR packet.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
+            "   OR packet.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
             "DETACH DELETE packet"
         ).consume()
         session.run(
             "MATCH (endpoint:ENDPOINT) "
-            "WHERE endpoint.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
+            "WHERE endpoint.CAPTURE_ID STARTS WITH 'cap_profile_fixture' "
+            "   OR endpoint.CAPTURE_ID STARTS WITH 'cap_inspection_fixture' "
+            "   OR endpoint.CAPTURE_ID STARTS WITH 'cap_retention_fixture' "
             "DETACH DELETE endpoint"
         ).consume()
         session.run(
@@ -76,6 +81,7 @@ def _reset_migration_fixture(driver, database):
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_repository_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_profile_fixture' "
             "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_inspection_fixture' "
+            "   OR scope.SCOPE_ID STARTS WITH 'scope_cap_retention_fixture' "
             "DETACH DELETE scope"
         ).consume()
         session.run(
@@ -257,6 +263,15 @@ def test_inspection_repository_follows_shared_contract(disposable_migration_data
     repositories = Neo4jRepositories.connect(driver, database)
 
     assert_inspection_repository_contract(repositories)
+
+
+def test_retention_service_follows_shared_contract(disposable_migration_database):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+
+    repositories = Neo4jRepositories.connect(driver, database)
+
+    assert_retention_service_contract(repositories)
 
 
 def test_profile_history_repository_orders_opaque_ids_by_capture_time(

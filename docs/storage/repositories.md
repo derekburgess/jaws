@@ -66,9 +66,11 @@ accumulating contradictory provider organizations.
 
 `ProfileRepository` atomically replaces all profiles in one explicit observation scope,
 reads a scope, reads earlier concrete scopes by capture evidence time, lists computed
-scopes, applies complete tri-state outlier verdict batches, and prunes whole profile sets.
-Missing scope/entity/profile validation occurs before destructive writes in the same
-transaction.
+scopes, applies complete tri-state outlier verdict batches, and deletes an exact previously
+planned set of whole profile scopes. Missing scope/entity/profile validation occurs before
+destructive writes in the same transaction. Exact-scope deletion validates identity,
+legacy alias, compute time, record count, and status so a stale retention plan fails without
+deleting a replacement.
 
 Pooled `all` is represented by `scope_pooled_all` and returns no history. Unstamped legacy
 profiles are retained in `scope_legacy_unstamped` with `legacy_quarantined` status.
@@ -93,3 +95,27 @@ The in-memory implementation composes `ProfileRepository`, `PacketRepository`, a
 `EnrichmentRepository`. Both implementations run through the same behavioral contract,
 including limits, missing endpoints, metadata fallback, history order, port roles, and
 directional byte counts.
+
+## Retention service
+
+`RetentionPolicy` declares independent rules for raw packets, capture metadata, profile
+sets, experiment indexes, and external artifact bundles. Every resource must appear exactly
+once. The safe default is `keep_all`; this milestone implements finite `keep_latest` only
+for nonquarantined profile sets and rejects unsupported finite rules.
+
+`RetentionService.plan` and `dry_run` only read profile summaries. Their `RetentionPlan`
+names every retained, deleted, and protected profile scope and the exact profile-row count
+proposed for deletion. `apply` recalculates the policy and delegates exact-scope validation
+plus deletion to one repository transaction. Quarantined legacy scopes are protected and
+do not consume the finite profile allowance.
+
+Operators can inspect the JSON plan independently:
+
+```bash
+jaws-retention dry-run --retain-profiles 20
+jaws-retention apply --retain-profiles 20
+```
+
+The legacy `jaws-compute --retain-profiles` flag constructs and applies the same complete
+policy after a successful profile replacement, preserving its result envelope during the
+compatibility period. Raw packet and capture history remain explicitly `keep_all`.

@@ -169,8 +169,11 @@ def assert_enrichment_and_profile_repository_contract(repositories):
         for record in repositories.profiles.read_scope(first_scope)
     } == verdicts
 
-    pruned, scopes = repositories.profiles.prune(1)
-    assert pruned == 2
-    assert scopes == (first_scope,)
+    first_summary = next(
+        summary
+        for summary in repositories.profiles.list_scopes()
+        if summary.scope_id == first_scope
+    )
+    assert repositories.profiles.delete_scopes((first_summary,)) == 2
     assert repositories.profiles.read_scope(first_scope) == ()
     assert repositories.profiles.read_scope(second_scope) == (latest,)

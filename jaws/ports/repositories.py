@@ -72,6 +72,10 @@ class ProfileScopeConflictError(RepositoryError):
     """A profile batch does not consistently identify one observation scope."""
 
 
+class RetentionConflictError(RepositoryError):
+    """Retained data changed after a dry-run plan was created."""
+
+
 class CaptureRepository(Protocol):
     """Lifecycle and catalog operations for immutable capture snapshots."""
 
@@ -135,7 +139,7 @@ class ProfileRepository(Protocol):
         self, scope_id: ObservationScopeId, verdicts: Mapping[EntityId, OutlierStatus]
     ) -> int: ...
 
-    def prune(self, retain: int) -> tuple[int, tuple[ObservationScopeId, ...]]: ...
+    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int: ...
 
 
 class InspectionRepository(Protocol):

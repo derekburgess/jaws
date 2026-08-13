@@ -94,6 +94,10 @@ def test_schema_administration_entry_point_is_packaged():
     assert PROJECT["scripts"]["jaws-schema"] == "jaws.storage.cli:main"
 
 
+def test_retention_entry_point_is_packaged():
+    assert PROJECT["scripts"]["jaws-retention"] == "jaws.retention_cli:main"
+
+
 def test_missing_capability_error_names_the_install_extra():
     try:
         require_module(

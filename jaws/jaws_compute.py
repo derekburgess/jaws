@@ -21,6 +21,7 @@ from jaws.domain import (
     ObservationWindow,
     ProfileIdentity,
     ProfileStatus,
+    RetentionPolicy,
 )
 from jaws.jaws_utils import (
     MIN_TIMING_PACKETS,
@@ -31,6 +32,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.services import RetentionService
 from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 
@@ -305,9 +307,11 @@ def prune_profile_sessions(driver, database, retain, repository=None):
     if retain is None or retain <= 0:
         return 0, []
     repository = repository or Neo4jProfileRepository(driver, database)
-    summaries = {summary.scope_id: summary.legacy_scope for summary in repository.list_scopes()}
-    pruned, stale = repository.prune(retain)
-    return pruned, [summaries[scope_id] for scope_id in stale]
+    service = RetentionService(repository)
+    result = service.apply(service.plan(RetentionPolicy.legacy_profile_limit(retain)))
+    return result.deleted_profile_records, [
+        summary.legacy_scope for summary in result.plan.deleted_profile_scopes
+    ]
 
 
 def count_profile_sessions(driver, database, repository=None):
@@ -481,7 +485,9 @@ def main():
             repositories.profiles,
         )
 
-        # Retention runs after the write so this run's own set is always among the kept.
+        # Compatibility adapter: the explicit retention service runs after the write so
+        # this run's own set is always among the kept. Operators can inspect the same
+        # policy independently through `jaws-retention dry-run`.
         pruned, pruned_scopes = prune_profile_sessions(
             driver, args.database, args.retain_profiles, repositories.profiles
         )

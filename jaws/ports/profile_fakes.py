@@ -19,7 +19,7 @@ from jaws.domain import (
     normalized_ip,
 )
 
-from .repositories import EntityNotFoundError, ProfileScopeConflictError
+from .repositories import EntityNotFoundError, ProfileScopeConflictError, RetentionConflictError
 
 
 @dataclass(slots=True)
@@ -213,17 +213,14 @@ class InMemoryProfileRepository:
         )
         return len(verdicts)
 
-    def prune(self, retain: int) -> tuple[int, tuple[ObservationScopeId, ...]]:
-        if retain <= 0:
-            return 0, ()
-        summaries = self.list_scopes()
-        retained = tuple(
-            summary
-            for summary in summaries
-            if summary.status is not ProfileStatus.LEGACY_QUARANTINED
-        )
-        stale = tuple(summary.scope_id for summary in retained[retain:])
-        removed = sum(len(self._records[scope_id]) for scope_id in stale)
-        for scope_id in stale:
-            del self._records[scope_id]
-        return removed, stale
+    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int:
+        requested = tuple(expected)
+        if len({summary.scope_id for summary in requested}) != len(requested):
+            raise ValueError("retention scope identities must be unique")
+        current = {summary.scope_id: summary for summary in self.list_scopes()}
+        if any(current.get(summary.scope_id) != summary for summary in requested):
+            raise RetentionConflictError("profile scopes changed after retention was planned")
+        removed = sum(len(self._records[summary.scope_id]) for summary in requested)
+        for summary in requested:
+            del self._records[summary.scope_id]
+        return removed

@@ -279,6 +279,17 @@ jaws-compute --api transformers --model jina-code --session latest
 
 Do not drop the database between ordinary captures: earlier profile sets provide the endpoint history used by the baseline. Use `jaws-utils --drop captures` only when you intentionally want to erase the research dataset.
 
+Inspect retention before applying it explicitly:
+
+```bash
+jaws-retention dry-run --retain-profiles 20
+jaws-retention apply --retain-profiles 20
+```
+
+The current finite policy applies only to computed profile sets. Raw packets and capture
+metadata remain retained. `jaws-compute --retain-profiles` delegates to the same policy for
+2.0 compatibility; use `0` to keep all profile sets.
+
 ### 6. Run the MCP server
 
 For a spawn-based MCP client:
