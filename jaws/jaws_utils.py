@@ -17,6 +17,7 @@ from jaws.config import (
 )
 from jaws.domain import legacy_failure, legacy_success
 from jaws.optional_dependencies import require_module
+from jaws.storage import Neo4jDatabaseRuntime
 from jaws.storage.migrations import MigrationError
 from jaws.storage.migrations import manager as migration_manager
 
@@ -201,8 +202,7 @@ def dbms_connection(database, reporter=None):
     reporter = reporter or Reporter()
     try:
         driver = get_neo4j_driver()
-        with driver.session(database=database) as session:
-            session.run("RETURN 1")
+        Neo4jDatabaseRuntime(driver, database).probe()
         return driver
     except Exception as e:
         message = str(e)
@@ -223,13 +223,7 @@ def dbms_connection(database, reporter=None):
 def initialize_schema(driver, database, local_ip, reporter):
     try:
         result = migration_manager(driver, database).migrate()
-        with driver.session(database=database) as session:
-            session.run(
-                "MERGE (ip:IP_ADDRESS {IP_ADDRESS: $local_ip}) "
-                "MERGE (org:ORGANIZATION {ORGANIZATION: 'YOU ARE HERE'}) "
-                "MERGE (org)-[:OWNERSHIP]->(ip)",
-                {"local_ip": local_ip},
-            ).consume()
+        Neo4jDatabaseRuntime(driver, database).ensure_local_perspective(local_ip)
         reporter.info(
             "CONFIG",
             f"Schema ready for: '{database}' (version {result.status.current_version})",

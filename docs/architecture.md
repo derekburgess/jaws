@@ -41,11 +41,11 @@ service layer does not import Neo4j, configuration, CLI, filesystem, or reportin
 `jaws.storage` is an outer infrastructure package. It depends inward on domain and port
 contracts; its repository adapters accept driver-compatible objects without importing the
 optional Neo4j package, so migration and repository records remain importable in a core
-installation. Schema and evidence Cypher belong here. Capture, enrichment, compute, finder,
-and MCP inspection now consume the repository bundle for their graph operations; none of
-those interface modules owns Cypher. The remaining direct administration queries in
-`jaws_utils.py` move behind guarded retention/export/administration services in the next
-Milestone 2 slices.
+installation. All executable Cypher belongs here. Capture, enrichment, compute, finder,
+utility, schema, evidence, administration, and MCP interfaces delegate graph operations to
+storage adapters. A global architecture ratchet scans every runtime Python module outside
+`jaws.storage` for structural Cypher markers, so future interfaces and services inherit the
+same boundary without being named individually.
 
 `jaws.adapters` contains outer implementations of inward ports. Its standard runtime clock
 and UUID capture-ID generator import only domain contracts and the standard library; later
@@ -54,8 +54,8 @@ those dependencies into domain or ports.
 
 ## Ratchet policy
 
-The test governs every Python file under a listed package. A new inner package must be
-added to the layer map in the same change. Existing legacy command modules are not declared
-compliant prematurely; each later service extraction adds its new package to this test
-before moving behavior behind it. Removing a governed package or weakening an allowed edge
-requires an ADR or an explicit implementation-plan entry.
+The import-direction test governs every Python file under a listed inner package. A new
+inner package must be added to the layer map in the same change. Separately, the Cypher-
+ownership test governs every runtime Python file under `jaws` and `jaws_mcp`, excluding only
+the owning `jaws.storage` package. Removing a governed package, adding a storage exception,
+or weakening an allowed edge requires an ADR or an explicit implementation-plan entry.

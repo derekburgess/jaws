@@ -505,7 +505,7 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 - [x] Implement `InspectionRepository` for bounded profile overviews and endpoint drill-down ([repository contract](docs/storage/repositories.md)).
 - [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
 - [ ] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph.
-- [ ] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher.
+- [x] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher ([architecture boundary](docs/architecture.md); `Neo4jDatabaseRuntime`).
 - [x] Add repository contract tests that run against both fakes and a pinned Neo4j test instance.
 
 #### Retention, export, and administration
@@ -1231,10 +1231,25 @@ Cypher. Retention now uses a complete five-resource policy, mutation-free dry-ru
 and stale-plan-safe apply semantics. Managed evidence has portable, checksummed export and
 empty-target atomic import. Guarded human-only administration now requires an exact
 database-bound plan/confirmation, preserves schema/audit history, and records both whole-
-evidence erasure and retention apply without payloads. The next active Milestone 2 slice is
-centralizing the remaining Cypher in storage adapters.
+evidence erasure and retention apply without payloads. All executable Cypher is now owned
+by storage adapters and protected by a whole-runtime architecture ratchet. The next active
+Milestone 2 slice is requiring a verified evidence export before any future destructive or
+irreversible migration.
 
 ## Change log
+
+### 2026-08-13 — Milestone 2 complete Cypher storage ownership
+
+- Added `Neo4jDatabaseRuntime` for the exact-database connectivity probe and idempotent,
+  parameterized local-perspective seed previously embedded in `jaws_utils.py`.
+- Routed legacy connection/schema initialization through that adapter without changing
+  command error handling, migration ordering, or capture behavior.
+- Replaced interface-specific source checks with a global architecture ratchet covering
+  every runtime Python module outside `jaws/storage`; executable Cypher now has one enforced
+  infrastructure owner.
+- Passed 185 offline tests and 11 integration tests against an isolated disposable pinned
+  Neo4j 5.26.28 container; strict types, Ruff format/lint, compatibility contracts, and
+  report-only Recall@3 at 5/5 remain green with the same three named benign false positives.
 
 ### 2026-08-13 — Milestone 2 guarded administration and audit logging
 

@@ -12,6 +12,7 @@ from .migrations import (
     SchemaStatus,
 )
 from .neo4j_administration_repository import Neo4jAdministrationRepository
+from .neo4j_database_runtime import Neo4jDatabaseRuntime
 from .neo4j_evidence_repository import Neo4jEvidenceRepository
 from .neo4j_inspection_repository import Neo4jInspectionRepository
 from .neo4j_profile_repositories import (
@@ -38,6 +39,7 @@ __all__ = [
     "Neo4jEnrichmentRepository",
     "Neo4jEvidenceRepository",
     "Neo4jAdministrationRepository",
+    "Neo4jDatabaseRuntime",
     "Neo4jInspectionRepository",
     "Neo4jProfileRepository",
     "SchemaObject",

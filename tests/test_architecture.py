@@ -15,6 +15,17 @@ LAYERS = {
     "jaws.settings": {"jaws.domain", "jaws.settings"},
 }
 
+CYPHER_MARKERS = (
+    "MATCH (",
+    "MERGE (",
+    "CREATE (",
+    "UNWIND $",
+    "DETACH DELETE",
+    "CALL db.",
+    "SHOW CONSTRAINTS",
+    "SHOW INDEXES",
+)
+
 
 def _governed_files(package: str) -> list[Path]:
     path = REPO_ROOT.joinpath(*package.split("."))
@@ -78,15 +89,19 @@ def test_architecture_policy_names_every_enforced_layer():
     assert set(LAYERS) <= {package for package in LAYERS if f"`{package}`" in policy}
 
 
-def test_capture_cli_delegates_cypher_to_storage_adapters():
-    source = (REPO_ROOT / "jaws" / "jaws_capture.py").read_text(encoding="utf-8")
-    assert not any(
-        token in source for token in ("MATCH (", "MERGE (", "CREATE (", "UNWIND $", "session.run(")
-    )
+def test_cypher_is_owned_only_by_storage_adapters():
+    """Ratchet every runtime module, not only interfaces already migrated today."""
 
-
-def test_mcp_adapter_delegates_cypher_to_storage_adapters():
-    source = (REPO_ROOT / "jaws_mcp" / "server.py").read_text(encoding="utf-8")
-    assert not any(
-        token in source for token in ("MATCH (", "MERGE (", "CREATE (", "UNWIND $", "session.run(")
+    runtime_files = sorted(
+        path
+        for root in (REPO_ROOT / "jaws", REPO_ROOT / "jaws_mcp")
+        for path in root.rglob("*.py")
+        if not path.is_relative_to(REPO_ROOT / "jaws" / "storage")
     )
+    violations = []
+    for path in runtime_files:
+        source = path.read_text(encoding="utf-8")
+        markers = tuple(marker for marker in CYPHER_MARKERS if marker in source)
+        if markers:
+            violations.append(f"{path.relative_to(REPO_ROOT)} owns {', '.join(markers)}")
+    assert not violations, "Cypher must live under jaws/storage:\n" + "\n".join(violations)

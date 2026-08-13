@@ -44,6 +44,18 @@ Repository errors distinguish duplicates, missing captures, optimistic state con
 inactive captures, and unsupported schema state without exposing Neo4j exception types to
 application code.
 
+## Database runtime adapter
+
+`Neo4jDatabaseRuntime` owns the two small graph operations needed before a repository bundle
+is available. `probe` validates an exact database round trip; `ensure_local_perspective`
+idempotently seeds the capture host IP plus the legacy `YOU ARE HERE` ownership label after
+migrations complete. The address is passed as a query parameter and an empty database or IP
+is rejected before opening a session.
+
+Legacy command utilities retain connection-error reporting and schema-migration
+coordination, but own no query text or direct session calls. All executable Cypher now lives
+under `jaws/storage`, enforced across the complete runtime tree by the architecture test.
+
 ## EnrichmentRepository
 
 `EnrichmentRepository` owns the IP inventory count, deterministic pending-address order,

@@ -28,7 +28,7 @@ from jaws.ports import (
     SequenceIdGenerator,
 )
 from jaws.services import AdministrationService, EvidenceTransferService
-from jaws.storage import Neo4jRepositories
+from jaws.storage import Neo4jDatabaseRuntime, Neo4jRepositories
 from jaws.storage.migrations import MIGRATIONS, manager
 
 pytestmark = pytest.mark.neo4j
@@ -151,6 +151,20 @@ def test_fresh_database_reaches_managed_schema(disposable_migration_database):
     assert result.applied_versions == (1, 2, 3, 4)
     assert result.status.is_current
     assert manager(driver, database).migrate().applied_versions == ()
+
+    runtime = Neo4jDatabaseRuntime(driver, database)
+    runtime.probe()
+    runtime.ensure_local_perspective("192.0.2.10")
+    runtime.ensure_local_perspective("192.0.2.10")
+    with driver.session(database=database) as session:
+        seed = session.run(
+            "MATCH (organization:ORGANIZATION {ORGANIZATION: 'YOU ARE HERE'})"
+            "-[ownership:OWNERSHIP]->"
+            "(address:IP_ADDRESS {IP_ADDRESS: '192.0.2.10'}) "
+            "RETURN count(organization) AS organizations, "
+            "count(ownership) AS ownerships, count(address) AS addresses"
+        ).single()
+    assert seed.data() == {"organizations": 1, "ownerships": 1, "addresses": 1}
 
 
 def test_starting_revision_schema_is_adopted_without_losing_evidence(
