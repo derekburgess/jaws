@@ -1,5 +1,13 @@
 """Lightweight public contracts for the JAWS research workbench."""
 
+from .administration import (
+    AdministrationPlan,
+    AdministrationResourceCount,
+    AdministrationResult,
+    AuditContext,
+    AuditEvent,
+    AuditOperation,
+)
 from .captures import (
     ACTIVE_CAPTURE_STATES,
     TERMINAL_CAPTURE_STATES,
@@ -40,6 +48,7 @@ from .evidence import (
     SchemaMigrationProvenance,
 )
 from .identifiers import (
+    AuditEventId,
     CanonicalDigest,
     CaptureId,
     DatasetId,
@@ -82,6 +91,13 @@ from .specifications import (
 from .time import CAPTURE_TRANSITIONS, RUN_TRANSITIONS, normalize_utc, require_transition, utc_text
 
 __all__ = [
+    "AdministrationPlan",
+    "AdministrationResourceCount",
+    "AdministrationResult",
+    "AuditContext",
+    "AuditEvent",
+    "AuditEventId",
+    "AuditOperation",
     "CAPTURE_TRANSITIONS",
     "ACTIVE_CAPTURE_STATES",
     "REDACTED",

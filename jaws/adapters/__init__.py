@@ -7,11 +7,12 @@ from .evidence_bundle import (
     parse_evidence_bundle,
     write_evidence_bundle,
 )
-from .runtime import SystemClock, UuidCaptureIdGenerator
+from .runtime import SystemClock, UuidAuditEventIdGenerator, UuidCaptureIdGenerator
 
 __all__ = [
     "EvidenceBundleError",
     "SystemClock",
+    "UuidAuditEventIdGenerator",
     "UuidCaptureIdGenerator",
     "evidence_bundle_document",
     "load_evidence_bundle",

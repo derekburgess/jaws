@@ -513,8 +513,8 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 - [x] Define independent policies for raw packets, capture metadata, profiles/embeddings, experiment indexes, and external artifact bundles ([ADR-0015](docs/adr/0015-declared-retention-plan-before-apply.md)).
 - [x] Make retention a declared policy with dry-run output, not an incidental post-compute side effect (`jaws-retention`; the legacy compute flag delegates to the same service during compatibility).
 - [x] Add export/import procedures that preserve schema version, provenance, IDs, and checksums ([ADR-0016](docs/adr/0016-portable-evidence-bundles-and-empty-target-import.md); `jaws-evidence`).
-- [ ] Replace unguarded agent-mode database deletion with an explicit administrative operation requiring exact target and confirmation semantics.
-- [ ] Record deletions/retention actions in an audit log without recording secrets or packet payloads unnecessarily.
+- [x] Replace unguarded agent-mode database deletion with an explicit administrative operation requiring exact target and confirmation semantics ([ADR-0017](docs/adr/0017-guarded-administration-and-payload-free-audit.md); `jaws-admin`).
+- [x] Record deletions/retention actions in an audit log without recording secrets or packet payloads unnecessarily ([ADR-0017](docs/adr/0017-guarded-administration-and-payload-free-audit.md)).
 
 #### Legacy migration cases
 
@@ -1222,17 +1222,34 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
-ownership plus database versions 1–3 now cover evidence identity, lifecycle, enrichment
+ownership plus database versions 1–4 now cover evidence identity, lifecycle, enrichment
 provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
 implementations. Capture, enrichment, compute, finder, and MCP inspection contain no
 Cypher. Retention now uses a complete five-resource policy, mutation-free dry-run plans,
 and stale-plan-safe apply semantics. Managed evidence has portable, checksummed export and
-empty-target atomic import. The next active Milestone 2 slice is guarded administration and
-audit logging.
+empty-target atomic import. Guarded human-only administration now requires an exact
+database-bound plan/confirmation, preserves schema/audit history, and records both whole-
+evidence erasure and retention apply without payloads. The next active Milestone 2 slice is
+centralizing the remaining Cypher in storage adapters.
 
 ## Change log
+
+### 2026-08-13 — Milestone 2 guarded administration and audit logging
+
+- Added [ADR-0017](docs/adr/0017-guarded-administration-and-payload-free-audit.md), typed
+  administration plans/results and minimal audit records, plus migration version 4 with
+  durable audit identity and query indexes.
+- Added human-only `jaws-admin plan|erase|audit`: every operation requires an exact database,
+  erase requires `ERASE <database> <plan-digest>`, and the transaction rejects data/schema
+  changes before deleting evidence while preserving migrations, system scopes, and audit.
+- Removed the destructive MCP tool and unconfirmed `jaws-utils --drop` implementation.
+  Applied retention now writes its payload-free event in the same exact-scope transaction;
+  dry-run and stale plans write nothing.
+- Passed 178 offline tests and 11 integration tests against an isolated disposable pinned
+  Neo4j 5.26.28 container; strict types, Ruff format/lint, compatibility contracts, and
+  report-only Recall@3 at 5/5 remain green with the same three named benign false positives.
 
 ### 2026-08-13 — Milestone 2 portable evidence export/import
 

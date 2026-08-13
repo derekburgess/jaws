@@ -12,6 +12,8 @@ from retention_contract import assert_retention_service_contract
 
 from jaws.config import DATABASE, NEO4J_PASSWORD, get_neo4j_driver
 from jaws.domain import (
+    AuditContext,
+    AuditEventId,
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
@@ -19,8 +21,13 @@ from jaws.domain import (
     EntityId,
     ObservationScopeId,
 )
-from jaws.ports import DuplicateCaptureError, FrozenClock
-from jaws.services import EvidenceTransferService
+from jaws.ports import (
+    AdministrationConflictError,
+    DuplicateCaptureError,
+    FrozenClock,
+    SequenceIdGenerator,
+)
+from jaws.services import AdministrationService, EvidenceTransferService
 from jaws.storage import Neo4jRepositories
 from jaws.storage.migrations import MIGRATIONS, manager
 
@@ -141,7 +148,7 @@ def test_fresh_database_reaches_managed_schema(disposable_migration_database):
 
     result = manager(driver, database).migrate()
 
-    assert result.applied_versions == (1, 2, 3)
+    assert result.applied_versions == (1, 2, 3, 4)
     assert result.status.is_current
     assert manager(driver, database).migrate().applied_versions == ()
 
@@ -317,6 +324,47 @@ def test_evidence_export_import_round_trip_preserves_snapshot(
     assert result.applied
     assert repositories.evidence.snapshot() == bundle.evidence
     assert repositories.evidence.snapshot().content_checksum == bundle.evidence.content_checksum
+
+
+def test_guarded_administration_preserves_schema_and_audit_on_disposable_database(
+    disposable_migration_database,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    repositories = Neo4jRepositories.connect(driver, database)
+    repositories.evidence.restore(evidence_fixture())
+    service = AdministrationService(
+        repositories.administration,
+        FrozenClock(OBSERVED_AT),
+        SequenceIdGenerator(
+            (AuditEventId("audit_admin_stale"), AuditEventId("audit_admin_applied"))
+        ),
+        AuditContext("integration_test", "pytest-neo4j", database),
+    )
+
+    stale = service.plan()
+    with driver.session(database=database) as session:
+        session.run("CREATE (:JAWS_MIGRATION_TEST_FIXTURE {VALUE: 'changed'})").consume()
+    with pytest.raises(AdministrationConflictError, match="changed"):
+        service.erase(stale, stale.confirmation)
+
+    plan = service.plan()
+    result = service.erase(plan, plan.confirmation)
+
+    assert result.deleted_nodes == plan.node_count
+    assert result.deleted_relationships == plan.relationship_count
+    assert repositories.evidence.is_empty()
+    assert repositories.administration.plan().node_count == 0
+    events = repositories.administration.audit_events()
+    assert tuple(event.event_id.value for event in events) == ("audit_admin_applied",)
+    with driver.session(database=database) as session:
+        assert session.run("MATCH (m:JAWS_SCHEMA_MIGRATION) RETURN count(m) AS count").single()[
+            "count"
+        ] == len(MIGRATIONS)
+        scopes = session.run(
+            "MATCH (scope:OBSERVATION_SCOPE) RETURN collect(scope.SCOPE_ID) AS ids"
+        ).single()["ids"]
+        assert set(scopes) == {"scope_pooled_all", "scope_legacy_unstamped"}
 
 
 def test_profile_history_repository_orders_opaque_ids_by_capture_time(

@@ -100,6 +100,7 @@ def test_retention_entry_point_is_packaged():
 
 def test_evidence_entry_point_is_packaged():
     assert PROJECT["scripts"]["jaws-evidence"] == "jaws.evidence_cli:main"
+    assert PROJECT["scripts"]["jaws-admin"] == "jaws.administration_cli:main"
 
 
 def test_missing_capability_error_names_the_install_extra():

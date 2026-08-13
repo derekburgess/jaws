@@ -307,7 +307,15 @@ def prune_profile_sessions(driver, database, retain, repository=None):
     if retain is None or retain <= 0:
         return 0, []
     repository = repository or Neo4jProfileRepository(driver, database)
-    service = RetentionService(repository)
+    from jaws.adapters import SystemClock, UuidAuditEventIdGenerator
+    from jaws.domain import AuditContext
+
+    service = RetentionService(
+        repository,
+        SystemClock(),
+        UuidAuditEventIdGenerator(),
+        AuditContext("jaws_compute", "jaws-compute", database),
+    )
     result = service.apply(service.plan(RetentionPolicy.legacy_profile_limit(retain)))
     return result.deleted_profile_records, [
         summary.legacy_scope for summary in result.plan.deleted_profile_scopes

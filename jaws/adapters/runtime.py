@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from jaws.domain import CaptureId
+from jaws.domain import AuditEventId, CaptureId
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,3 +24,13 @@ class UuidCaptureIdGenerator:
 
     def new(self) -> CaptureId:
         return CaptureId(f"cap_{self.uuid_factory().hex}")
+
+
+@dataclass(frozen=True, slots=True)
+class UuidAuditEventIdGenerator:
+    """Create opaque audit IDs without using evidence or operator data."""
+
+    uuid_factory: Callable[[], UUID] = uuid4
+
+    def new(self) -> AuditEventId:
+        return AuditEventId(f"audit_{self.uuid_factory().hex}")

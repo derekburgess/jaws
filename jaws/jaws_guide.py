@@ -59,7 +59,7 @@ def main():
 
     print(f"""[gray100]
     [grey85]To drop the database:[/]
-    [green1][CLI][/] jaws-utils [grey50]OPTIONAL[/] --drop '{DATABASE}'
+    [green1][CLI][/] jaws-admin plan --database '{DATABASE}' [grey50]HUMAN ADMIN ONLY[/]
     [orange1][WARNING][/] This will erase all data!
     [/]""")
 

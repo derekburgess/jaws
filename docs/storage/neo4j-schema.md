@@ -165,6 +165,34 @@ identity cannot be recovered.
 The repository behavior and conditional rollback are detailed in
 [ADR-0014](../adr/0014-enrichment-provenance-and-versioned-profile-sets.md).
 
+## Managed target: database schema version 4
+
+Version 4 adds durable administrative audit metadata. It changes no managed evidence node
+or relationship and retains every version-1 through version-3 schema object.
+
+| Label/property | Contract |
+| --- | --- |
+| `JAWS_AUDIT_EVENT.EVENT_ID` | Opaque `audit_` identity, unique when present |
+| `OPERATION`, `TARGET_DATABASE` | Guarded operation and exact database target |
+| `OCCURRED_AT` | Aware UTC datetime |
+| `ACTOR`, `INTERFACE` | Non-secret runtime attribution; not evidence or credentials |
+| `PLAN_DIGEST` | SHA-256 of the complete exact operation plan |
+| `AFFECTED_RECORDS` | Planned/deleted record count |
+
+Audit nodes are administrative history: evidence export and erasure exclude them. They may
+not contain packet payloads, settings, credentials, or copied evidence properties.
+
+### Version-4 constraints and indexes
+
+| Kind | Name | Label/properties |
+| --- | --- | --- |
+| Uniqueness constraint | `jaws_audit_event_id_unique` | `JAWS_AUDIT_EVENT(EVENT_ID)` |
+| Range index | `jaws_audit_occurred_at_index` | `JAWS_AUDIT_EVENT(OCCURRED_AT)` |
+| Range index | `jaws_audit_operation_target_index` | `JAWS_AUDIT_EVENT(OPERATION, TARGET_DATABASE)` |
+
+The guarded operation and audit policy are detailed in
+[ADR-0017](../adr/0017-guarded-administration-and-payload-free-audit.md).
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -186,10 +214,22 @@ is corrected.
 No operation reads a database name from a new environment setting. `--database` remains a
 runtime argument; URI, username, and password retain their existing settings behavior.
 
+Whole-evidence administration is a separate, human-only interface and always requires an
+exact target:
+
+```text
+jaws-admin plan --database NAME
+jaws-admin erase --database NAME --confirm 'ERASE NAME PLAN_DIGEST'
+jaws-admin audit --database NAME [--limit N]
+```
+
+The plan reports exact evidence/unclassified node counts, relationship count, schema
+provenance, digest, and confirmation. Erase repeats that plan inside one transaction,
+preserves schema/audit nodes, and fails closed if anything changed.
+
 ## Later Milestone 2 versions
 
-Versions 1–3 do not complete administration, finding indexes, experiment indexes, or
-removal of every remaining interface-owned Cypher query. Retention and portable managed-
-evidence export/import operate over version 3 without changing graph schema. Later versions
-must document their contracts before implementation and retain Benchmark 0 compatibility
-until their parity gates pass.
+Versions 1–4 do not complete finding indexes, experiment indexes, or removal of every
+remaining interface-owned Cypher query. Retention, administration, and portable managed-
+evidence export/import operate over version 4. Later versions must document their contracts
+before implementation and retain Benchmark 0 compatibility until their parity gates pass.

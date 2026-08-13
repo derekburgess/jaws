@@ -242,36 +242,12 @@ def initialize_schema(driver, database, local_ip, reporter):
         raise MigrationError(f"schema migration failed for '{database}'") from error
 
 
-# Drops all entities from the database.
-def drop_database(driver, database, reporter):
-    with driver.session(database=database) as session:
-        count_result = session.run("MATCH (n) RETURN count(n)")
-        count = count_result.single()[0]
-        if count == 0:
-            return reporter.result(
-                {"database": database, "dropped": 0, "empty": True},
-                summary=f"'{database}' is empty.",
-            )
-        if not reporter.agent:
-            reporter.info(
-                "WARNING",
-                f"This will permanently delete all {count} entities from '{database}'.\nType the database name '{database}' to confirm.",
-            )
-            confirmation = input(f"Type '{database}' to confirm: ")
-            if confirmation.strip() != database:
-                return reporter.info("CANCELLED", f"Drop cancelled. '{database}' was not modified.")
-        session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
-        return reporter.result(
-            {"database": database, "dropped": count}, summary=f"Dropped({count}): '{database}'"
-        )
-
-
 def main():
-    parser = argparse.ArgumentParser(
-        description="Utility functions for JAWS | 1.) Download models 2.) Drop database"
-    )
+    parser = argparse.ArgumentParser(description="Download optional local embedding models.")
     parser.add_argument(
-        "--drop", default=DATABASE, help=f"Specify a database to drop (default: '{DATABASE}')."
+        "--drop",
+        metavar="DATABASE",
+        help="Removed: use the human-only guarded `jaws-admin plan/erase` workflow.",
     )
     parser.add_argument(
         "--model",
@@ -281,15 +257,17 @@ def main():
     args = parser.parse_args()
     reporter = Reporter()
 
+    if args.drop:
+        parser.error(
+            "--drop was removed; run `jaws-admin plan --database NAME`, then repeat its exact "
+            "confirmation with `jaws-admin erase --database NAME --confirm ...`"
+        )
+
     if args.model:
         download_model(PACKET_MODELS[args.model], reporter)
         return
 
-    driver = dbms_connection(args.drop, reporter)
-    if driver is None:
-        return
-    drop_database(driver, args.drop, reporter)
-    driver.close()
+    parser.error("one of --model is required")
 
 
 if __name__ == "__main__":

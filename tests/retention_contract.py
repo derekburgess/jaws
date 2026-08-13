@@ -5,6 +5,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from jaws.domain import (
+    AuditContext,
+    AuditEventId,
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
@@ -16,7 +18,7 @@ from jaws.domain import (
     ProfileIdentity,
     RetentionPolicy,
 )
-from jaws.ports import RetentionConflictError
+from jaws.ports import FrozenClock, RetentionConflictError, SequenceIdGenerator
 from jaws.services import RetentionService
 
 
@@ -74,7 +76,16 @@ def assert_retention_service_contract(repositories):
             (_profile(address, capture_id, observed_at + timedelta(seconds=index)),),
         )
 
-    service = RetentionService(repositories.profiles)
+    service = RetentionService(
+        repositories.profiles,
+        FrozenClock(observed_at),
+        SequenceIdGenerator((AuditEventId("audit_retention_fixture"),)),
+        AuditContext(
+            "contract",
+            "retention-contract",
+            getattr(repositories.profiles, "database", "fixture"),
+        ),
+    )
     policy = RetentionPolicy.legacy_profile_limit(2)
     dry_run = service.dry_run(policy)
     assert not dry_run.applied
@@ -105,6 +116,11 @@ def assert_retention_service_contract(repositories):
     result = service.apply(current)
     assert result.applied
     assert result.deleted_profile_records == 1
+    assert result.audit_event is not None
+    assert result.audit_event.affected_records == 1
+    assert result.audit_event.context.target_database == getattr(
+        repositories.profiles, "database", "fixture"
+    )
     assert (
         repositories.profiles.read_scope(ObservationScopeId(f"scope_{capture_ids[1].value}")) == ()
     )

@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from jaws.domain import (
+    AuditContext,
+    AuditEvent,
+    AuditEventId,
+    AuditOperation,
+    Clock,
+    IdGenerator,
     ProfileScopeSummary,
     ProfileStatus,
     RetentionMode,
@@ -12,6 +18,7 @@ from jaws.domain import (
     RetentionPolicy,
     RetentionResource,
     RetentionResult,
+    canonical_digest,
 )
 from jaws.ports import ProfileRepository, RetentionConflictError
 
@@ -23,6 +30,9 @@ class UnsupportedRetentionPolicyError(ValueError):
 @dataclass(frozen=True, slots=True)
 class RetentionService:
     profiles: ProfileRepository
+    clock: Clock
+    event_ids: IdGenerator[AuditEventId]
+    audit_context: AuditContext
 
     @staticmethod
     def _validate(policy: RetentionPolicy) -> None:
@@ -72,8 +82,24 @@ class RetentionService:
         current = self.plan(plan.policy)
         if current != plan:
             raise RetentionConflictError("retained data changed after retention was planned")
-        deleted = self.profiles.delete_scopes(plan.deleted_profile_scopes)
-        return RetentionResult(plan=plan, applied=True, deleted_profile_records=deleted)
+        audit_event = AuditEvent(
+            event_id=self.event_ids.new(),
+            operation=AuditOperation.RETENTION_APPLY,
+            context=self.audit_context,
+            occurred_at=self.clock.now(),
+            plan_digest=canonical_digest(plan),
+            affected_records=plan.profile_records_to_delete,
+        )
+        deleted = self.profiles.delete_scopes(
+            plan.deleted_profile_scopes,
+            audit_event=audit_event,
+        )
+        return RetentionResult(
+            plan=plan,
+            applied=True,
+            deleted_profile_records=deleted,
+            audit_event=audit_event,
+        )
 
     def dry_run(self, policy: RetentionPolicy) -> RetentionResult:
         return RetentionResult(plan=self.plan(policy), applied=False)

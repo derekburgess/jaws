@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from .administration import AuditEvent
 from .profiles import ProfileScopeSummary
 
 
@@ -117,6 +118,7 @@ class RetentionResult:
     plan: RetentionPlan
     applied: bool
     deleted_profile_records: int = 0
+    audit_event: AuditEvent | None = None
 
     def __post_init__(self) -> None:
         if self.deleted_profile_records < 0:
@@ -124,5 +126,9 @@ class RetentionResult:
         expected = self.plan.profile_records_to_delete
         if self.applied and self.deleted_profile_records != expected:
             raise ValueError("applied retention result must match its planned deletion count")
+        if self.applied and self.audit_event is None:
+            raise ValueError("applied retention result requires an audit event")
         if not self.applied and self.deleted_profile_records:
             raise ValueError("dry-run retention cannot report deleted records")
+        if not self.applied and self.audit_event is not None:
+            raise ValueError("dry-run retention cannot create an audit event")

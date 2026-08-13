@@ -38,6 +38,7 @@ from .neo4j_inspection_repository import Neo4jInspectionRepository
 from .neo4j_profile_repositories import Neo4jEnrichmentRepository, Neo4jProfileRepository
 
 if TYPE_CHECKING:
+    from .neo4j_administration_repository import Neo4jAdministrationRepository
     from .neo4j_evidence_repository import Neo4jEvidenceRepository
 
 ResultT = TypeVar("ResultT")
@@ -491,9 +492,11 @@ class Neo4jRepositories:
     profiles: Neo4jProfileRepository
     inspection: Neo4jInspectionRepository
     evidence: Neo4jEvidenceRepository
+    administration: Neo4jAdministrationRepository
 
     @classmethod
     def connect(cls, driver: object, database: str) -> Self:
+        from .neo4j_administration_repository import Neo4jAdministrationRepository
         from .neo4j_evidence_repository import Neo4jEvidenceRepository
 
         status = manager(driver, database).validate()
@@ -507,4 +510,5 @@ class Neo4jRepositories:
             profiles=Neo4jProfileRepository(driver, database),
             inspection=Neo4jInspectionRepository(driver, database),
             evidence=Neo4jEvidenceRepository(driver, database),
+            administration=Neo4jAdministrationRepository(driver, database),
         )

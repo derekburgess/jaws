@@ -28,6 +28,7 @@ the research-workbench rollout.
 | [0014](0014-enrichment-provenance-and-versioned-profile-sets.md) | Accepted | Separate enrichment provenance, annotations, and versioned profile sets |
 | [0015](0015-declared-retention-plan-before-apply.md) | Accepted | Require a declared retention plan before apply |
 | [0016](0016-portable-evidence-bundles-and-empty-target-import.md) | Accepted | Use checksummed evidence bundles and empty-target import |
+| [0017](0017-guarded-administration-and-payload-free-audit.md) | Accepted | Require exact destructive plans and payload-free audit records |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In

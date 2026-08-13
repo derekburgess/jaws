@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from jaws.domain import (
+    AuditEvent,
     EndpointProfile,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -213,7 +214,14 @@ class InMemoryProfileRepository:
         )
         return len(verdicts)
 
-    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int:
+    audit_log: list[AuditEvent] = field(default_factory=list)
+
+    def delete_scopes(
+        self,
+        expected: Sequence[ProfileScopeSummary],
+        *,
+        audit_event: AuditEvent | None = None,
+    ) -> int:
         requested = tuple(expected)
         if len({summary.scope_id for summary in requested}) != len(requested):
             raise ValueError("retention scope identities must be unique")
@@ -223,4 +231,6 @@ class InMemoryProfileRepository:
         removed = sum(len(self._records[summary.scope_id]) for summary in requested)
         for summary in requested:
             del self._records[summary.scope_id]
+        if audit_event is not None:
+            self.audit_log.append(audit_event)
         return removed

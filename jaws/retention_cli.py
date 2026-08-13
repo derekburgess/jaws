@@ -9,7 +9,8 @@ import sys
 from collections.abc import Sequence
 from typing import cast
 
-from jaws.domain import RetentionPolicy, primitive
+from jaws.adapters import SystemClock, UuidAuditEventIdGenerator
+from jaws.domain import AuditContext, RetentionPolicy, primitive
 from jaws.services import RetentionService
 from jaws.storage import Neo4jRepositories
 
@@ -37,7 +38,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         policy = RetentionPolicy.legacy_profile_limit(args.retain_profiles)
         repositories = Neo4jRepositories.connect(config.get_neo4j_driver(), database)
-        service = RetentionService(repositories.profiles)
+        service = RetentionService(
+            repositories.profiles,
+            SystemClock(),
+            UuidAuditEventIdGenerator(),
+            AuditContext("local_operator", "jaws-retention", database),
+        )
         result = (
             service.dry_run(policy)
             if args.operation == "dry-run"

@@ -176,6 +176,20 @@ def test_version_three_adds_enrichment_provenance_and_profile_scope_semantics():
     assert "DETACH DELETE endpoint" not in source
 
 
+def test_version_four_adds_payload_free_administration_audit_indexes():
+    migration = MIGRATIONS[3]
+    assert migration.version == 4
+    assert len(migration.checksum) == 64
+    assert migration.reversible is True
+    assert {item.name for item in migration.required_schema if item.kind == "constraint"} == {
+        "jaws_audit_event_id_unique"
+    }
+    assert {item.name for item in migration.required_schema if item.kind == "index"} == {
+        "jaws_audit_occurred_at_index",
+        "jaws_audit_operation_target_index",
+    }
+
+
 def test_legacy_utility_delegates_schema_ownership_to_migrations():
     utility_source = Path("jaws/jaws_utils.py").read_text(encoding="utf-8")
     migration_source = Path("jaws/storage/migrations/v0001_adopt_legacy_schema.py").read_text(
@@ -193,16 +207,16 @@ def test_fresh_database_dry_run_is_read_only_and_migration_is_idempotent(clock):
 
     status = migration_manager.status()
     assert status.current_version is None
-    assert status.pending_versions == (1, 2, 3)
+    assert status.pending_versions == (1, 2, 3, 4)
     plan = migration_manager.dry_run()
     assert plan.current_version is None
-    assert plan.target_version == 3
+    assert plan.target_version == 4
     assert plan.pending == MIGRATIONS
     assert len(plan.statements) == sum(len(migration.statements) for migration in MIGRATIONS)
     assert graph.writes == []
 
     result = migration_manager.migrate()
-    assert result.applied_versions == (1, 2, 3)
+    assert result.applied_versions == (1, 2, 3, 4)
     assert result.status.is_current
     assert graph.applied == [
         {
@@ -263,7 +277,7 @@ def test_partial_schema_application_writes_no_version_and_can_retry(clock):
     graph.fail_on = None
     result = migration_manager.migrate()
     assert result.status.is_current
-    assert len(graph.applied) == 3
+    assert len(graph.applied) == 4
 
 
 def test_applied_checksum_drift_blocks_validation_and_migration(clock):

@@ -72,6 +72,9 @@ destructive writes in the same transaction. Exact-scope deletion validates ident
 legacy alias, compute time, record count, and status so a stale retention plan fails without
 deleting a replacement.
 
+Applied retention supplies a minimal `AuditEvent`; validation, exact-scope deletion, and
+event creation share one transaction. Dry-run and a stale plan write no audit record.
+
 Pooled `all` is represented by `scope_pooled_all` and returns no history. Unstamped legacy
 profiles are retained in `scope_legacy_unstamped` with `legacy_quarantined` status.
 Version-aware writers require a computation timestamp and canonical `PROFILE_KEY`; readers
@@ -162,3 +165,26 @@ sensitive research evidence, restrict their filesystem and transport access, and
 commit them to the source repository. Application secrets are not part of the managed
 evidence snapshot. The bundle is not a general Neo4j dump: unmanaged labels, properties,
 and relationships require a separate database-native backup if they must be preserved.
+
+## AdministrationRepository
+
+`AdministrationRepository.plan` returns the exact database, ordered schema migration
+provenance, categorized evidence/unclassified node counts, and relationship count. The
+canonical digest over that complete value is an optimistic lock and part of the required
+human confirmation. Planning is read-only.
+
+`erase` recalculates the plan inside the write transaction. It either deletes every
+non-administrative node and its relationships, restores the schema-owned pooled/quarantine
+scopes, and creates one minimal audit event, or changes nothing. Migration history, prior
+audit events, and schema objects remain. `audit_events` returns bounded newest-first
+metadata; it never returns evidence or settings.
+
+```bash
+jaws-admin plan --database disposable-name
+jaws-admin erase --database disposable-name \
+  --confirm 'ERASE disposable-name <digest-from-plan>'
+jaws-admin audit --database disposable-name
+```
+
+There is no default destructive target. `jaws-utils --drop` is rejected, and MCP does not
+register an administration tool.

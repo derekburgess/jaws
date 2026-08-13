@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Protocol
 
 from jaws.domain import (
+    AdministrationPlan,
+    AuditEvent,
     CaptureId,
     CaptureRecord,
     CaptureState,
@@ -86,6 +88,10 @@ class EvidenceImportConflictError(RepositoryError):
     """An evidence import target is not empty or changed after planning."""
 
 
+class AdministrationConflictError(RepositoryError):
+    """A destructive-operation target changed after its plan was created."""
+
+
 class CaptureRepository(Protocol):
     """Lifecycle and catalog operations for immutable capture snapshots."""
 
@@ -149,7 +155,22 @@ class ProfileRepository(Protocol):
         self, scope_id: ObservationScopeId, verdicts: Mapping[EntityId, OutlierStatus]
     ) -> int: ...
 
-    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int: ...
+    def delete_scopes(
+        self,
+        expected: Sequence[ProfileScopeSummary],
+        *,
+        audit_event: AuditEvent | None = None,
+    ) -> int: ...
+
+
+class AdministrationRepository(Protocol):
+    """Database-bound planning, atomic erasure, and durable audit reads."""
+
+    def plan(self) -> AdministrationPlan: ...
+
+    def erase(self, expected: AdministrationPlan, audit_event: AuditEvent) -> tuple[int, int]: ...
+
+    def audit_events(self, *, limit: int = 100) -> tuple[AuditEvent, ...]: ...
 
 
 class EvidenceRepository(Protocol):

@@ -60,20 +60,19 @@ Anytime:
                        who it talked to (peers), and a raw packet sample. The join key from an
                        anomaly back to its detail.
   - list_captures   — enumerate the capture sessions accumulated in the graph.
-  - drop_database   — wipe the graph entirely (optional between sessions — see Notes).
 
 Notes:
   - Keep captures short (30-120s); capture again rather than running one long session.
   - Captures ACCUMULATE as sessions: each capture_packets run is stamped with a capture_id, and
     compute_embeddings profiles only the LATEST session by default (pass session='all' or a
-    specific capture_id to change that). You do NOT need drop_database between captures; packet
+    specific capture_id to change that). You do not erase the database between captures; packet
     history stays queryable via list_captures/inspect_endpoint while profiles track one session.
   - REPEATED RUNS MAKE DETECTION BETTER. Endpoint profiles accumulate one set per session, so
     anomaly_detection scores an endpoint against its OWN history where it has one instead of only
     against its current peers — which suppresses the endpoints that are always busy and surfaces
     the ones that CHANGED, plus endpoints never seen before (`first_seen`). This needs no extra
     steps: just run capture → document → compute → detect again, and check `baseline.enabled` in
-    the result. Dropping the database throws that history away, so prefer not to.
+    the result. Database administration is deliberately unavailable to agents and MCP tools.
   - After every capture, run document_organizations and compute_embeddings before anomaly_detection.
   - Use compute_embeddings(api='transformers') on a GPU host; otherwise api='openai'. The local
     transformer model must be downloaded on the host beforehand (`jaws-utils --model ...`); this is
@@ -251,7 +250,7 @@ def list_interfaces() -> dict[str, Any]:
         "again rather than running one long session. The call runs for roughly `duration` seconds. "
         "Each run becomes its own capture SESSION (the result's `capture_id`); sessions accumulate "
         "in the graph, and compute_embeddings profiles the latest one by default — no need to "
-        "drop_database between captures."
+        "erase data between captures."
     ),
 )
 def capture_packets(interface: str, duration: int = 60) -> dict[str, Any]:
@@ -462,16 +461,6 @@ def anomaly_detection(
     if not baseline:
         args.append("--no-baseline")
     return _script("jaws_finder.py", *args)
-
-
-@mcp.tool(
-    name="drop_database",
-    description=(
-        "Wipe ALL data from the graph. Irreversible. Typically run before starting a fresh capture session."
-    ),
-)
-def drop_database() -> dict[str, Any]:
-    return _script("jaws_utils.py")
 
 
 @mcp.tool(

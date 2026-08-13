@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import replace
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -9,6 +10,8 @@ from retention_contract import assert_retention_service_contract
 
 from jaws import retention_cli
 from jaws.domain import (
+    AuditContext,
+    AuditEventId,
     ProfileStatus,
     RetentionMode,
     RetentionPolicy,
@@ -16,11 +19,13 @@ from jaws.domain import (
     RetentionRule,
 )
 from jaws.ports import (
+    FrozenClock,
     InMemoryCaptureRepository,
     InMemoryEnrichmentRepository,
     InMemoryInspectionRepository,
     InMemoryPacketRepository,
     InMemoryProfileRepository,
+    SequenceIdGenerator,
 )
 from jaws.services import RetentionService, UnsupportedRetentionPolicyError
 
@@ -36,6 +41,15 @@ def _repositories():
         enrichment=enrichment,
         profiles=profiles,
         inspection=InMemoryInspectionRepository(profiles, packets, enrichment, captures),
+    )
+
+
+def _service(repository):
+    return RetentionService(
+        repository,
+        FrozenClock(datetime(2026, 8, 12, 12, tzinfo=UTC)),
+        SequenceIdGenerator((AuditEventId("audit_test_retention"),)),
+        AuditContext("test", "test-retention", "fixture"),
     )
 
 
@@ -59,7 +73,7 @@ def test_policy_declares_all_resources_and_rejects_unsupported_deletion():
     )
     unsupported = RetentionPolicy("unsafe", "1", rules)
     with pytest.raises(UnsupportedRetentionPolicyError, match="raw_packets"):
-        RetentionService(_repositories().profiles).plan(unsupported)
+        _service(_repositories().profiles).plan(unsupported)
 
 
 def test_quarantined_profiles_are_protected_from_profile_limit():
@@ -71,7 +85,7 @@ def test_quarantined_profiles_are_protected_from_profile_limit():
         replace(record, status=ProfileStatus.LEGACY_QUARANTINED) for record in records
     )
 
-    plan = RetentionService(repositories.profiles).plan(RetentionPolicy.legacy_profile_limit(1))
+    plan = _service(repositories.profiles).plan(RetentionPolicy.legacy_profile_limit(1))
 
     assert plan.protected_profile_scopes
     assert not plan.deleted_profile_scopes

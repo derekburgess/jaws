@@ -130,6 +130,7 @@ ORDER BY ip_address
 _EVIDENCE_COUNT_QUERY = """
 MATCH (node)
 WHERE NOT node:JAWS_SCHEMA_MIGRATION
+  AND NOT node:JAWS_AUDIT_EVENT
   AND NOT (
       node:OBSERVATION_SCOPE
       AND node.SCOPE_ID IN ['scope_pooled_all', 'scope_legacy_unstamped']

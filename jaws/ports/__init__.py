@@ -2,6 +2,7 @@
 
 from jaws.domain import Clock, IdGenerator
 
+from .administration_fakes import InMemoryAdministrationRepository
 from .contracts import (
     ArtifactStore,
     EmbeddingProvider,
@@ -28,6 +29,8 @@ from .fakes import (
 from .inspection_fakes import InMemoryInspectionRepository
 from .profile_fakes import InMemoryEnrichmentRepository, InMemoryProfileRepository
 from .repositories import (
+    AdministrationConflictError,
+    AdministrationRepository,
     CaptureNotFoundError,
     CaptureRepository,
     CaptureStateConflictError,
@@ -49,6 +52,8 @@ from .repositories import (
 from .repository_fakes import InMemoryCaptureRepository, InMemoryPacketRepository
 
 __all__ = [
+    "AdministrationConflictError",
+    "AdministrationRepository",
     "ArtifactStore",
     "CaptureNotFoundError",
     "CaptureRepository",
@@ -72,6 +77,7 @@ __all__ = [
     "FrozenClock",
     "IdGenerator",
     "InMemoryArtifactStore",
+    "InMemoryAdministrationRepository",
     "InMemoryCaptureRepository",
     "InMemoryEvidenceRepository",
     "InMemoryEvidenceStore",

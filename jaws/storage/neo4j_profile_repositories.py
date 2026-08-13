@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, Protocol, Self, TypeVar, cast
 
 from jaws.domain import (
+    AuditEvent,
     EndpointProfile,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -22,6 +23,8 @@ from jaws.domain import (
     utc_text,
 )
 from jaws.ports import EntityNotFoundError, ProfileScopeConflictError, RetentionConflictError
+
+from .audit import CREATE_AUDIT_EVENT_QUERY, audit_parameters
 
 ResultT = TypeVar("ResultT")
 
@@ -620,9 +623,16 @@ class Neo4jProfileRepository:
         with self._driver.session(database=self.database) as session:
             return session.execute_write(write)
 
-    def delete_scopes(self, expected: Sequence[ProfileScopeSummary]) -> int:
+    def delete_scopes(
+        self,
+        expected: Sequence[ProfileScopeSummary],
+        *,
+        audit_event: AuditEvent | None = None,
+    ) -> int:
         requested = tuple(expected)
-        if not requested:
+        if audit_event is not None and audit_event.context.target_database != self.database:
+            raise RetentionConflictError("retention audit targets a different database")
+        if not requested and audit_event is None:
             return 0
         if len({summary.scope_id for summary in requested}) != len(requested):
             raise ValueError("retention scope identities must be unique")
@@ -654,6 +664,10 @@ class Neo4jProfileRepository:
         """
 
         def write(transaction: _Transaction) -> int:
+            if not requested:
+                assert audit_event is not None
+                transaction.run(CREATE_AUDIT_EVENT_QUERY, audit_parameters(audit_event)).consume()
+                return 0
             rows = transaction.run(validate_query, {"scopes": values})
             current = tuple(
                 sorted(
@@ -676,6 +690,8 @@ class Neo4jProfileRepository:
                 delete_query,
                 {"scope_ids": [summary.scope_id.value for summary in requested]},
             ).single()
+            if audit_event is not None:
+                transaction.run(CREATE_AUDIT_EVENT_QUERY, audit_parameters(audit_event)).consume()
             return int(deleted["deleted"]) if deleted else 0
 
         with self._driver.session(database=self.database) as session:

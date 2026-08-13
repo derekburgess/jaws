@@ -62,3 +62,8 @@ class RunId(Identifier):
 @dataclass(frozen=True, slots=True, order=True)
 class FindingId(Identifier):
     pass
+
+
+@dataclass(frozen=True, slots=True, order=True)
+class AuditEventId(Identifier):
+    pass
