@@ -7,9 +7,11 @@ from .migrations import (
     MigrationError,
     MigrationPlan,
     MigrationResult,
+    MigrationSafety,
     Neo4jMigrationManager,
     SchemaObject,
     SchemaStatus,
+    VerifiedMigrationBackup,
 )
 from .neo4j_administration_repository import Neo4jAdministrationRepository
 from .neo4j_database_runtime import Neo4jDatabaseRuntime
@@ -32,6 +34,7 @@ __all__ = [
     "MigrationError",
     "MigrationPlan",
     "MigrationResult",
+    "MigrationSafety",
     "Neo4jMigrationManager",
     "Neo4jCaptureRepository",
     "Neo4jPacketRepository",
@@ -44,4 +47,5 @@ __all__ = [
     "Neo4jProfileRepository",
     "SchemaObject",
     "SchemaStatus",
+    "VerifiedMigrationBackup",
 ]

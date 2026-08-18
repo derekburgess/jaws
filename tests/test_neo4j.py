@@ -10,6 +10,8 @@ from profile_repository_contract import assert_enrichment_and_profile_repository
 from repository_contract import assert_capture_and_packet_repository_contract
 from retention_contract import assert_retention_service_contract
 
+from jaws.adapters import write_evidence_bundle
+from jaws.adapters.migration_backup import verify_migration_backup
 from jaws.config import DATABASE, NEO4J_PASSWORD, get_neo4j_driver
 from jaws.domain import (
     AuditContext,
@@ -29,7 +31,14 @@ from jaws.ports import (
 )
 from jaws.services import AdministrationService, EvidenceTransferService
 from jaws.storage import Neo4jDatabaseRuntime, Neo4jRepositories
-from jaws.storage.migrations import MIGRATIONS, manager
+from jaws.storage.migrations import (
+    MIGRATIONS,
+    Migration,
+    MigrationError,
+    MigrationSafety,
+    Neo4jMigrationManager,
+    manager,
+)
 
 pytestmark = pytest.mark.neo4j
 
@@ -379,6 +388,80 @@ def test_guarded_administration_preserves_schema_and_audit_on_disposable_databas
             "MATCH (scope:OBSERVATION_SCOPE) RETURN collect(scope.SCOPE_ID) AS ids"
         ).single()["ids"]
         assert set(scopes) == {"scope_pooled_all", "scope_legacy_unstamped"}
+
+
+def test_destructive_migration_requires_current_verified_evidence_backup(
+    disposable_migration_database,
+    tmp_path,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    repositories = Neo4jRepositories.connect(driver, database)
+    repositories.evidence.restore(evidence_fixture())
+    bundle = EvidenceTransferService(repositories.evidence, FrozenClock(OBSERVED_AT)).export()
+    backup_path = tmp_path / "pre-migration-evidence.json"
+    write_evidence_bundle(backup_path, bundle)
+    destructive = Migration(
+        version=5,
+        name="fixture_delete_profiles",
+        statements=(
+            MIGRATIONS[0]
+            .statements[0]
+            .__class__(
+                "delete profiles in disposable fixture",
+                "MATCH (endpoint:ENDPOINT) DETACH DELETE endpoint",
+            ),
+        ),
+        required_schema=(),
+        reversible=False,
+        rollback="restore the verified evidence bundle",
+        safety=MigrationSafety.DESTRUCTIVE,
+    )
+    migration_manager = Neo4jMigrationManager(
+        driver,
+        database,
+        (*MIGRATIONS, destructive),
+        clock=FrozenClock(OBSERVED_AT),
+    )
+    plan = migration_manager.dry_run()
+
+    with pytest.raises(MigrationError, match="verified evidence backup required"):
+        migration_manager.migrate()
+    with driver.session(database=database) as session:
+        assert session.run("MATCH (endpoint:ENDPOINT) RETURN count(endpoint) AS count").single()[
+            "count"
+        ] == len(bundle.evidence.profiles)
+
+    with driver.session(database=database) as session:
+        session.run(
+            "CREATE (:JAWS_MIGRATION_TEST_FIXTURE:IP_ADDRESS {IP_ADDRESS: '203.0.113.99'})"
+        ).consume()
+    with pytest.raises(ValueError, match="stale or belongs to different"):
+        verify_migration_backup(
+            backup_path,
+            database=database,
+            plan=plan,
+            evidence=repositories.evidence,
+        )
+    with driver.session(database=database) as session:
+        session.run("MATCH (node:JAWS_MIGRATION_TEST_FIXTURE) DETACH DELETE node").consume()
+
+    proof = verify_migration_backup(
+        backup_path,
+        database=database,
+        plan=plan,
+        evidence=repositories.evidence,
+    )
+    result = migration_manager.migrate(proof)
+
+    assert result.applied_versions == (5,)
+    with driver.session(database=database) as session:
+        assert (
+            session.run("MATCH (endpoint:ENDPOINT) RETURN count(endpoint) AS count").single()[
+                "count"
+            ]
+            == 0
+        )
 
 
 def test_profile_history_repository_orders_opaque_ids_by_capture_time(

@@ -482,7 +482,7 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 - [x] Document current and target node, relationship, property, constraint, and index contracts ([schema contract](docs/storage/neo4j-schema.md)).
 - [x] Add schema status, validate, migrate, and dry-run operations (`jaws-schema`).
 - [x] Make migrations idempotent and transactional where Neo4j permits.
-- [ ] Back up/export metadata before destructive or irreversible migrations.
+- [x] Back up/export metadata before destructive or irreversible migrations (`jaws-schema migrate --backup`; verified schema and live-evidence checksums).
 - [x] Test upgrade from a graph created by the starting code revision.
 - [x] Test a fresh empty database migration.
 - [x] Define downgrade/rollback behavior per migration; explicitly mark non-reversible migrations.
@@ -1232,11 +1232,27 @@ and stale-plan-safe apply semantics. Managed evidence has portable, checksummed 
 empty-target atomic import. Guarded human-only administration now requires an exact
 database-bound plan/confirmation, preserves schema/audit history, and records both whole-
 evidence erasure and retention apply without payloads. All executable Cypher is now owned
-by storage adapters and protected by a whole-runtime architecture ratchet. The next active
-Milestone 2 slice is requiring a verified evidence export before any future destructive or
-irreversible migration.
+by storage adapters and protected by a whole-runtime architecture ratchet. Destructive or
+irreversible migrations now fail before their first statement unless a checksummed bundle
+exactly matches the source schema and live evidence. The next active Milestone 2 slice is
+the experiment/run graph index; portable artifacts remain canonical.
 
 ## Change log
+
+### 2026-08-13 — Milestone 2 verified export before risky migration
+
+- Added explicit additive/destructive/irreversible migration safety metadata while
+  retaining the already-applied checksums and behavior of schema versions 1–4.
+- Extended dry-run plans with protected versions and the pre-migration schema digest;
+  migration apply fails before any statement for absent or mismatched typed backup proof.
+- Added bundle verification against both internal checksums and the complete live managed-
+  evidence checksum. Export now supports a valid applied schema prefix while newer versions
+  are pending, so operators can create proof after installing upgrade code.
+- Added offline manager/adapter/CLI contracts and a destructive disposable-Neo4j migration
+  contract covering missing, stale, exact, and applied proof.
+- Passed 191 offline tests and 12 integration tests against an isolated disposable pinned
+  Neo4j 5.26.28 container; strict types, Ruff format/lint, compatibility contracts, and
+  report-only Recall@3 at 5/5 remain green with the same three named benign false positives.
 
 ### 2026-08-13 — Milestone 2 complete Cypher storage ownership
 

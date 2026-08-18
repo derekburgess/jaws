@@ -18,7 +18,7 @@ from jaws.adapters import (
 )
 from jaws.domain import primitive
 from jaws.services import EvidenceTransferService
-from jaws.storage import Neo4jRepositories
+from jaws.storage import Neo4jEvidenceRepository, Neo4jRepositories
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -51,6 +51,14 @@ def _repositories(database_override: str | None) -> Neo4jRepositories:
     return Neo4jRepositories.connect(config.get_neo4j_driver(), database)
 
 
+def _export_repository(database_override: str | None) -> Neo4jEvidenceRepository:
+    """Permit a safe export from a valid applied prefix before pending migrations."""
+
+    config = importlib.import_module("jaws.config")
+    database = database_override or cast(str, config.DATABASE)
+    return Neo4jEvidenceRepository(config.get_neo4j_driver(), database)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
@@ -64,13 +72,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
             return 0
-        repositories = _repositories(args.database)
-        service = EvidenceTransferService(repositories.evidence, SystemClock())
         if args.operation == "export":
+            service = EvidenceTransferService(_export_repository(args.database), SystemClock())
             bundle = service.export()
             write_evidence_bundle(args.path, bundle)
             output: object = {"manifest": primitive(bundle.manifest), "path": str(args.path)}
         else:
+            repositories = _repositories(args.database)
+            service = EvidenceTransferService(repositories.evidence, SystemClock())
             bundle = load_evidence_bundle(args.path)
             plan = service.plan_import(bundle)
             output = (

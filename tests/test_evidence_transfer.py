@@ -25,7 +25,13 @@ from jaws.adapters import (
     parse_evidence_bundle,
     write_evidence_bundle,
 )
-from jaws.domain import EvidenceBundle, EvidenceSchemaProvenance, SchemaMigrationProvenance
+from jaws.adapters.migration_backup import verify_migration_backup
+from jaws.domain import (
+    EvidenceBundle,
+    EvidenceSchemaProvenance,
+    SchemaMigrationProvenance,
+    canonical_digest,
+)
 from jaws.ports import (
     EvidenceImportConflictError,
     EvidenceSchemaConflictError,
@@ -33,6 +39,7 @@ from jaws.ports import (
     InMemoryEvidenceRepository,
 )
 from jaws.services import EvidenceTransferService
+from jaws.storage.migrations import MIGRATIONS, MigrationPlan
 
 
 def test_in_memory_evidence_transfer_follows_shared_contract():
@@ -91,6 +98,7 @@ def test_evidence_cli_exports_validates_dry_runs_and_imports(monkeypatch, capsys
         "_repositories",
         lambda _database: SimpleNamespace(evidence=selected),
     )
+    monkeypatch.setattr(evidence_cli, "_export_repository", lambda _database: source)
 
     assert evidence_cli.main(("export", str(path), "--database", "source")) == 0
     export_output = json.loads(capsys.readouterr().out)
@@ -108,3 +116,39 @@ def test_evidence_cli_exports_validates_dry_runs_and_imports(monkeypatch, capsys
     assert evidence_cli.main(("import", str(path), "--database", "target")) == 0
     assert json.loads(capsys.readouterr().out)["applied"] is True
     assert target.snapshot() == source.snapshot()
+
+
+def test_migration_backup_verification_requires_exact_live_evidence(tmp_path):
+    snapshot = evidence_fixture()
+    bundle = EvidenceBundle.build(snapshot, exported_at=OBSERVED_AT)
+    path = tmp_path / "migration-backup.json"
+    write_evidence_bundle(path, bundle)
+    plan = MigrationPlan(
+        current_version=snapshot.schema.version,
+        target_version=snapshot.schema.version + 1,
+        pending=(),
+        statements=(),
+        source_schema_digest=canonical_digest(snapshot.schema),
+        backup_required_versions=(snapshot.schema.version + 1,),
+    )
+
+    proof = verify_migration_backup(
+        path,
+        database="captures",
+        plan=plan,
+        evidence=in_memory_source(),
+    )
+
+    assert proof.target_database == "captures"
+    assert proof.protected_versions == (MIGRATIONS[-1].version + 1,)
+    assert proof.evidence_content_checksum == snapshot.content_checksum
+
+    changed = in_memory_source()
+    changed.evidence = type(snapshot)(schema=snapshot.schema)
+    with pytest.raises(ValueError, match="stale or belongs to different"):
+        verify_migration_backup(
+            path,
+            database="captures",
+            plan=plan,
+            evidence=changed,
+        )

@@ -377,15 +377,20 @@ class Neo4jEvidenceRepository:
 
     def schema_provenance(self) -> EvidenceSchemaProvenance:
         status = manager(self._driver, self.database).validate()
-        if not status.is_current:
+        blocking = tuple(
+            issue for issue in status.issues if not issue.startswith("pending migration")
+        )
+        if blocking or status.current_version is None:
             raise EvidenceSchemaConflictError(
-                "evidence schema is not current: " + "; ".join(status.issues)
+                "evidence schema cannot be exported safely: "
+                + "; ".join(blocking or ("no managed schema history",))
             )
         return EvidenceSchemaProvenance(
-            version=status.target_version,
+            version=status.current_version,
             migrations=tuple(
                 SchemaMigrationProvenance(item.version, item.name, item.checksum)
                 for item in status.applied
+                if item.version <= status.current_version
             ),
         )
 

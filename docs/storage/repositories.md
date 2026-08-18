@@ -178,6 +178,21 @@ commit them to the source repository. Application secrets are not part of the ma
 evidence snapshot. The bundle is not a general Neo4j dump: unmanaged labels, properties,
 and relationships require a separate database-native backup if they must be preserved.
 
+### Migration backup proof
+
+A pending destructive or irreversible migration cannot consume a path or an operator
+assertion as proof by itself. The migration-backup adapter first loads and fully validates
+the portable bundle, snapshots the live managed evidence, and requires exact schema
+provenance plus whole-content checksum equality. Its typed proof binds the resolved target
+database, target schema version, protected migration versions, source-schema digest,
+evidence checksum, export time, and resolved bundle path.
+
+The migration manager repeats the database, target, protected-version, and schema-digest
+checks before its first statement. Missing or mismatched proof is mutation-free. Existing
+additive versions 1–4 retain their historical checksums and behavior; version 1's
+non-mutating legacy-schema adoption is explicitly exempt because no managed export format
+exists before it.
+
 ## AdministrationRepository
 
 `AdministrationRepository.plan` returns the exact database, ordered schema migration

@@ -202,7 +202,7 @@ JAWS commands and accepts the existing `--database` runtime override:
 jaws-schema status [--database NAME]
 jaws-schema validate [--database NAME]
 jaws-schema dry-run [--database NAME]
-jaws-schema migrate [--database NAME]
+jaws-schema migrate [--database NAME] [--backup EVIDENCE_BUNDLE]
 ```
 
 `status`, `validate`, and `dry-run` do not write. `validate` exits nonzero for pending,
@@ -210,6 +210,24 @@ unknown, checksum-drifted, or schema-drifted migrations. `migrate` applies pendi
 idempotent statements, waits for indexes, validates required objects, and only then writes
 the applied record. A failure before the record is recoverable by retrying after the cause
 is corrected.
+
+Every migration declares an evidence-safety classification. `dry-run` includes
+`backup_required_versions` and the canonical `source_schema_digest`. Additive migrations
+need no proof. Before a destructive or irreversible migration, create a portable evidence
+bundle from the source schema and pass it to `migrate --backup`. The command revalidates the
+bundle's internal checksums and compares its schema and whole evidence-content checksum to
+the live database before any migration statement runs. A missing, malformed, schema-
+mismatched, or stale bundle fails without applying the protected migration.
+
+```text
+jaws-evidence export /secure/backups/pre-migration.json --database NAME
+jaws-schema dry-run --database NAME
+jaws-schema migrate --database NAME --backup /secure/backups/pre-migration.json
+```
+
+Evidence export accepts a valid applied migration prefix when newer migrations are pending,
+which allows the backup to be created after installing new code but before upgrading the
+database. Other repository bundles remain unavailable until the schema is current.
 
 No operation reads a database name from a new environment setting. `--database` remains a
 runtime argument; URI, username, and password retain their existing settings behavior.

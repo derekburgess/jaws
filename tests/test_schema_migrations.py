@@ -11,8 +11,16 @@ from typing import Any
 
 import pytest
 
+from jaws.domain import CanonicalDigest
 from jaws.ports import FrozenClock
-from jaws.storage.migrations import MIGRATIONS, Migration, MigrationError, Neo4jMigrationManager
+from jaws.storage.migrations import (
+    MIGRATIONS,
+    Migration,
+    MigrationError,
+    MigrationSafety,
+    Neo4jMigrationManager,
+    VerifiedMigrationBackup,
+)
 from jaws.storage.migrations.models import SchemaObject
 
 
@@ -190,6 +198,17 @@ def test_version_four_adds_payload_free_administration_audit_indexes():
     }
 
 
+def test_existing_additive_migration_checksums_remain_immutable():
+    assert tuple(migration.checksum for migration in MIGRATIONS) == (
+        "22e1720bf04aa692ab3bc71a9e23a880829923f11c44bf38b164e21c1e9bb081",
+        "15fcd747c31d83a845e32d2fbe0141dd44474e7fc57eec7b55b577cd9bb50142",
+        "3cdd6d0cc56136206bb3c3d0cc215c3f0cfbf967830c1627ddc255787744cfa3",
+        "8cf6114bb284d64eac5715c59e87720b302790c9b707e722fe565f14053ae37a",
+    )
+    assert all(migration.safety is MigrationSafety.ADDITIVE for migration in MIGRATIONS)
+    assert not MIGRATIONS[0].backup_required
+
+
 def test_legacy_utility_delegates_schema_ownership_to_migrations():
     utility_source = Path("jaws/jaws_utils.py").read_text(encoding="utf-8")
     migration_source = Path("jaws/storage/migrations/v0001_adopt_legacy_schema.py").read_text(
@@ -331,6 +350,74 @@ def test_noncontiguous_applied_history_blocks_an_earlier_migration(clock):
     assert "applied migration history is not contiguous from version 1" in status.issues
     with pytest.raises(MigrationError, match="not contiguous"):
         migration_manager.dry_run()
+
+
+def _risky_manager(graph: FakeNeo4j, clock: FrozenClock) -> Neo4jMigrationManager:
+    risky = Migration(
+        version=5,
+        name="fixture_destructive_rewrite",
+        statements=(MIGRATIONS[1].statements[5],),
+        required_schema=(),
+        reversible=False,
+        rollback="restore the verified evidence bundle",
+        safety=MigrationSafety.DESTRUCTIVE,
+    )
+    return Neo4jMigrationManager(graph, "captures", (*MIGRATIONS, risky), clock=clock)
+
+
+def _backup(plan) -> VerifiedMigrationBackup:
+    assert plan.source_schema_digest is not None
+    return VerifiedMigrationBackup(
+        target_database="captures",
+        target_version=plan.target_version,
+        protected_versions=plan.backup_required_versions,
+        source_schema_digest=plan.source_schema_digest,
+        evidence_content_checksum=CanonicalDigest("e" * 64),
+        exported_at=datetime(2026, 8, 13, 15, 30, tzinfo=UTC),
+        bundle_path="/secure/evidence.json",
+    )
+
+
+def test_risky_migration_plan_names_backup_requirement_and_fails_closed(clock):
+    graph = FakeNeo4j()
+    _manager(graph, clock).migrate()
+    migration_manager = _risky_manager(graph, clock)
+
+    plan = migration_manager.dry_run()
+
+    assert plan.backup_required
+    assert plan.backup_required_versions == (5,)
+    assert plan.source_schema_digest is not None
+    writes = list(graph.writes)
+    with pytest.raises(MigrationError, match="verified evidence backup required"):
+        migration_manager.migrate()
+    assert graph.writes == writes
+    assert len(graph.applied) == 4
+
+
+def test_risky_migration_rejects_mismatched_proof_and_accepts_exact_proof(clock):
+    graph = FakeNeo4j()
+    _manager(graph, clock).migrate()
+    migration_manager = _risky_manager(graph, clock)
+    plan = migration_manager.dry_run()
+    proof = _backup(plan)
+    wrong_database = VerifiedMigrationBackup(
+        target_database="other",
+        target_version=proof.target_version,
+        protected_versions=proof.protected_versions,
+        source_schema_digest=proof.source_schema_digest,
+        evidence_content_checksum=proof.evidence_content_checksum,
+        exported_at=proof.exported_at,
+        bundle_path=proof.bundle_path,
+    )
+
+    with pytest.raises(MigrationError, match="different database"):
+        migration_manager.migrate(wrong_database)
+    assert len(graph.applied) == 4
+
+    result = migration_manager.migrate(proof)
+    assert result.applied_versions == (5,)
+    assert result.status.is_current
 
 
 @pytest.mark.parametrize("versions", [(2,), (1, 3), (1, 1)])

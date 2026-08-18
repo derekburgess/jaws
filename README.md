@@ -303,6 +303,16 @@ jaws-evidence import /secure/backups/jaws-evidence.json \
   --database jaws-restored
 ```
 
+Before applying a future destructive or irreversible schema migration, export the live
+pre-migration evidence and provide that exact verified bundle:
+
+```bash
+jaws-evidence export /secure/backups/pre-migration.json --database neo4j
+jaws-schema dry-run --database neo4j
+jaws-schema migrate --database neo4j \
+  --backup /secure/backups/pre-migration.json
+```
+
 Import refuses populated or schema-incompatible targets. Evidence bundles may contain raw
 packet payloads and enriched metadata; handle them as sensitive evidence and do not commit
 them to the repository.

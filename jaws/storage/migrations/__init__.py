@@ -10,8 +10,10 @@ from .models import (
     MigrationError,
     MigrationPlan,
     MigrationResult,
+    MigrationSafety,
     SchemaObject,
     SchemaStatus,
+    VerifiedMigrationBackup,
 )
 from .v0001_adopt_legacy_schema import MIGRATION as V0001
 from .v0002_capture_identity_and_scope import MIGRATION as V0002
@@ -38,8 +40,10 @@ __all__ = [
     "MigrationError",
     "MigrationPlan",
     "MigrationResult",
+    "MigrationSafety",
     "Neo4jMigrationManager",
     "SchemaObject",
     "SchemaStatus",
+    "VerifiedMigrationBackup",
     "manager",
 ]

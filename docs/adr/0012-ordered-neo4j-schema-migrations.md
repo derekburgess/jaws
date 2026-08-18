@@ -92,7 +92,12 @@ objects are validation evidence, not a replacement for ordered history.
 ### Follow-on constraints
 
 - A destructive or irreversible migration requires a verified metadata/data export before
-  execution and a migration-specific confirmation boundary.
+  execution and a migration-specific confirmation boundary. Implemented migration plans
+  expose their safety classification, protected versions, and pre-migration schema digest;
+  `jaws-schema migrate --backup` accepts proof only after a portable bundle's internal
+  checksums, schema provenance, and complete live-evidence checksum match. Version 1 is the
+  sole grandfathered case because it adopts schema objects without mutating evidence and
+  predates the managed evidence format.
 - Repository adapters must validate a supported schema version before writes.
 - Migration integration tests run only against an explicitly designated disposable test
   database, never an implicitly selected research database.

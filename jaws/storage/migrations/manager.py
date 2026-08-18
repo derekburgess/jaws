@@ -6,7 +6,13 @@ from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime
 from typing import Any, Protocol, TypeVar, cast
 
-from jaws.domain import Clock, utc_text
+from jaws.domain import (
+    Clock,
+    EvidenceSchemaProvenance,
+    SchemaMigrationProvenance,
+    canonical_digest,
+    utc_text,
+)
 
 from .models import (
     AppliedMigration,
@@ -14,9 +20,11 @@ from .models import (
     MigrationError,
     MigrationPlan,
     MigrationResult,
+    MigrationSafety,
     SchemaObject,
     SchemaObjectKind,
     SchemaStatus,
+    VerifiedMigrationBackup,
 )
 
 ResultT = TypeVar("ResultT")
@@ -103,6 +111,8 @@ class Neo4jMigrationManager:
             raise ValueError("migration versions must be contiguous, ordered, and start at 1")
         if len({migration.name for migration in migrations}) != len(migrations):
             raise ValueError("migration names must be unique")
+        if migrations and migrations[0].safety is not MigrationSafety.ADDITIVE:
+            raise ValueError("the first migration must be additive so a fresh database can start")
         self._driver = cast(_Driver, driver)
         self.database = database
         self.migrations = migrations
@@ -137,6 +147,7 @@ class Neo4jMigrationManager:
             for migration in self.migrations
             if migration.version in status.pending_versions
         )
+        source_schema = self._schema_provenance(status)
         return MigrationPlan(
             current_version=status.current_version,
             target_version=self.target_version,
@@ -144,12 +155,19 @@ class Neo4jMigrationManager:
             statements=tuple(
                 statement.query for migration in pending for statement in migration.statements
             ),
+            source_schema_digest=(
+                canonical_digest(source_schema) if source_schema is not None else None
+            ),
+            backup_required_versions=tuple(
+                migration.version for migration in pending if migration.backup_required
+            ),
         )
 
-    def migrate(self) -> MigrationResult:
+    def migrate(self, backup: VerifiedMigrationBackup | None = None) -> MigrationResult:
         """Apply pending idempotent statements, validate, then record each version."""
 
         plan = self.dry_run()
+        self._validate_backup(plan, backup)
         applied_versions: list[int] = []
         for migration in plan.pending:
             with self._driver.session(database=self.database) as session:
@@ -180,6 +198,40 @@ class Neo4jMigrationManager:
                 "schema remains invalid after migration: " + "; ".join(status.issues)
             )
         return MigrationResult(tuple(applied_versions), status)
+
+    def _validate_backup(
+        self,
+        plan: MigrationPlan,
+        backup: VerifiedMigrationBackup | None,
+    ) -> None:
+        if not plan.backup_required:
+            return
+        if backup is None:
+            versions = ", ".join(str(version) for version in plan.backup_required_versions)
+            raise MigrationError(
+                f"verified evidence backup required before migration version(s): {versions}"
+            )
+        if plan.source_schema_digest is None:
+            raise MigrationError("a risky first migration cannot be backed by managed evidence")
+        if backup.target_database != self.database:
+            raise MigrationError("verified evidence backup targets a different database")
+        if backup.target_version != plan.target_version:
+            raise MigrationError("verified evidence backup targets a different schema version")
+        if backup.protected_versions != plan.backup_required_versions:
+            raise MigrationError("verified evidence backup covers different migration versions")
+        if backup.source_schema_digest != plan.source_schema_digest:
+            raise MigrationError("verified evidence backup was created from a different schema")
+
+    @staticmethod
+    def _schema_provenance(status: SchemaStatus) -> EvidenceSchemaProvenance | None:
+        if status.current_version is None:
+            return None
+        migrations = tuple(
+            SchemaMigrationProvenance(item.version, item.name, item.checksum)
+            for item in status.applied
+            if item.version <= status.current_version
+        )
+        return EvidenceSchemaProvenance(status.current_version, migrations)
 
     def _build_status(
         self,
