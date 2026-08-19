@@ -134,6 +134,27 @@ supersession. Neo4j normalizes each snapshot into `JAWS_EXPERIMENT` and
 portable experiment bundles remain a Milestone 5 responsibility and must be able to rebuild
 this graph index.
 
+## FindingRepository
+
+`FindingRepository` is an optional graph-discovery index over canonical ranked findings.
+`publish` accepts one complete `FindingIndexBatch` bound to a run ID and exact artifact
+checksum. Each minimal row contains only finding, run, and entity IDs, rank, finite score,
+score direction, and tri-state outlier status. Explanations, contributions, feature values,
+evidence pointers, labels, metrics, and complete results are never copied into the graph.
+
+The target run must exist, be `succeeded`, and expose the same finalized artifact checksum.
+The batch requires unique finding and entity IDs plus contiguous one-based ranks. Its
+canonical digest and count are stored on the run in the same transaction as all finding
+nodes. An identical retry returns without writing; a changed retry, cross-run finding ID,
+or concurrent publication conflict leaves the previous index unchanged. Empty rankings are
+published and locked explicitly rather than remaining indistinguishable from unpublished
+runs.
+
+The in-memory and Neo4j implementations share behavior for preconditions, idempotence,
+conflicts, atomic duplicate rollback, run-ordered reads, and entity lookup. Neo4j relates
+each `JAWS_FINDING_INDEX` node to exactly one `JAWS_EXPERIMENT_RUN` through `IN_RUN`. The
+index remains disposable and reconstructable from canonical Milestone 5 artifacts.
+
 ## Retention service
 
 `RetentionPolicy` declares independent rules for raw packets, capture metadata, profile

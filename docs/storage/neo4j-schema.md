@@ -228,6 +228,40 @@ cannot change during a transition.
 The authority split and reconstruction requirement are detailed in
 [ADR-0005](../adr/0005-evidence-store-and-portable-experiment-records.md).
 
+## Managed target: database schema version 6
+
+Version 6 adds the optional, reconstructable discovery index for ranked findings. A finding
+batch may be published only for a `succeeded` run and must name that run's exact canonical
+artifact checksum. Publication records the batch digest and count on the run, so an
+identical retry is a no-op and different later content fails without partially rewriting
+the graph.
+
+| Label/property | Contract |
+| --- | --- |
+| `JAWS_FINDING_INDEX.FINDING_ID` | Unique finding identity from the canonical run artifact |
+| `RUN_ID` | Denormalized run identity for indexed run/rank lookup |
+| `ENTITY_ID` | Stable ranked-entity identity; no entity type or perspective is inferred |
+| `RANK` | Positive, unique, contiguous one-based rank within the published run batch |
+| `SCORE` | Finite ranking score |
+| `SCORE_DIRECTION` | `higher_is_more_anomalous` or `lower_is_more_anomalous` |
+| `OUTLIER_STATUS` | `outlier`, `inlier`, or `not_scored`; never a malicious/benign verdict |
+| `JAWS_EXPERIMENT_RUN.FINDING_INDEX_SHA256` | Canonical digest of the complete artifact-bound index batch after publication |
+| `JAWS_EXPERIMENT_RUN.FINDING_COUNT` | Exact number of indexed rows, including zero |
+
+Every indexed finding has exactly one
+`(:JAWS_FINDING_INDEX)-[:IN_RUN]->(:JAWS_EXPERIMENT_RUN)` relationship. The graph does not
+copy finding explanations, contributions, evidence pointers, feature values, metrics,
+labels, or result payloads. Those remain authoritative only in the canonical external run
+artifact, from which this index must be reconstructable.
+
+### Version-6 constraints and indexes
+
+| Kind | Name | Label/properties |
+| --- | --- | --- |
+| Uniqueness constraint | `jaws_finding_index_id_unique` | `JAWS_FINDING_INDEX(FINDING_ID)` |
+| Range index | `jaws_finding_run_rank_index` | `JAWS_FINDING_INDEX(RUN_ID, RANK)` |
+| Range index | `jaws_finding_entity_index` | `JAWS_FINDING_INDEX(ENTITY_ID)` |
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -280,10 +314,10 @@ The plan reports exact evidence/unclassified node counts, relationship count, sc
 provenance, digest, and confirmation. Erase repeats that plan inside one transaction,
 preserves schema/audit nodes, and fails closed if anything changed.
 
-## Later Milestone 2 versions
+## Milestone 2 target and later versions
 
-Versions 1–5 do not add the optional graph finding index. Retention, administration, and
-portable managed-evidence export/import operate over version 5; experiment index nodes are
-discovery metadata and are not copied into evidence bundles. Later versions must document
-their contracts before implementation and retain Benchmark 0 compatibility until their
-parity gates pass.
+Version 6 completes the Milestone 2 managed schema. Retention, administration, and portable
+managed-evidence export/import operate over version 6; experiment and finding index nodes
+are reconstructable discovery metadata and are not copied into evidence bundles. Later
+versions must document their contracts before implementation and retain Benchmark 0
+compatibility until their parity gates pass.

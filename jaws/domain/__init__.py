@@ -52,6 +52,7 @@ from .experiments import (
     ExperimentRunIndex,
     experiment_run_metadata,
 )
+from .finding_indexes import FindingIndex, FindingIndexBatch
 from .identifiers import (
     AuditEventId,
     CanonicalDigest,
@@ -145,6 +146,8 @@ __all__ = [
     "ExperimentSpec",
     "Failure",
     "FindingId",
+    "FindingIndex",
+    "FindingIndexBatch",
     "IdGenerator",
     "Measurement",
     "MeasurementUnit",

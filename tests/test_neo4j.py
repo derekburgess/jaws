@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 from evidence_contract import OBSERVED_AT, evidence_fixture
 from experiment_index_repository_contract import assert_experiment_index_repository_contract
+from finding_repository_contract import assert_finding_repository_contract
 from inspection_repository_contract import assert_inspection_repository_contract
 from profile_repository_contract import assert_enrichment_and_profile_repository_contract
 from repository_contract import assert_capture_and_packet_repository_contract
@@ -158,7 +159,7 @@ def test_fresh_database_reaches_managed_schema(disposable_migration_database):
 
     result = manager(driver, database).migrate()
 
-    assert result.applied_versions == (1, 2, 3, 4, 5)
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6)
     assert result.status.is_current
     assert manager(driver, database).migrate().applied_versions == ()
 
@@ -326,6 +327,14 @@ def test_experiment_index_repository_follows_shared_contract(
     assert_experiment_index_repository_contract(repositories.experiments)
 
 
+def test_finding_repository_follows_shared_contract(disposable_migration_database):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    repositories = Neo4jRepositories.connect(driver, database)
+
+    assert_finding_repository_contract(repositories)
+
+
 def test_retention_service_follows_shared_contract(disposable_migration_database):
     driver, database = disposable_migration_database
     manager(driver, database).migrate()
@@ -413,7 +422,7 @@ def test_destructive_migration_requires_current_verified_evidence_backup(
     backup_path = tmp_path / "pre-migration-evidence.json"
     write_evidence_bundle(backup_path, bundle)
     destructive = Migration(
-        version=6,
+        version=7,
         name="fixture_delete_profiles",
         statements=(
             MIGRATIONS[0]
@@ -465,7 +474,7 @@ def test_destructive_migration_requires_current_verified_evidence_backup(
     )
     result = migration_manager.migrate(proof)
 
-    assert result.applied_versions == (6,)
+    assert result.applied_versions == (7,)
     with driver.session(database=database) as session:
         assert (
             session.run("MATCH (endpoint:ENDPOINT) RETURN count(endpoint) AS count").single()[

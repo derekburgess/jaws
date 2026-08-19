@@ -35,6 +35,7 @@ from jaws.ports.repositories import capture_metadata
 
 from .migrations import manager
 from .neo4j_experiment_index_repository import Neo4jExperimentIndexRepository
+from .neo4j_finding_repository import Neo4jFindingRepository
 from .neo4j_inspection_repository import Neo4jInspectionRepository
 from .neo4j_profile_repositories import Neo4jEnrichmentRepository, Neo4jProfileRepository
 
@@ -495,6 +496,7 @@ class Neo4jRepositories:
     evidence: Neo4jEvidenceRepository
     administration: Neo4jAdministrationRepository
     experiments: Neo4jExperimentIndexRepository
+    findings: Neo4jFindingRepository
 
     @classmethod
     def connect(cls, driver: object, database: str) -> Self:
@@ -514,4 +516,5 @@ class Neo4jRepositories:
             evidence=Neo4jEvidenceRepository(driver, database),
             administration=Neo4jAdministrationRepository(driver, database),
             experiments=Neo4jExperimentIndexRepository(driver, database),
+            findings=Neo4jFindingRepository(driver, database),
         )

@@ -21,6 +21,9 @@ from jaws.domain import (
     EvidenceSnapshot,
     ExperimentId,
     ExperimentRunIndex,
+    FindingId,
+    FindingIndex,
+    FindingIndexBatch,
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
@@ -110,6 +113,14 @@ class RunStateConflictError(RepositoryError):
 
 class ExperimentDigestConflictError(RepositoryError):
     """An experiment identity is already bound to different semantic content."""
+
+
+class DuplicateFindingError(RepositoryError):
+    """A finding index identity is already bound to another publication."""
+
+
+class FindingIndexConflictError(RepositoryError):
+    """Published finding metadata differs from the canonical run artifact or prior index."""
 
 
 class CaptureRepository(Protocol):
@@ -236,3 +247,15 @@ class ExperimentIndexRepository(Protocol):
     def list_all(self) -> tuple[ExperimentRunIndex, ...]: ...
 
     def transition(self, record: ExperimentRunIndex, *, expected_state: RunState) -> None: ...
+
+
+class FindingRepository(Protocol):
+    """Optional, reconstructable discovery index over canonical ranked findings."""
+
+    def publish(self, batch: FindingIndexBatch) -> int: ...
+
+    def get(self, finding_id: FindingId) -> FindingIndex | None: ...
+
+    def list_for_run(self, run_id: RunId) -> tuple[FindingIndex, ...]: ...
+
+    def list_for_entity(self, entity_id: EntityId) -> tuple[FindingIndex, ...]: ...

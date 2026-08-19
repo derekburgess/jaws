@@ -27,6 +27,7 @@ from .fakes import (
     SequenceIdGenerator,
     SequencePacketSource,
 )
+from .finding_index_fakes import InMemoryFindingRepository
 from .inspection_fakes import InMemoryInspectionRepository
 from .profile_fakes import InMemoryEnrichmentRepository, InMemoryProfileRepository
 from .repositories import (
@@ -36,6 +37,7 @@ from .repositories import (
     CaptureRepository,
     CaptureStateConflictError,
     DuplicateCaptureError,
+    DuplicateFindingError,
     DuplicateRunError,
     EnrichmentRepository,
     EntityNotFoundError,
@@ -44,6 +46,8 @@ from .repositories import (
     EvidenceSchemaConflictError,
     ExperimentDigestConflictError,
     ExperimentIndexRepository,
+    FindingIndexConflictError,
+    FindingRepository,
     InactiveCaptureError,
     InspectionRepository,
     PacketRepository,
@@ -71,12 +75,15 @@ __all__ = [
     "EvidenceStore",
     "DuplicateCaptureError",
     "DuplicateRunError",
+    "DuplicateFindingError",
     "EvidenceImportConflictError",
     "EvidenceRepository",
     "EvidenceSchemaConflictError",
     "EnrichmentRepository",
     "ExperimentDigestConflictError",
     "ExperimentIndexRepository",
+    "FindingIndexConflictError",
+    "FindingRepository",
     "EntityNotFoundError",
     "FakeEmbeddingProvider",
     "FakeEnrichmentProvider",
@@ -90,6 +97,7 @@ __all__ = [
     "InMemoryCaptureRepository",
     "InMemoryEvidenceRepository",
     "InMemoryExperimentIndexRepository",
+    "InMemoryFindingRepository",
     "InMemoryEvidenceStore",
     "InMemoryEnrichmentRepository",
     "InMemoryInspectionRepository",
