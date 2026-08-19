@@ -90,7 +90,7 @@ backed `CAPTURE_ID` values while legacy captures retain their original identity.
 | `REGISTERED_AT`, `STARTED_AT`, `ENDED_AT` | Neo4j datetimes; unknown legacy end time remains absent |
 | `PACKET_COUNT` | Nonnegative stored packet count; mirrors legacy `PACKETS` during compatibility |
 | `PERSPECTIVE_IP` | Capture-host IP only when known; absent for imported/legacy evidence unless supplied explicitly |
-| `CAPTURE_FILTER` | Capture/display filter when one was declared |
+| `CAPTURE_FILTER` | Exact declared capture/display filter provenance; combined filters carry explicit `capture=`/`display=` prefixes |
 | `TOOL_VERSIONS_JSON` | Canonical JSON object of available tool versions |
 | `FAILURE_CODE` | Non-secret machine-readable terminal failure code when applicable |
 

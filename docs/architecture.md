@@ -51,9 +51,11 @@ storage adapters. A global architecture ratchet scans every runtime Python modul
 same boundary without being named individually.
 
 `jaws.adapters` contains outer implementations of inward ports. Its standard runtime clock
-and UUID capture-ID generator import only domain contracts and the standard library; later
-provider/interface adapters may carry their declared optional dependencies without moving
-those dependencies into domain or ports.
+and UUID capture-ID generator import only domain contracts and the standard library.
+PyShark packet-source adapters own live-capture privileges, callback/iterator bridging,
+decoded-packet policy, and capture-handle cleanup without importing PyShark until the CLI
+loads that optional capability. Later provider/interface adapters may carry their declared
+optional dependencies without moving those dependencies into domain or ports.
 
 ## Ratchet policy
 

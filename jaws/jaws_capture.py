@@ -1,22 +1,26 @@
 import argparse
-import hashlib
 import os
 import socket
-from datetime import datetime, timezone
-from importlib.metadata import PackageNotFoundError, version
+from collections import deque
+from ipaddress import ip_address
 
 from rich.console import Group
 
-from jaws.adapters import SystemClock, UuidCaptureIdGenerator
+from jaws.adapters import (
+    LivePacketSource,
+    PcapPacketSource,
+    SystemClock,
+    UuidCaptureIdGenerator,
+    capture_tool_versions,
+)
+from jaws.adapters import file_sha256 as _file_sha256
 from jaws.config import CONSOLE, DATABASE
 from jaws.domain import (
-    ACTIVE_CAPTURE_STATES,
     CanonicalDigest,
-    CaptureRecord,
     CaptureSourceKind,
-    CaptureState,
+    CaptureSpec,
     EntityId,
-    PacketRecord,
+    PacketObservation,
 )
 from jaws.jaws_utils import (
     Reporter,
@@ -26,6 +30,7 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
+from jaws.services import IngestService
 from jaws.storage import Neo4jRepositories
 from jaws.storage.migrations import MigrationError
 
@@ -67,77 +72,15 @@ BATCH_SIZE = 100
 
 
 def file_sha256(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as capture_file:
-        for chunk in iter(lambda: capture_file.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return CanonicalDigest(digest.hexdigest())
+    """Compatibility alias for the bounded adapter-owned PCAP hash."""
+
+    return CanonicalDigest(_file_sha256(path))
 
 
-def capture_tool_versions():
-    versions = {}
-    for distribution in ("JAWS", "pyshark"):
-        try:
-            versions[distribution.lower()] = version(distribution)
-        except PackageNotFoundError:
-            versions[distribution.lower()] = "unknown"
-    return versions
-
-
-def process_packet(packet):
-    # sniff_time is the packet's actual capture time (from the frame header), so
-    # imported pcap files keep their original timing — the INTERVAL_MEAN/INTERVAL_CV
-    # features measure network cadence, not how fast the file was read. It is a naive
-    # local datetime; astimezone() attaches the local zone and converts to UTC.
-    sniff_time = getattr(packet, "sniff_time", None)
-    timestamp = sniff_time.astimezone(timezone.utc) if sniff_time else datetime.now(timezone.utc)
-    packet_data = {
-        "protocol": packet.highest_layer,
-        "src_ip_address": packet.ip.src if hasattr(packet, "ip") else "0.0.0.0",
-        "src_port": 0,
-        "dst_ip_address": packet.ip.dst if hasattr(packet, "ip") else "0.0.0.0",
-        "dst_port": 0,
-        "size": len(packet),
-        "payload": None,
-        "timestamp": timestamp.isoformat(),
-    }
-
-    if hasattr(packet, "tcp") or hasattr(packet, "udp"):
-        layer = packet.tcp if hasattr(packet, "tcp") else packet.udp
-        packet_data.update(
-            {
-                "src_port": int(layer.srcport) if layer.srcport.isdigit() else 0,
-                "dst_port": int(layer.dstport) if layer.dstport.isdigit() else 0,
-                "payload": layer.payload if hasattr(layer, "payload") else None,
-            }
-        )
-
-    packet_string = f"{packet_data['src_ip_address']}:{packet_data['src_port']} ➜ {packet_data['protocol']}({packet_data['size']}) ➜ {packet_data['dst_ip_address']}:{packet_data['dst_port']}"
-    return packet_data, packet_string
-
-
-def packet_record(capture_id, packet_data):
-    """Translate the legacy PyShark parse shape into typed repository evidence."""
-
-    timestamp = packet_data["timestamp"]
-    if not isinstance(timestamp, datetime):
-        timestamp = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
-
-    def port(value):
-        parsed = int(value)
-        return parsed or None
-
-    return PacketRecord(
-        capture_id=capture_id,
-        observed_at=timestamp,
-        protocol=str(packet_data["protocol"]),
-        size_bytes=int(packet_data["size"]),
-        source_ip=str(packet_data["src_ip_address"]),
-        destination_ip=str(packet_data["dst_ip_address"]),
-        source_port=port(packet_data["src_port"]),
-        destination_port=port(packet_data["dst_port"]),
-        payload=packet_data["payload"],
-    )
+def _perspective(value: str | None) -> EntityId | None:
+    if value is None:
+        return None
+    return EntityId(f"ip:{ip_address(value.strip())}")
 
 
 def main():
@@ -150,6 +93,12 @@ def main():
         help="Specify the network interface to use (default: the first active interface from --list).",
     )
     parser.add_argument("--file", dest="capture_file", help="Path to a Wireshark capture file.")
+    parser.add_argument(
+        "--local-ip",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument("--capture-filter", help=argparse.SUPPRESS)
+    parser.add_argument("--display-filter", help=argparse.SUPPRESS)
     parser.add_argument(
         "--duration",
         type=int,
@@ -181,30 +130,9 @@ def main():
     if driver is None:
         return
 
-    capture = None
-    capture_record = None
-    packets = []
-    batch = []
-    stored_packet_count = 0
     clock = SystemClock()
     capture_ids = UuidCaptureIdGenerator()
-    repositories = None
-
-    def flush_batch():
-        nonlocal stored_packet_count
-        if batch:
-            if repositories is None:
-                raise RuntimeError("capture repositories are not initialized")
-            written = repositories.packets.append(capture_id, batch)
-            batch.clear()
-            stored_packet_count += written
-
-    def close_capture():
-        if capture is not None:
-            try:
-                capture.close()
-            except Exception:
-                pass
+    recent_packets: deque[str] = deque(maxlen=10)
 
     try:
         initialize_schema(driver, args.database, local_ip, reporter)
@@ -234,113 +162,96 @@ def main():
 
         repositories = Neo4jRepositories.connect(driver, args.database)
         source = args.capture_file if args.capture_file else args.interface
+        if source is None:
+            raise RuntimeError("capture source was not resolved")
+        if args.capture_file and args.capture_filter:
+            raise ValueError("--capture-filter is only valid for live interface capture")
         pyshark = require_module("pyshark", "capture", "Packet capture and import")
-        registered_at = clock.now()
-        capture_id = capture_ids.new()
-        source_kind = (
-            CaptureSourceKind.PCAP_FILE if args.capture_file else CaptureSourceKind.LIVE_INTERFACE
-        )
-        active_state = CaptureState.IMPORTING if args.capture_file else CaptureState.RUNNING
-        perspective = None if args.capture_file else EntityId(f"ip:{local_ip}")
-        content_digest = file_sha256(args.capture_file) if args.capture_file else None
-        capture_record = CaptureRecord(
-            capture_id=capture_id,
-            source_kind=source_kind,
-            source_name=source,
-            state=CaptureState.REGISTERED,
-            registered_at=registered_at,
-            legacy_capture_id=registered_at.strftime("%Y%m%dT%H%M%SZ"),
-            content_digest=content_digest,
-            perspective=perspective,
-            tool_versions=capture_tool_versions(),
-        ).transition(active_state, clock.now())
-        repositories.captures.add(capture_record)
-
-        if args.capture_file:
-            config_message = (
-                f"Import: {args.capture_file} | perspective unknown | session {capture_id}"
+        declared_filter = args.capture_filter
+        if args.display_filter:
+            display = f"display={args.display_filter}"
+            declared_filter = (
+                f"capture={args.capture_filter}; {display}" if args.capture_filter else display
             )
+        if args.capture_file:
+            perspective = _perspective(args.local_ip)
+            perspective_text = perspective.value if perspective else "perspective unknown"
+            spec = CaptureSpec(
+                source_kind=CaptureSourceKind.PCAP_FILE,
+                source_name=source,
+                perspective=perspective,
+                content_digest=file_sha256(args.capture_file),
+                capture_filter=declared_filter,
+                tool_versions=capture_tool_versions(),
+            )
+            config_message = f"Import: {args.capture_file} | {perspective_text}"
         else:
+            perspective = _perspective(args.local_ip or local_ip)
+            assert perspective is not None
+            spec = CaptureSpec(
+                source_kind=CaptureSourceKind.LIVE_INTERFACE,
+                source_name=source,
+                perspective=perspective,
+                capture_filter=declared_filter,
+                tool_versions=capture_tool_versions(),
+            )
             config_message = (
-                f"Interface: {args.interface} | {local_ip} | {args.duration} seconds | "
-                f"session {capture_id}"
+                f"Interface: {args.interface} | {perspective.value} | {args.duration} seconds"
             )
 
         def render():
             return Group(
                 render_info_panel("CONFIG", config_message, CONSOLE),
-                render_activity_panel("PACKETS", packets, CONSOLE),
+                render_activity_panel("PACKETS", recent_packets, CONSOLE),
             )
 
         with reporter.activity(render) as update:
 
-            def on_packet(packet):
-                packet_data, packet_string = process_packet(packet)
-                batch.append(packet_record(capture_id, packet_data))
-                packets.append(packet_string)
-                if len(batch) >= BATCH_SIZE:
-                    flush_batch()
+            def on_packet(observation: PacketObservation, summary: str) -> None:
+                recent_packets.append(summary)
                 update()
 
             if args.capture_file:
-                capture = pyshark.FileCapture(args.capture_file)
-                for packet in capture:
-                    on_packet(packet)
+                packet_source = PcapPacketSource(
+                    pyshark,
+                    args.capture_file,
+                    display_filter=args.display_filter,
+                    observer=on_packet,
+                )
             else:
-                capture = pyshark.LiveCapture(interface=args.interface)
-                try:
-                    # apply_on_packets enforces a wall-clock timeout, so the capture
-                    # ends after `duration` seconds even on a quiet interface (an
-                    # elapsed check inside the loop would only run when a packet
-                    # arrives, blocking indefinitely with no traffic).
-                    capture.apply_on_packets(on_packet, timeout=args.duration)
-                except TimeoutError:
-                    pass  # the normal end of a timed capture
-
-        flush_batch()
-        completed_record = capture_record.transition(
-            CaptureState.COMPLETE,
-            clock.now(),
-            packet_count=stored_packet_count,
-        )
-        repositories.captures.transition(
-            completed_record,
-            expected_state=capture_record.state,
-        )
-        capture_record = completed_record
+                assert args.interface is not None
+                packet_source = LivePacketSource(
+                    pyshark,
+                    args.interface,
+                    args.duration,
+                    capture_filter=args.capture_filter,
+                    display_filter=args.display_filter,
+                    observer=on_packet,
+                )
+            capture_record = IngestService(
+                repositories.captures,
+                repositories.packets,
+                clock,
+                capture_ids,
+                batch_size=BATCH_SIZE,
+            ).ingest(spec, packet_source)
 
         reporter.result(
             {
                 "database": args.database,
                 "source": source,
-                "capture_id": capture_id.value,
+                "capture_id": capture_record.capture_id.value,
                 "legacy_capture_id": capture_record.legacy_capture_id,
-                "packets_captured": stored_packet_count,
+                "packets_captured": capture_record.packet_count,
             },
-            summary=f"Packets({len(packets)}) added to: '{args.database}' as session '{capture_id}'",
+            summary=(
+                f"Packets({capture_record.packet_count}) added to: '{args.database}' "
+                f"as session '{capture_record.capture_id}'"
+            ),
         )
         return
 
     except KeyboardInterrupt:
-        if capture_record is not None and capture_record.state in ACTIVE_CAPTURE_STATES:
-            try:
-                flush_batch()
-            except Exception:
-                pass
-            previous_state = capture_record.state
-            capture_record = capture_record.transition(
-                CaptureState.CANCELLED,
-                clock.now(),
-                packet_count=stored_packet_count,
-                failure_code="capture_cancelled",
-            )
-            try:
-                repositories.captures.transition(
-                    capture_record,
-                    expected_state=previous_state,
-                )
-            except Exception as finalize_error:
-                reporter.info("WARNING", f"Could not finalize cancelled capture: {finalize_error}")
         reporter.error("CANCELLED", "Capture cancelled.")
         return
 
@@ -349,31 +260,10 @@ def main():
         return
 
     except Exception as error:
-        if capture_record is not None and capture_record.state in ACTIVE_CAPTURE_STATES:
-            try:
-                flush_batch()
-            except Exception:
-                pass
-            target = CaptureState.PARTIAL if stored_packet_count else CaptureState.FAILED
-            previous_state = capture_record.state
-            capture_record = capture_record.transition(
-                target,
-                clock.now(),
-                packet_count=stored_packet_count,
-                failure_code=type(error).__name__,
-            )
-            try:
-                repositories.captures.transition(
-                    capture_record,
-                    expected_state=previous_state,
-                )
-            except Exception as finalize_error:
-                reporter.info("WARNING", f"Could not finalize failed capture: {finalize_error}")
         reporter.error("ERROR", str(error))
         return
 
     finally:
-        close_capture()
         driver.close()
 
 

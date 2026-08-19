@@ -234,7 +234,7 @@ def test_cooperative_cancellation_flushes_pending_batch_and_returns_cancelled_re
 
     assert result.state is CaptureState.CANCELLED
     assert result.packet_count == 2
-    assert result.failure_code == "ingest_cancelled"
+    assert result.failure_code == "capture_cancelled"
     assert captures.get(result.capture_id) == result
     assert packets.batch_sizes == [2]
     assert len(stored_packets.read(ObservationWindow(capture_ids=(result.capture_id,)))) == 2
@@ -250,7 +250,7 @@ def test_keyboard_interrupt_finalizes_cancelled_before_propagating():
     assert result is not None
     assert result.state is CaptureState.CANCELLED
     assert result.packet_count == 1
-    assert result.failure_code == "ingest_cancelled"
+    assert result.failure_code == "capture_cancelled"
 
 
 def test_ingest_batch_size_must_be_positive():

@@ -549,17 +549,17 @@ Extract evidence acquisition and representation building into deterministic serv
 
 #### Ingest service
 
-- [ ] Split live capture and PCAP import into separate packet-source adapters sharing one ingest service.
+- [x] Split live capture and PCAP import into separate packet-source adapters sharing one ingest service (`LivePacketSource`; `PcapPacketSource`).
 - [x] Make the local/capture-host identity explicit in `CaptureSpec`; do not infer imported-PCAP perspective solely from the importer machine ([ingest contract](docs/services/ingest.md)).
 - [x] Support an explicit local IP/entity for imported captures and dataset manifests ([ingest contract](docs/services/ingest.md)).
 - [x] Preserve original packet timestamps and capture-session boundaries (`PacketObservation`; `IngestService`).
-- [ ] Define handling for non-IP, IPv4, IPv6, VLAN/tunnel, TCP, UDP, ICMP, and malformed/partial packets.
-- [ ] Record capture/display filters and tshark/PyShark versions.
+- [x] Define handling for non-IP, IPv4, IPv6, VLAN/tunnel, TCP, UDP, ICMP, and malformed/partial packets ([ingest contract](docs/services/ingest.md); `PySharkPacketParser`).
+- [x] Record capture/display filters and tshark/PyShark versions ([ingest contract](docs/services/ingest.md)).
 - [ ] Hash imported files and record size/path/source metadata without assuming paths are portable.
 - [x] Batch writes with bounded memory and clear partial-failure semantics (`IngestService`).
 - [x] Finalize capture state in `finally` paths so interrupted work is distinguishable from a clean zero-packet capture (`IngestService`).
 - [x] Add cancellation support that safely flushes or marks a partial batch (`CancellationSignal`; `IngestService`).
-- [ ] Keep live capture privileges inside the capture adapter/process boundary.
+- [x] Keep live capture privileges inside the capture adapter/process boundary (`LivePacketSource`; [architecture policy](docs/architecture.md)).
 
 #### Enrichment service
 
@@ -1239,10 +1239,32 @@ exactly matches the source schema and live evidence. Experiment and finding grap
 are small, artifact-bound, reconstructable projections; portable artifacts remain
 canonical. Milestone 3 is now in progress: the deterministic ingest core owns explicit
 capture perspective, source timestamps/session identity, bounded writes, finalization, and
-cooperative cancellation (6 of 37 checklist items complete). Separate live/PCAP source
-adapters are the next active slice.
+cooperative cancellation. Separate bounded live/PCAP adapters now own capture privileges,
+packet parsing policy, filters, and runtime provenance (10 of 37 checklist items complete).
+Portable file size/path/source metadata is the next active ingest slice.
 
 ## Change log
+
+### 2026-08-19 — Milestone 3 live and PCAP packet-source adapters
+
+- Added separate bounded `LivePacketSource` and streaming `PcapPacketSource` adapters over
+  PyShark. Live callbacks cross a bounded queue into the deterministic ingest iterator;
+  capture handles are closed on success, timeout, failure, cancellation, and interruption.
+- Added one tested parsing policy for IPv4/IPv6, VLAN and tunneled traffic, TCP/UDP ports,
+  ICMP, non-IP frames, and malformed/partial frames. The parser selects the outermost
+  complete decoded IP pair, never invents `0.0.0.0`, and preserves epoch or timezone-aware
+  source timestamps.
+- Added capture/display filter forwarding and recorded filter provenance plus JAWS,
+  PyShark, and exact tshark runtime versions. PCAP decoding disables PyShark packet
+  retention so repository batching remains the memory bound.
+- Reduced `jaws-capture` to interface/database compatibility, presentation, explicit PCAP
+  `--local-ip`, adapter construction, and `IngestService` invocation. Existing arguments,
+  JSON result fields, handled errors, and argparse failure output remain unchanged.
+- Added pure adapter/parser tests and CLI lifecycle coverage for interrupt, partial import,
+  explicit imported perspective, and unchanged result shape.
+- Passed 217 offline tests with 240 total tests collected; strict types, Ruff format/lint,
+  frozen CLI compatibility, architecture contracts, and report-only Recall@3 at 5/5
+  remain green with the same three named benign false positives.
 
 ### 2026-08-19 — Milestone 3 deterministic ingest core
 

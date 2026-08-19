@@ -268,6 +268,10 @@ A typical local session is:
 jaws-capture --list
 jaws-capture --interface eth0 --duration 60
 # jaws-capture --file /path/to/capture.pcap
+# For imported evidence, declare its original capture host when known.
+# jaws-capture --file /path/to/capture.pcap --local-ip 192.0.2.10
+# Optional PyShark filters are recorded as capture provenance.
+# jaws-capture --interface eth0 --capture-filter "tcp port 443" --display-filter "tls"
 
 # Enrich, profile, and rank the latest session.
 jaws-ipinfo

@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from jaws import jaws_capture as capture
-from jaws.domain import CaptureId, ObservationWindow
+from jaws.domain import CaptureId, ObservationWindow, PacketObservation
 from jaws.ports import (
     FrozenClock,
     InMemoryCaptureRepository,
@@ -55,6 +55,7 @@ class RecordingDriver:
 class SilentReporter:
     def __init__(self):
         self.errors = []
+        self.results = []
 
     def info(self, title, message):
         return None
@@ -63,7 +64,7 @@ class SilentReporter:
         self.errors.append((title, message))
 
     def result(self, obj, summary=None):
-        return None
+        self.results.append((obj, summary))
 
     @contextmanager
     def activity(self, render):
@@ -81,16 +82,23 @@ class InterruptingLiveCapture:
         return None
 
 
-class PartialFileCapture:
-    def __init__(self, path):
-        self.path = path
-
-    def __iter__(self):
-        yield object()
+class PartialPacketSource:
+    def packets(self):
+        yield PacketObservation(
+            observed_at=datetime(2026, 8, 10, 15, 30, tzinfo=UTC),
+            protocol="TCP",
+            size_bytes=64,
+            source_ip="10.0.0.2",
+            destination_ip="8.8.8.8",
+            source_port=12345,
+            destination_port=443,
+        )
         raise RuntimeError("fixture import failure")
 
-    def close(self):
-        return None
+
+class EmptyPacketSource:
+    def packets(self):
+        return iter(())
 
 
 def _runtime(monkeypatch, driver, reporter):
@@ -153,25 +161,11 @@ def test_failed_import_flushes_available_evidence_and_is_partial(monkeypatch, tm
     repositories = _runtime(monkeypatch, driver, reporter)
     monkeypatch.setattr(
         capture,
-        "require_module",
-        lambda *args: SimpleNamespace(FileCapture=PartialFileCapture),
+        "PcapPacketSource",
+        lambda *args, **kwargs: PartialPacketSource(),
     )
     monkeypatch.setattr(
-        capture,
-        "process_packet",
-        lambda packet: (
-            {
-                "protocol": "TCP",
-                "src_ip_address": "10.0.0.2",
-                "dst_ip_address": "8.8.8.8",
-                "src_port": 12345,
-                "dst_port": 443,
-                "size": 64,
-                "payload": None,
-                "timestamp": "2026-08-10T15:30:00+00:00",
-            },
-            "fixture packet",
-        ),
+        capture, "require_module", lambda *args: SimpleNamespace(FileCapture=object())
     )
     monkeypatch.setattr(
         sys,
@@ -190,6 +184,56 @@ def test_failed_import_flushes_available_evidence_and_is_partial(monkeypatch, tm
     packets = repositories.packets.read(ObservationWindow(capture_ids=(CaptureId("cap_fixture"),)))
     assert len(packets) == 1
     assert reporter.errors == [("ERROR", "fixture import failure")]
+    assert driver.closed
+
+
+def test_imported_capture_accepts_explicit_host_perspective_and_preserves_result_shape(
+    monkeypatch, tmp_path
+):
+    capture_path = tmp_path / "fixture.pcap"
+    capture_path.write_bytes(b"fixture evidence")
+    driver = RecordingDriver()
+    reporter = SilentReporter()
+    repositories = _runtime(monkeypatch, driver, reporter)
+    monkeypatch.setattr(
+        capture,
+        "PcapPacketSource",
+        lambda *args, **kwargs: EmptyPacketSource(),
+    )
+    monkeypatch.setattr(
+        capture, "require_module", lambda *args: SimpleNamespace(FileCapture=object())
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "jaws-capture",
+            "--file",
+            str(capture_path),
+            "--local-ip",
+            "203.0.113.7",
+            "--display-filter",
+            "ip",
+            "--database",
+            "fixtures",
+        ],
+    )
+
+    capture.main()
+
+    finalization = repositories.captures.get(CaptureId("cap_fixture"))
+    assert finalization is not None
+    assert finalization.perspective.value == "ip:203.0.113.7"
+    assert finalization.capture_filter == "display=ip"
+    assert finalization.state.value == "complete"
+    assert reporter.results[0][0] == {
+        "database": "fixtures",
+        "source": str(capture_path),
+        "capture_id": "cap_fixture",
+        "legacy_capture_id": "20260810T153000Z",
+        "packets_captured": 0,
+    }
+    assert reporter.errors == []
     assert driver.closed
 
 

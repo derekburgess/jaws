@@ -37,10 +37,40 @@ Source and storage exceptions are re-raised after finalization. Cooperative canc
 returns the finalized cancelled record. A `CancellationSignal` is checked between packet
 observations, so cancellation does not interrupt an atomic repository batch.
 
-## Adapter follow-up
+## Packet-source adapters
 
-The current legacy capture command still constructs PyShark live/file sources itself. The
-next Milestone 3 slice will provide separate live and PCAP adapters that emit
-`PacketObservation`, then reduce `jaws-capture` to compatibility/presentation over this
-service. File size/path metadata, display filters, packet-type policy, and exact tshark
-acquisition metadata remain part of that adapter slice.
+`PcapPacketSource` iterates `FileCapture` with PyShark packet retention disabled and closes
+the capture in a `finally` path. `LivePacketSource` owns `LiveCapture` and its privileges;
+it bridges the callback API to the service iterator through a bounded queue. A quiet live
+interface still terminates through PyShark's wall-clock timeout rather than waiting for a
+packet to evaluate elapsed time.
+
+`PySharkPacketParser` applies one explicit policy:
+
+| Input | Behavior |
+| --- | --- |
+| IPv4 or IPv6 | Emit normalized addresses from the outermost complete decoded IP layer |
+| VLAN | Ignore the link wrapper and use its decoded IP layer |
+| IP-in-IP/GRE tunnel | Index the outermost complete decoded IP pair; inner layers remain future evidence detail |
+| TCP or UDP | Retain valid 1–65535 ports and available text payload field |
+| ICMP/ICMPv6 or other IP | Emit with null ports |
+| Non-IP | Skip and count; never merge unrelated frames into a synthetic address |
+| Missing/invalid IP, timestamp, protocol, or size | Skip and count as malformed |
+
+Epoch frame time is preferred. A timezone-aware decoded frame time is the fallback; naive
+time is rejected rather than interpreted in the importer's timezone. Packet parse counters
+remain adapter diagnostics and do not masquerade as stored packets.
+
+Capture and display filters are passed to their distinct PyShark parameters. When declared
+through `jaws-capture`, their exact values are recorded in capture provenance (capture-only
+keeps the legacy raw value; display filters use a `display=` prefix; both are explicitly
+prefixed). Tool provenance records JAWS and PyShark package versions plus the first exact
+line of `tshark --version`, using `unknown` when unavailable.
+
+## Remaining ingest follow-up
+
+`jaws-capture` now constructs the appropriate source adapter and invokes `IngestService`;
+it no longer parses packets, batches repository writes, or finalizes lifecycle state.
+Portable file size/path/source metadata still needs a versioned persistence contract. The
+remaining CLI compatibility checklist also covers `jaws-ipinfo` and `jaws-compute`, which
+have not yet moved onto their Milestone 3 services.

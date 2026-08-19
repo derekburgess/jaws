@@ -116,7 +116,7 @@ class IngestService:
             failure_code: str | None
             if cancelled:
                 terminal_state = CaptureState.CANCELLED
-                failure_code = "ingest_cancelled"
+                failure_code = "capture_cancelled"
             elif caught is None:
                 terminal_state = CaptureState.COMPLETE
                 failure_code = None
