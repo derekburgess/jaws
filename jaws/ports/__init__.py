@@ -14,6 +14,7 @@ from .contracts import (
     ReferenceBuilder,
 )
 from .evidence_fakes import InMemoryEvidenceRepository
+from .experiment_index_fakes import InMemoryExperimentIndexRepository
 from .fakes import (
     FakeEmbeddingProvider,
     FakeEnrichmentProvider,
@@ -35,11 +36,14 @@ from .repositories import (
     CaptureRepository,
     CaptureStateConflictError,
     DuplicateCaptureError,
+    DuplicateRunError,
     EnrichmentRepository,
     EntityNotFoundError,
     EvidenceImportConflictError,
     EvidenceRepository,
     EvidenceSchemaConflictError,
+    ExperimentDigestConflictError,
+    ExperimentIndexRepository,
     InactiveCaptureError,
     InspectionRepository,
     PacketRepository,
@@ -48,6 +52,8 @@ from .repositories import (
     RepositoryError,
     RepositorySchemaError,
     RetentionConflictError,
+    RunNotFoundError,
+    RunStateConflictError,
 )
 from .repository_fakes import InMemoryCaptureRepository, InMemoryPacketRepository
 
@@ -64,10 +70,13 @@ __all__ = [
     "Evaluator",
     "EvidenceStore",
     "DuplicateCaptureError",
+    "DuplicateRunError",
     "EvidenceImportConflictError",
     "EvidenceRepository",
     "EvidenceSchemaConflictError",
     "EnrichmentRepository",
+    "ExperimentDigestConflictError",
+    "ExperimentIndexRepository",
     "EntityNotFoundError",
     "FakeEmbeddingProvider",
     "FakeEnrichmentProvider",
@@ -80,6 +89,7 @@ __all__ = [
     "InMemoryAdministrationRepository",
     "InMemoryCaptureRepository",
     "InMemoryEvidenceRepository",
+    "InMemoryExperimentIndexRepository",
     "InMemoryEvidenceStore",
     "InMemoryEnrichmentRepository",
     "InMemoryInspectionRepository",
@@ -96,6 +106,8 @@ __all__ = [
     "RepositoryError",
     "RepositorySchemaError",
     "RetentionConflictError",
+    "RunNotFoundError",
+    "RunStateConflictError",
     "SequenceIdGenerator",
     "SequencePacketSource",
 ]

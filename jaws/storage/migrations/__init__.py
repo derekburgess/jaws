@@ -19,8 +19,9 @@ from .v0001_adopt_legacy_schema import MIGRATION as V0001
 from .v0002_capture_identity_and_scope import MIGRATION as V0002
 from .v0003_enrichment_and_profiles import MIGRATION as V0003
 from .v0004_administration_audit import MIGRATION as V0004
+from .v0005_experiment_run_index import MIGRATION as V0005
 
-MIGRATIONS = (V0001, V0002, V0003, V0004)
+MIGRATIONS = (V0001, V0002, V0003, V0004, V0005)
 
 
 def manager(driver: object, database: str, *, clock: Clock | None = None) -> Neo4jMigrationManager:
@@ -34,6 +35,8 @@ __all__ = [
     "V0001",
     "V0002",
     "V0003",
+    "V0004",
+    "V0005",
     "AppliedMigration",
     "CypherStatement",
     "Migration",

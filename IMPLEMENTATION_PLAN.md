@@ -504,7 +504,7 @@ Make Neo4j a versioned implementation of explicit repository contracts rather th
 - [x] Implement `ProfileRepository` for versioned profile sets and histories ([ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
 - [x] Implement `InspectionRepository` for bounded profile overviews and endpoint drill-down ([repository contract](docs/storage/repositories.md)).
 - [ ] Implement `FindingRepository` only for optional graph indexing of results; portable run artifacts remain canonical.
-- [ ] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph.
+- [x] Implement `ExperimentIndexRepository` for experiment/run IDs, status, digests, and artifact URIs without duplicating complete bundles into the graph ([repository contract](docs/storage/repositories.md); schema version 5).
 - [x] Centralize Cypher in storage adapters; application services and interface adapters must not contain Cypher ([architecture boundary](docs/architecture.md); `Neo4jDatabaseRuntime`).
 - [x] Add repository contract tests that run against both fakes and a pinned Neo4j test instance.
 
@@ -1222,11 +1222,12 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is in progress: schema
-ownership plus database versions 1–4 now cover evidence identity, lifecycle, enrichment
+ownership plus database versions 1–5 now cover evidence identity, lifecycle, enrichment
 provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
-`EnrichmentRepository`, and `ProfileRepository` provide tested in-memory and Neo4j
-implementations. Capture, enrichment, compute, finder, and MCP inspection contain no
+`EnrichmentRepository`, `ProfileRepository`, `InspectionRepository`, and
+`ExperimentIndexRepository` provide tested in-memory and Neo4j implementations. Capture,
+enrichment, compute, finder, and MCP inspection contain no
 Cypher. Retention now uses a complete five-resource policy, mutation-free dry-run plans,
 and stale-plan-safe apply semantics. Managed evidence has portable, checksummed export and
 empty-target atomic import. Guarded human-only administration now requires an exact
@@ -1234,10 +1235,26 @@ database-bound plan/confirmation, preserves schema/audit history, and records bo
 evidence erasure and retention apply without payloads. All executable Cypher is now owned
 by storage adapters and protected by a whole-runtime architecture ratchet. Destructive or
 irreversible migrations now fail before their first statement unless a checksummed bundle
-exactly matches the source schema and live evidence. The next active Milestone 2 slice is
-the experiment/run graph index; portable artifacts remain canonical.
+exactly matches the source schema and live evidence. The only remaining Milestone 2
+repository slice is the optional graph finding index; portable artifacts remain canonical.
 
 ## Change log
+
+### 2026-08-18 — Milestone 2 experiment/run discovery index
+
+- Added a minimal `ExperimentRunIndex` domain snapshot with content-addressed experiment
+  identity, append-only run identity, explicit lifecycle validation, credential-free paired
+  artifact URI/checksum metadata, and same-experiment terminal-run supersession.
+- Added shared `ExperimentIndexRepository` behavior with deterministic in-memory and Neo4j
+  implementations. Neo4j stores normalized experiment/run discovery nodes and relationships
+  without copying specifications, findings, metrics, logs, or result payloads into the graph.
+- Added additive schema version 5 with experiment/run identity constraints and lifecycle/
+  artifact discovery indexes; canonical versions 1–4 retain their historical checksums.
+- Added offline domain/repository/migration contracts and a disposable-Neo4j repository
+  contract.
+- Passed 194 offline tests and 13 integration tests against an isolated disposable pinned
+  Neo4j 5.26.28 container; strict types, Ruff format/lint, compatibility contracts, and
+  report-only Recall@3 at 5/5 remain green with the same three named benign false positives.
 
 ### 2026-08-13 — Milestone 2 verified export before risky migration
 

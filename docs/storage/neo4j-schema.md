@@ -193,6 +193,41 @@ not contain packet payloads, settings, credentials, or copied evidence propertie
 The guarded operation and audit policy are detailed in
 [ADR-0017](../adr/0017-guarded-administration-and-payload-free-audit.md).
 
+## Managed target: database schema version 5
+
+Version 5 adds a minimal discovery index for experiment specifications and their append-
+only execution runs. It is additive, creates no experiment data, and retains every prior
+schema object. Canonical specifications, results, findings, metrics, logs, and other run
+payloads remain external portable artifacts rather than graph properties.
+
+| Label/property | Contract |
+| --- | --- |
+| `JAWS_EXPERIMENT.EXPERIMENT_ID` | Canonical specification digest and unique experiment identity |
+| `JAWS_EXPERIMENT.SPECIFICATION_SHA256` | Lowercase SHA-256 of the immutable semantic specification; must equal `EXPERIMENT_ID` |
+| `JAWS_EXPERIMENT_RUN.RUN_ID` | Unique append-only execution-attempt identity |
+| `STATE` | `created`, `running`, `succeeded`, `failed`, or `cancelled` |
+| `CREATED_AT`, `STARTED_AT`, `ENDED_AT` | Aware lifecycle datetimes; required according to state |
+| `ARTIFACT_URI`, `ARTIFACT_SHA256` | Paired secret-free URI and checksum for a finalized canonical run artifact |
+| `FAILURE_CODE` | Non-secret machine-readable code for a failed run only |
+
+Every run has exactly one `(:JAWS_EXPERIMENT_RUN)-[:RUN_OF]->(:JAWS_EXPERIMENT)`
+relationship. A rerun may point to one terminal prior run of the same experiment through
+`[:SUPERSEDES]`; supersession never deletes or rewrites the prior run. Neo4j lifecycle
+transitions use the caller's expected state as an optimistic lock, and identity metadata
+cannot change during a transition.
+
+### Version-5 constraints and indexes
+
+| Kind | Name | Label/properties |
+| --- | --- | --- |
+| Uniqueness constraint | `jaws_experiment_id_unique` | `JAWS_EXPERIMENT(EXPERIMENT_ID)` |
+| Uniqueness constraint | `jaws_experiment_run_id_unique` | `JAWS_EXPERIMENT_RUN(RUN_ID)` |
+| Range index | `jaws_experiment_run_state_created_index` | `JAWS_EXPERIMENT_RUN(STATE, CREATED_AT)` |
+| Range index | `jaws_experiment_run_artifact_uri_index` | `JAWS_EXPERIMENT_RUN(ARTIFACT_URI)` |
+
+The authority split and reconstruction requirement are detailed in
+[ADR-0005](../adr/0005-evidence-store-and-portable-experiment-records.md).
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -247,7 +282,8 @@ preserves schema/audit nodes, and fails closed if anything changed.
 
 ## Later Milestone 2 versions
 
-Versions 1–4 do not complete finding indexes, experiment indexes, or removal of every
-remaining interface-owned Cypher query. Retention, administration, and portable managed-
-evidence export/import operate over version 4. Later versions must document their contracts
-before implementation and retain Benchmark 0 compatibility until their parity gates pass.
+Versions 1–5 do not add the optional graph finding index. Retention, administration, and
+portable managed-evidence export/import operate over version 5; experiment index nodes are
+discovery metadata and are not copied into evidence bundles. Later versions must document
+their contracts before implementation and retain Benchmark 0 compatibility until their
+parity gates pass.

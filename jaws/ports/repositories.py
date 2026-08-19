@@ -19,12 +19,16 @@ from jaws.domain import (
     EntityMetadata,
     EvidenceSchemaProvenance,
     EvidenceSnapshot,
+    ExperimentId,
+    ExperimentRunIndex,
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
     PacketRecord,
     ProfileScopeSummary,
     ResearcherAnnotation,
+    RunId,
+    RunState,
 )
 
 
@@ -90,6 +94,22 @@ class EvidenceImportConflictError(RepositoryError):
 
 class AdministrationConflictError(RepositoryError):
     """A destructive-operation target changed after its plan was created."""
+
+
+class DuplicateRunError(RepositoryError):
+    """An append-only experiment run already has the requested identity."""
+
+
+class RunNotFoundError(RepositoryError):
+    """No indexed experiment run exists with the requested identity."""
+
+
+class RunStateConflictError(RepositoryError):
+    """A run lifecycle write did not observe the caller's expected state."""
+
+
+class ExperimentDigestConflictError(RepositoryError):
+    """An experiment identity is already bound to different semantic content."""
 
 
 class CaptureRepository(Protocol):
@@ -200,3 +220,19 @@ class InspectionRepository(Protocol):
         packet_limit: int,
         history_limit: int,
     ) -> EndpointInspection: ...
+
+
+class ExperimentIndexRepository(Protocol):
+    """Append-only run discovery metadata for canonical external artifacts."""
+
+    def add(self, record: ExperimentRunIndex) -> None: ...
+
+    def get(self, run_id: RunId) -> ExperimentRunIndex | None: ...
+
+    def list_for_experiment(
+        self, experiment_id: ExperimentId
+    ) -> tuple[ExperimentRunIndex, ...]: ...
+
+    def list_all(self) -> tuple[ExperimentRunIndex, ...]: ...
+
+    def transition(self, record: ExperimentRunIndex, *, expected_state: RunState) -> None: ...

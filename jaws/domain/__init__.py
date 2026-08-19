@@ -47,6 +47,11 @@ from .evidence import (
     EvidenceSnapshot,
     SchemaMigrationProvenance,
 )
+from .experiments import (
+    TERMINAL_RUN_STATES,
+    ExperimentRunIndex,
+    experiment_run_metadata,
+)
 from .identifiers import (
     AuditEventId,
     CanonicalDigest,
@@ -136,6 +141,7 @@ __all__ = [
     "EvidenceSchemaProvenance",
     "EvidenceSnapshot",
     "ExperimentId",
+    "ExperimentRunIndex",
     "ExperimentSpec",
     "Failure",
     "FindingId",
@@ -174,12 +180,14 @@ __all__ = [
     "Secret",
     "Success",
     "TERMINAL_CAPTURE_STATES",
+    "TERMINAL_RUN_STATES",
     "VersionedSpec",
     "bytes_count",
     "capture_scope_id",
     "canonical_digest",
     "canonical_json",
     "deterministic_ranking",
+    "experiment_run_metadata",
     "interval_seconds",
     "legacy_failure",
     "legacy_success",

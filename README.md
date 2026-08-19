@@ -124,7 +124,12 @@ JAWS 2.0 is beta research software organized around seven composable operations:
 
 Typed Python services define these operations. The CLI, MCP server, benchmark runner, and optional agent laboratory are adapters over the same deterministic core. Storage, representation, comparison, ranking, explanation, evaluation, and artifact management remain separable so researchers can add a feature family or ranker without rewriting the pipeline.
 
-Neo4j stores packet evidence, relationships, capture history, and endpoint profiles. Immutable experiment specifications and result artifacts record analytical provenance. Versioned database, sensor, analysis, GPU, and MCP containers separate packet-capture privileges from analysis and agent execution.
+Neo4j stores packet evidence, relationships, capture history, endpoint profiles, and a
+minimal experiment/run discovery index. Immutable external experiment specifications and
+result artifacts remain the canonical analytical record; the graph stores only IDs,
+lifecycle metadata, digests, and artifact locations. Versioned database, sensor, analysis,
+GPU, and MCP containers separate packet-capture privileges from analysis and agent
+execution.
 
 The agent laboratory implements the **Orient → Hypothesize → Experiment → Observe** loop as an optional orchestration layer. Agent-generated hypotheses are proposals; deterministic code executes experiments and calculates rewards.
 

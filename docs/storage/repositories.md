@@ -111,6 +111,29 @@ The in-memory implementation composes `ProfileRepository`, `PacketRepository`, a
 including limits, missing endpoints, metadata fallback, history order, port roles, and
 directional byte counts.
 
+## ExperimentIndexRepository
+
+`ExperimentIndexRepository` stores only graph-discovery metadata for immutable experiment
+specifications and append-only execution attempts. One `ExperimentRunIndex` snapshot binds
+a run ID to the content-addressed experiment/specification digest, lifecycle state and
+timestamps, optional terminal failure code, optional superseded run, and a paired canonical
+artifact URI/checksum. It never contains complete specifications, findings, metrics, logs,
+or result payloads.
+
+New runs must start in `created`. Transitions require the state observed by the caller,
+follow the shared run lifecycle, and cannot rewrite experiment identity, specification
+digest, creation time, or supersession. Successful runs require a finalized artifact;
+artifact metadata is allowed only on terminal runs, rejects credential-bearing URIs, and
+cannot be changed afterward because terminal states have no outgoing transition. A rerun
+may supersede only an existing terminal run of the same experiment.
+
+The in-memory and Neo4j implementations share one behavioral contract covering duplicates,
+missing and stale runs, immutable identity, ordered discovery, artifact publication, and
+supersession. Neo4j normalizes each snapshot into `JAWS_EXPERIMENT` and
+`JAWS_EXPERIMENT_RUN` nodes with `RUN_OF` and optional `SUPERSEDES` relationships. Canonical
+portable experiment bundles remain a Milestone 5 responsibility and must be able to rebuild
+this graph index.
+
 ## Retention service
 
 `RetentionPolicy` declares independent rules for raw packets, capture metadata, profile

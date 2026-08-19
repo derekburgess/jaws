@@ -45,9 +45,10 @@ metadata, and checksums. A bundle must make missing or inaccessible evidence
 explicit. Secret values are never recorded.
 
 An `ArtifactStore` protocol isolates bundle semantics from storage location. The
-exact JSON/JSONL/Parquet encodings, artifact-store configuration, and indexing
-implementation remain due in Milestone 5; this ADR fixes the responsibility
-boundary rather than prematurely selecting those details.
+exact JSON/JSONL/Parquet encodings and artifact-store configuration remain due in
+Milestone 5. Milestone 2 implements only the minimal reconstructable graph index;
+this ADR fixes the responsibility boundary without prematurely selecting bundle
+encodings or artifact infrastructure.
 
 ## Alternatives considered
 
@@ -117,10 +118,11 @@ whatever graph state happens to exist at report time.
 ## Migration
 
 Milestone 0 defines the first baseline artifact schemas and records the current
-graph schema. Milestone 2 versions and migrates Neo4j evidence storage. Milestone
-5 implements the canonical experiment bundle and graph index repositories. The
-existing graph remains in place until repository contracts, export/import, and
-rollback tests pass.
+graph schema. Milestone 2 versions Neo4j and adds the minimal experiment/run graph
+index contract. Milestone 5 implements canonical experiment bundles, atomic
+artifact publication, and index reconstruction from those bundles. The existing
+graph remains in place until repository contracts, export/import, and rollback
+tests pass.
 
 ## Reversal conditions
 
