@@ -12,6 +12,7 @@ from .captures import (
     ACTIVE_CAPTURE_STATES,
     TERMINAL_CAPTURE_STATES,
     CaptureRecord,
+    CaptureSpec,
     ObservationScope,
     ProfileIdentity,
     capture_scope_id,
@@ -67,7 +68,7 @@ from .identifiers import (
 )
 from .inspection import EndpointInspection, EndpointPacketSample, EndpointPeerTraffic
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
-from .packets import PacketRecord
+from .packets import PacketObservation, PacketRecord
 from .profiles import EndpointProfile, ProfileScopeSummary
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
@@ -115,6 +116,7 @@ __all__ = [
     "ArchivedProfile",
     "CaptureId",
     "CaptureRecord",
+    "CaptureSpec",
     "CaptureSourceKind",
     "CaptureState",
     "Clock",
@@ -157,6 +159,7 @@ __all__ = [
     "ObservationScopeKind",
     "OutlierStatus",
     "PacketRecord",
+    "PacketObservation",
     "RankedFinding",
     "RankerSpec",
     "ReferenceKind",

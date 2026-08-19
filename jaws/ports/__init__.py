@@ -5,6 +5,7 @@ from jaws.domain import Clock, IdGenerator
 from .administration_fakes import InMemoryAdministrationRepository
 from .contracts import (
     ArtifactStore,
+    CancellationSignal,
     EmbeddingProvider,
     EnrichmentProvider,
     Evaluator,
@@ -24,6 +25,7 @@ from .fakes import (
     FrozenClock,
     InMemoryArtifactStore,
     InMemoryEvidenceStore,
+    SequenceCancellationSignal,
     SequenceIdGenerator,
     SequencePacketSource,
 )
@@ -65,6 +67,7 @@ __all__ = [
     "AdministrationConflictError",
     "AdministrationRepository",
     "ArtifactStore",
+    "CancellationSignal",
     "CaptureNotFoundError",
     "CaptureRepository",
     "CaptureStateConflictError",
@@ -117,5 +120,6 @@ __all__ = [
     "RunNotFoundError",
     "RunStateConflictError",
     "SequenceIdGenerator",
+    "SequenceCancellationSignal",
     "SequencePacketSource",
 ]

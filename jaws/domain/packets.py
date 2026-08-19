@@ -29,10 +29,9 @@ def _port(value: int | None) -> int | None:
 
 
 @dataclass(frozen=True, slots=True)
-class PacketRecord:
-    """One immutable packet observation with explicit capture ownership."""
+class PacketObservation:
+    """One parsed packet before the ingest service assigns capture ownership."""
 
-    capture_id: CaptureId
     observed_at: datetime
     protocol: str
     size_bytes: int
@@ -56,3 +55,54 @@ class PacketRecord:
         object.__setattr__(self, "destination_port", _port(self.destination_port))
         if self.payload is not None and not isinstance(self.payload, str):
             raise ValueError("packet payload must be text or null")
+
+    def for_capture(self, capture_id: CaptureId) -> PacketRecord:
+        """Bind this source observation to one service-owned capture session."""
+
+        return PacketRecord(
+            capture_id=capture_id,
+            observed_at=self.observed_at,
+            protocol=self.protocol,
+            size_bytes=self.size_bytes,
+            source_ip=self.source_ip,
+            destination_ip=self.destination_ip,
+            source_port=self.source_port,
+            destination_port=self.destination_port,
+            payload=self.payload,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PacketRecord:
+    """One immutable packet observation with explicit capture ownership."""
+
+    capture_id: CaptureId
+    observed_at: datetime
+    protocol: str
+    size_bytes: int
+    source_ip: str
+    destination_ip: str
+    source_port: int | None = None
+    destination_port: int | None = None
+    payload: str | None = None
+
+    def __post_init__(self) -> None:
+        observation = PacketObservation(
+            observed_at=self.observed_at,
+            protocol=self.protocol,
+            size_bytes=self.size_bytes,
+            source_ip=self.source_ip,
+            destination_ip=self.destination_ip,
+            source_port=self.source_port,
+            destination_port=self.destination_port,
+            payload=self.payload,
+        )
+        for field_name in (
+            "observed_at",
+            "protocol",
+            "source_ip",
+            "destination_ip",
+            "source_port",
+            "destination_port",
+        ):
+            object.__setattr__(self, field_name, getattr(observation, field_name))

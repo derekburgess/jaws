@@ -51,6 +51,10 @@ has the UUID format.
 `CaptureRecord` is an immutable lifecycle snapshot. It records source kind/name, state,
 registration/start/end, packet count, content SHA-256 when available, perspective when
 known, capture filter, tool versions, legacy alias, and a non-secret failure code.
+`CaptureSpec` is the explicit input to new ingest operations: live capture requires a host
+entity, while PCAP perspective is optional and must come from the caller or dataset
+manifest. A PCAP spec requires its content digest. The ingest service copies these values
+without consulting the importer machine.
 Transitions follow the already declared state graph:
 
 - `registered` to `running` for a live interface or `importing` for a PCAP;

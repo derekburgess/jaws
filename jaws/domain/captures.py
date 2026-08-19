@@ -41,6 +41,48 @@ def _tool_versions(value: Mapping[str, str]) -> Mapping[str, str]:
 
 
 @dataclass(frozen=True, slots=True)
+class CaptureSpec:
+    """Explicit provenance and host perspective for one bounded ingest operation."""
+
+    source_kind: CaptureSourceKind
+    source_name: str
+    perspective: EntityId | None = None
+    content_digest: CanonicalDigest | None = None
+    capture_filter: str | None = None
+    tool_versions: Mapping[str, str] = field(default_factory=dict)
+    legacy_capture_id: str | None = None
+
+    def __post_init__(self) -> None:
+        source_name = self.source_name.strip()
+        if not source_name:
+            raise ValueError("capture source_name cannot be empty")
+        if self.source_kind is CaptureSourceKind.LEGACY_UNKNOWN:
+            raise ValueError("new ingest cannot use legacy-unknown source provenance")
+        if self.source_kind is CaptureSourceKind.LIVE_INTERFACE and self.perspective is None:
+            raise ValueError("live capture requires an explicit host perspective")
+        if self.source_kind is CaptureSourceKind.PCAP_FILE and self.content_digest is None:
+            raise ValueError("PCAP import requires its content SHA-256 digest")
+        if self.content_digest is not None:
+            digest = str(self.content_digest)
+            if len(digest) != 64 or any(
+                character not in "0123456789abcdef" for character in digest
+            ):
+                raise ValueError("capture content_digest must be lowercase SHA-256 text")
+        capture_filter = self.capture_filter.strip() if self.capture_filter else None
+        legacy_capture_id = self.legacy_capture_id.strip() if self.legacy_capture_id else None
+        object.__setattr__(self, "source_name", source_name)
+        object.__setattr__(self, "capture_filter", capture_filter)
+        object.__setattr__(self, "legacy_capture_id", legacy_capture_id)
+        object.__setattr__(self, "tool_versions", _tool_versions(self.tool_versions))
+
+    @property
+    def active_state(self) -> CaptureState:
+        if self.source_kind is CaptureSourceKind.LIVE_INTERFACE:
+            return CaptureState.RUNNING
+        return CaptureState.IMPORTING
+
+
+@dataclass(frozen=True, slots=True)
 class CaptureRecord:
     """One immutable snapshot of a bounded live capture or PCAP import."""
 

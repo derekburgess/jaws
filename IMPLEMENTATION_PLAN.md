@@ -550,15 +550,15 @@ Extract evidence acquisition and representation building into deterministic serv
 #### Ingest service
 
 - [ ] Split live capture and PCAP import into separate packet-source adapters sharing one ingest service.
-- [ ] Make the local/capture-host identity explicit in `CaptureSpec`; do not infer imported-PCAP perspective solely from the importer machine.
-- [ ] Support an explicit local IP/entity for imported captures and dataset manifests.
-- [ ] Preserve original packet timestamps and capture-session boundaries.
+- [x] Make the local/capture-host identity explicit in `CaptureSpec`; do not infer imported-PCAP perspective solely from the importer machine ([ingest contract](docs/services/ingest.md)).
+- [x] Support an explicit local IP/entity for imported captures and dataset manifests ([ingest contract](docs/services/ingest.md)).
+- [x] Preserve original packet timestamps and capture-session boundaries (`PacketObservation`; `IngestService`).
 - [ ] Define handling for non-IP, IPv4, IPv6, VLAN/tunnel, TCP, UDP, ICMP, and malformed/partial packets.
 - [ ] Record capture/display filters and tshark/PyShark versions.
 - [ ] Hash imported files and record size/path/source metadata without assuming paths are portable.
-- [ ] Batch writes with bounded memory and clear partial-failure semantics.
-- [ ] Finalize capture state in `finally` paths so interrupted work is distinguishable from a clean zero-packet capture.
-- [ ] Add cancellation support that safely flushes or marks a partial batch.
+- [x] Batch writes with bounded memory and clear partial-failure semantics (`IngestService`).
+- [x] Finalize capture state in `finally` paths so interrupted work is distinguishable from a clean zero-packet capture (`IngestService`).
+- [x] Add cancellation support that safely flushes or marks a partial batch (`CancellationSignal`; `IngestService`).
 - [ ] Keep live capture privileges inside the capture adapter/process boundary.
 
 #### Enrichment service
@@ -1237,9 +1237,30 @@ by storage adapters and protected by a whole-runtime architecture ratchet. Destr
 irreversible migrations now fail before their first statement unless a checksummed bundle
 exactly matches the source schema and live evidence. Experiment and finding graph indexes
 are small, artifact-bound, reconstructable projections; portable artifacts remain
-canonical. The next active slice is Milestone 3's ingest service boundary.
+canonical. Milestone 3 is now in progress: the deterministic ingest core owns explicit
+capture perspective, source timestamps/session identity, bounded writes, finalization, and
+cooperative cancellation (6 of 37 checklist items complete). Separate live/PCAP source
+adapters are the next active slice.
 
 ## Change log
+
+### 2026-08-19 — Milestone 3 deterministic ingest core
+
+- Added explicit `CaptureSpec` provenance and perspective. Live capture requires a host
+  entity; PCAP imports require a content digest and retain either their declared host
+  entity or an honest unknown rather than inheriting the importer machine.
+- Added capture-neutral `PacketObservation` records and a deterministic `IngestService`
+  that assigns one capture session, preserves source timestamps, writes bounded batches,
+  and always finalizes lifecycle state.
+- Added cooperative cancellation plus exact complete/partial/failed/cancelled semantics.
+  Available pending evidence is flushed in finalization paths, while the original source or
+  storage failure remains visible to callers.
+- Added pure in-memory tests for provenance, zero-packet completion, bounded writes,
+  source and storage failures, cooperative cancellation, keyboard interruption, and the
+  existing capture-first `PacketRecord` constructor contract.
+- Passed 208 offline tests with 231 total tests collected; strict types, Ruff format/lint,
+  architecture and compatibility contracts, and report-only Recall@3 at 5/5 remain green
+  with the same three named benign false positives.
 
 ### 2026-08-19 — Milestone 2 complete with finding discovery index
 

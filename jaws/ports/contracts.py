@@ -52,6 +52,12 @@ class PacketSource(Protocol[PacketT_co]):
     def packets(self) -> Iterator[PacketT_co]: ...
 
 
+class CancellationSignal(Protocol):
+    """Cooperative cancellation checked between bounded units of service work."""
+
+    def is_cancelled(self) -> bool: ...
+
+
 class EnrichmentProvider(Protocol[EntityT_contra, EnrichmentT_co]):
     """Resolve provider-neutral enrichment for one entity."""
 

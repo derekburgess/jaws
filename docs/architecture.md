@@ -32,11 +32,14 @@ OpenAI, sentence-transformers, CLI, and MCP code implement or consume these cont
 outer layers; none belongs in `jaws.domain` or `jaws.ports`. The deterministic fakes live
 beside the contracts because service unit tests need the same lightweight install boundary.
 
-`jaws.services` contains deterministic use-case coordination over inward ports. Retention
-planning consumes typed policies and profile summaries, produces a mutation-free dry-run
-plan, and applies only an unchanged exact plan. Evidence transfer consumes typed snapshots,
-builds checksummed bundles, and imports only into an unchanged compatible empty target. The
-service layer does not import Neo4j, configuration, CLI, filesystem, or reporting code.
+`jaws.services` contains deterministic use-case coordination over inward ports. Ingest
+assigns capture identity, binds source packet observations to that session, writes bounded
+batches, and finalizes complete, partial, failed, or cancelled state without owning packet
+capture privileges. Retention planning consumes typed policies and profile summaries,
+produces a mutation-free dry-run plan, and applies only an unchanged exact plan. Evidence
+transfer consumes typed snapshots, builds checksummed bundles, and imports only into an
+unchanged compatible empty target. The service layer does not import Neo4j, configuration,
+CLI, filesystem, packet-capture providers, or reporting code.
 
 `jaws.storage` is an outer infrastructure package. It depends inward on domain and port
 contracts; its repository adapters accept driver-compatible objects without importing the

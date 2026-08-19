@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
     from .contracts import (
         ArtifactStore,
+        CancellationSignal,
         EmbeddingProvider,
         EnrichmentProvider,
         Evaluator,
@@ -87,6 +88,21 @@ class SequencePacketSource(Generic[PacketT]):
 
     def packets(self) -> Iterator[PacketT]:
         return iter(self.values)
+
+
+@dataclass(slots=True)
+class SequenceCancellationSignal:
+    """Return scripted cancellation states, retaining the final state thereafter."""
+
+    values: tuple[bool, ...]
+    _position: int = 0
+
+    def is_cancelled(self) -> bool:
+        if not self.values:
+            return False
+        position = min(self._position, len(self.values) - 1)
+        self._position += 1
+        return self.values[position]
 
 
 @dataclass(slots=True)
@@ -170,6 +186,7 @@ if TYPE_CHECKING:
         evidence: InMemoryEvidenceStore[str],
         artifacts: InMemoryArtifactStore,
         packets: SequencePacketSource[str],
+        cancellation: SequenceCancellationSignal,
         enrichment: FakeEnrichmentProvider[str, int],
         embeddings: FakeEmbeddingProvider,
         ranker: FakeRanker[str],
@@ -181,6 +198,7 @@ if TYPE_CHECKING:
         evidence_port: EvidenceStore[str] = evidence
         artifact_port: ArtifactStore = artifacts
         packet_port: PacketSource[str] = packets
+        cancellation_port: CancellationSignal = cancellation
         enrichment_port: EnrichmentProvider[str, int] = enrichment
         embedding_port: EmbeddingProvider = embeddings
         ranker_port: Ranker[str] = ranker
@@ -192,6 +210,7 @@ if TYPE_CHECKING:
             evidence_port,
             artifact_port,
             packet_port,
+            cancellation_port,
             enrichment_port,
             embedding_port,
             ranker_port,
