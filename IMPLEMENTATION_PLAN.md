@@ -34,8 +34,8 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | --- | --- | --- | --- |
 | 0 | Research contract and Benchmark 0 | Complete | — |
 | 1 | Project foundation and typed contracts | Complete | 0 |
-| 2 | Versioned evidence storage and migrations | In progress | 1 |
-| 3 | Ingest, enrichment, and profiling services | Not started | 2 |
+| 2 | Versioned evidence storage and migrations | Complete | 1 |
+| 3 | Ingest, enrichment, and profiling services | In progress | 2 |
 | 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
 | 5 | Experiment, run, provenance, and artifact system | Not started | 4 |
 | 6 | Benchmark v1 and ranker research platform | Not started | 5 |
@@ -569,7 +569,7 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Distinguish not-applicable, not-found, transient failure, permanent failure, and successfully enriched (`EnrichmentStatus`; [enrichment contract](docs/services/enrichment.md)).
 - [x] Support researcher annotations and ground-truth labels separately from third-party enrichment (`ResearcherAnnotation`; [ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
 - [x] Avoid merging unrelated unknown values into one misleading organization identity (`IpinfoEnrichmentProvider`).
-- [ ] Add rate-limit/retry policy with deterministic test doubles.
+- [x] Add rate-limit/retry policy with deterministic test doubles (`EnrichmentAcquisitionPolicy`; `WaitStrategy`; [enrichment contract](docs/services/enrichment.md)).
 
 #### Profile service
 
@@ -1242,11 +1242,27 @@ capture perspective, source timestamps/session identity, bounded writes, finaliz
 cooperative cancellation. Separate bounded live/PCAP adapters now own capture privileges,
 packet parsing policy, filters, runtime provenance, and portable PCAP content identity with
 explicitly non-portable local locators. Provider-neutral enrichment now owns deterministic
-address classification, explicit provider outcomes, cache semantics, and the thin IPinfo
-adapter (17 of 37 checklist items complete). Bounded rate-limit and retry policy is the
-next active Milestone 3 slice.
+address classification, explicit provider outcomes, cache semantics, bounded request
+pacing and retry/backoff, and the thin IPinfo adapter (18 of 37 checklist items complete).
+Extracting packet-to-entity aggregation into a pure profiler is the next active Milestone
+3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 bounded enrichment acquisition policy
+
+- Added a validated `EnrichmentAcquisitionPolicy` that bounds provider attempts, request
+  pacing, exponential backoff, and the maximum retry delay. Only transient failures retry;
+  terminal outcomes still stop after one provider observation.
+- Added an inward-facing `WaitStrategy`, real `SystemWaitStrategy`, and deterministic
+  `RecordingWaitStrategy`. The service persists each provider outcome before waiting and
+  returns auditable attempt, retry, delay, and exact-policy metadata.
+- Added explicit per-run `jaws-ipinfo` policy flags while preserving the existing structured
+  result envelope. These values remain runtime arguments rather than process settings or
+  credentials.
+- Passed 250 offline correctness tests and all 15 disposable-Neo4j tests with 274 total
+  tests collected; Ruff, strict types, architecture checks, and the report-only synthetic
+  benchmark remain green at Recall@3 5/5 with the same three named benign false positives.
 
 ### 2026-08-20 — Milestone 3 provider-neutral enrichment acquisition
 

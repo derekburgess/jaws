@@ -13,6 +13,7 @@ from .contracts import (
     PacketSource,
     Ranker,
     ReferenceBuilder,
+    WaitStrategy,
 )
 from .evidence_fakes import InMemoryEvidenceRepository
 from .experiment_index_fakes import InMemoryExperimentIndexRepository
@@ -25,6 +26,7 @@ from .fakes import (
     FrozenClock,
     InMemoryArtifactStore,
     InMemoryEvidenceStore,
+    RecordingWaitStrategy,
     SequenceCancellationSignal,
     SequenceIdGenerator,
     SequencePacketSource,
@@ -114,6 +116,7 @@ __all__ = [
     "ProfileScopeConflictError",
     "Ranker",
     "ReferenceBuilder",
+    "RecordingWaitStrategy",
     "RepositoryError",
     "RepositorySchemaError",
     "RetentionConflictError",
@@ -122,4 +125,5 @@ __all__ = [
     "SequenceIdGenerator",
     "SequenceCancellationSignal",
     "SequencePacketSource",
+    "WaitStrategy",
 ]

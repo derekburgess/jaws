@@ -116,6 +116,16 @@ class FakeEnrichmentProvider(Generic[EntityT, EnrichmentT]):
 
 
 @dataclass(slots=True)
+class RecordingWaitStrategy:
+    """Record requested delays without making deterministic tests sleep."""
+
+    delays: list[float] = field(default_factory=list)
+
+    def wait(self, seconds: float) -> None:
+        self.delays.append(seconds)
+
+
+@dataclass(slots=True)
 class FakeEmbeddingProvider:
     responses: Mapping[str, tuple[float, ...]]
     requests: list[tuple[str, ...]] = field(default_factory=list)

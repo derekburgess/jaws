@@ -32,9 +32,15 @@ from jaws.ports import (
     DuplicateCaptureError,
     FakeEnrichmentProvider,
     FrozenClock,
+    RecordingWaitStrategy,
     SequenceIdGenerator,
 )
-from jaws.services import AdministrationService, EnrichmentService, EvidenceTransferService
+from jaws.services import (
+    AdministrationService,
+    EnrichmentAcquisitionPolicy,
+    EnrichmentService,
+    EvidenceTransferService,
+)
 from jaws.storage import Neo4jDatabaseRuntime, Neo4jRepositories
 from jaws.storage.migrations import (
     MIGRATIONS,
@@ -333,7 +339,18 @@ def test_enrichment_service_persists_provider_and_classifier_outcomes(
         }
     )
 
-    result = EnrichmentService(repository, provider, FrozenClock(OBSERVED_AT)).enrich_pending()
+    result = EnrichmentService(
+        repository,
+        provider,
+        FrozenClock(OBSERVED_AT),
+        EnrichmentAcquisitionPolicy(
+            max_attempts=1,
+            minimum_request_interval_seconds=0.0,
+            initial_backoff_seconds=0.0,
+            maximum_backoff_seconds=0.0,
+        ),
+        RecordingWaitStrategy(),
+    ).enrich_pending()
 
     assert result.addresses_scanned == 1
     assert result.addresses_skipped_non_public == 1

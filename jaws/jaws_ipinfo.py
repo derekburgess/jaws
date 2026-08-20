@@ -7,6 +7,7 @@ from rich.console import Group
 from jaws.adapters import (
     IpinfoEnrichmentProvider,
     SystemClock,
+    SystemWaitStrategy,
     ipinfo_location,
     ipinfo_organization,
 )
@@ -14,7 +15,11 @@ from jaws.adapters import ipinfo_revision as ipinfo_revision
 from jaws.config import CONSOLE, DATABASE, get_ipinfo_api_key
 from jaws.domain import EnrichmentRecord, EnrichmentStatus
 from jaws.jaws_utils import Reporter, dbms_connection, render_activity_panel, render_info_panel
-from jaws.services import EnrichmentService
+from jaws.services import (
+    DEFAULT_ENRICHMENT_ACQUISITION_POLICY,
+    EnrichmentAcquisitionPolicy,
+    EnrichmentService,
+)
 from jaws.services import cleanup_legacy_unknown as cleanup_unknown
 from jaws.storage import Neo4jEnrichmentRepository, Neo4jRepositories
 
@@ -68,6 +73,36 @@ def main():
         default=DATABASE,
         help=f"Specify the database to connect to (default: '{DATABASE}').",
     )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        default=DEFAULT_ENRICHMENT_ACQUISITION_POLICY.max_attempts,
+        help="Maximum provider attempts per public address.",
+    )
+    parser.add_argument(
+        "--request-interval",
+        type=float,
+        default=DEFAULT_ENRICHMENT_ACQUISITION_POLICY.minimum_request_interval_seconds,
+        help="Minimum seconds between provider requests.",
+    )
+    parser.add_argument(
+        "--initial-backoff",
+        type=float,
+        default=DEFAULT_ENRICHMENT_ACQUISITION_POLICY.initial_backoff_seconds,
+        help="Seconds to wait before the first transient retry.",
+    )
+    parser.add_argument(
+        "--backoff-multiplier",
+        type=float,
+        default=DEFAULT_ENRICHMENT_ACQUISITION_POLICY.backoff_multiplier,
+        help="Multiplier applied to each subsequent retry delay.",
+    )
+    parser.add_argument(
+        "--max-backoff",
+        type=float,
+        default=DEFAULT_ENRICHMENT_ACQUISITION_POLICY.maximum_backoff_seconds,
+        help="Maximum seconds for any transient retry delay.",
+    )
     args = parser.parse_args()
     reporter = Reporter()
     driver = dbms_connection(args.database, reporter)
@@ -106,6 +141,14 @@ def main():
                 repository=repository,
                 provider=IpinfoEnrichmentProvider(get_ipinfo_api_key),
                 clock=SystemClock(),
+                policy=EnrichmentAcquisitionPolicy(
+                    max_attempts=args.max_attempts,
+                    minimum_request_interval_seconds=args.request_interval,
+                    initial_backoff_seconds=args.initial_backoff,
+                    backoff_multiplier=args.backoff_multiplier,
+                    maximum_backoff_seconds=args.max_backoff,
+                ),
+                wait_strategy=SystemWaitStrategy(),
             ).enrich_pending(observer=on_record)
 
         output = {

@@ -64,6 +64,12 @@ class EnrichmentProvider(Protocol[EntityT_contra, EnrichmentT_co]):
     def enrich(self, entity: EntityT_contra) -> EnrichmentT_co: ...
 
 
+class WaitStrategy(Protocol):
+    """Wait between bounded external requests without fixing a runtime clock."""
+
+    def wait(self, seconds: float) -> None: ...
+
+
 class EmbeddingProvider(Protocol):
     """Embed texts in input order; provider metadata belongs in later result records."""
 

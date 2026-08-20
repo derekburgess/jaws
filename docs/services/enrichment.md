@@ -53,14 +53,36 @@ API key. It maps meaningful response fields without inventing fallbacks:
 Configuration and missing-dependency failures occur before a provider request and remain
 interface errors; they are not persisted as false observations about an IP address.
 
-## CLI compatibility and remaining follow-up
+## Rate limiting and transient retries
+
+`EnrichmentAcquisitionPolicy` makes all request bounds explicit. The runtime default permits
+three attempts per public address, leaves at least 0.2 seconds between provider requests,
+starts transient backoff at one second, doubles it, and caps it at eight seconds. Contract
+validation limits any policy to 10 attempts, a 60-second request interval, and a 300-second
+maximum backoff; durations must be finite and non-negative.
+
+Only `transient_failure` is retried in the same run. `succeeded`, `not_found`, and
+`permanent_failure` stop immediately, while a provider returning `not_applicable` for an
+address already classified as public remains a contract error. The next delay is the
+larger of the pacing interval and the capped retry backoff, so the policy never stacks two
+waits for one request.
+
+The service persists every provider observation before a possible wait. If the process is
+interrupted during backoff, the repository therefore retains the transient outcome rather
+than an older claim. The observer and `records` result expose only the final outcome for
+each address. `provider_attempts`, `retries`, `scheduled_wait_seconds`, and the exact policy
+make the bounded behavior auditable without changing the legacy CLI result envelope.
+
+`WaitStrategy` keeps time outside the deterministic service. `SystemWaitStrategy` performs
+real runtime sleeps; `RecordingWaitStrategy` records requested delays so unit and
+integration tests never sleep.
+
+## CLI compatibility
 
 `jaws-ipinfo` retains its `--database` flag and structured result fields:
 `addresses_scanned`, `addresses_skipped_non_public`,
 `addresses_already_documented`, and `organizations_added`. It now owns only connection,
-provider construction, progress rendering, and compatibility serialization.
-
-The next enrichment slice must add an explicit bounded rate-limit and in-run retry/backoff
-policy with an injected wait strategy and deterministic tests. Current transient outcomes
-are safely retryable on a later invocation, but the service deliberately does not sleep or
-retry within the same run yet.
+provider construction, progress rendering, and compatibility serialization. Runtime
+policy overrides are explicit through `--max-attempts`, `--request-interval`,
+`--initial-backoff`, `--backoff-multiplier`, and `--max-backoff`; they are not process-wide
+environment settings or credentials.

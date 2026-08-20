@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from time import sleep
 from uuid import UUID, uuid4
 
 from jaws.domain import AuditEventId, CaptureId
@@ -14,6 +15,16 @@ from jaws.domain import AuditEventId, CaptureId
 class SystemClock:
     def now(self) -> datetime:
         return datetime.now(UTC)
+
+
+@dataclass(frozen=True, slots=True)
+class SystemWaitStrategy:
+    """Perform real runtime waits requested by deterministic service policy."""
+
+    sleeper: Callable[[float], None] = sleep
+
+    def wait(self, seconds: float) -> None:
+        self.sleeper(seconds)
 
 
 @dataclass(frozen=True, slots=True)

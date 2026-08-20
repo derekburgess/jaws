@@ -23,7 +23,12 @@ from .packet_sources import (
     packet_summary,
     pcap_source_metadata,
 )
-from .runtime import SystemClock, UuidAuditEventIdGenerator, UuidCaptureIdGenerator
+from .runtime import (
+    SystemClock,
+    SystemWaitStrategy,
+    UuidAuditEventIdGenerator,
+    UuidCaptureIdGenerator,
+)
 
 __all__ = [
     "EvidenceBundleError",
@@ -33,6 +38,7 @@ __all__ = [
     "PcapPacketSource",
     "PySharkPacketParser",
     "SystemClock",
+    "SystemWaitStrategy",
     "UuidAuditEventIdGenerator",
     "UuidCaptureIdGenerator",
     "evidence_bundle_document",
