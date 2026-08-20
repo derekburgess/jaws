@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/research/hypothesis-1.0.0.json",
+  "additionalProperties": false,
+  "properties": {
+    "claim": {"minLength": 1, "type": "string"},
+    "control": {"minLength": 1, "type": "string"},
+    "metrics": {"items": {"minLength": 1, "type": "string"}, "minItems": 1, "type": "array", "uniqueItems": true},
+    "motivated_by_observation_id": {"minLength": 1, "type": ["string", "null"]},
+    "regression_budgets": {"additionalProperties": {"minimum": 0, "type": "number"}, "type": "object"},
+    "schema_version": {"const": "1.0.0"},
+    "treatments": {"items": {"minLength": 1, "type": "string"}, "minItems": 1, "type": "array", "uniqueItems": true}
+  },
+  "required": ["schema_version", "claim", "control", "treatments", "metrics", "regression_budgets"],
+  "title": "HypothesisSpec 1.0.0",
+  "type": "object"
+}

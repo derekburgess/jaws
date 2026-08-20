@@ -99,6 +99,7 @@ jaws-schema = "jaws.storage.cli:main"
 jaws-retention = "jaws.retention_cli:main"
 jaws-evidence = "jaws.evidence_cli:main"
 jaws-admin = "jaws.administration_cli:main"
+jaws-research = "jaws.research_cli:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
@@ -147,6 +148,8 @@ files = [
     "jaws/retention_cli.py",
     "jaws/evidence_cli.py",
     "jaws/administration_cli.py",
+    "jaws/research_cli.py",
+    "jaws/research_codec.py",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

@@ -61,7 +61,19 @@ class ProvenanceCollector:
                 specification.ranker.version,
                 specification.ranker.schema_version,
                 model=self._optional_parameter(specification.ranker.parameters, "model"),
+                model_version=self._optional_parameter(
+                    specification.ranker.parameters, "model_version"
+                ),
+                prompt_digest=self._optional_digest(
+                    specification.ranker.parameters, "prompt_digest"
+                ),
+                template_version=self._optional_parameter(
+                    specification.ranker.parameters, "template_version"
+                ),
                 provider=self._optional_parameter(specification.ranker.parameters, "provider"),
+                provider_version=self._optional_parameter(
+                    specification.ranker.parameters, "provider_version"
+                ),
             ),
             StrategyProvenance(
                 "evaluator",
@@ -100,10 +112,12 @@ class ProvenanceCollector:
             schema_versions={
                 "experiment": str(specification.schema_version),
                 "hypothesis": str(
-                    getattr(specification.hypothesis, "schema_version", specification.schema_version)
+                    getattr(
+                        specification.hypothesis, "schema_version", specification.schema_version
+                    )
                 ),
             },
-            evidence_digests=evidence_digests or {},
+            evidence_digests=evidence_digests or specification.evidence_digests,
             label_source_versions=specification.label_source_versions,
             strategies=strategies,
             seed=specification.ranker.seed,
@@ -136,6 +150,11 @@ class ProvenanceCollector:
     def _optional_parameter(parameters: Mapping[str, object], key: str) -> str | None:
         value = parameters.get(key)
         return str(value) if value is not None else None
+
+    @staticmethod
+    def _optional_digest(parameters: Mapping[str, object], key: str) -> CanonicalDigest | None:
+        value = parameters.get(key)
+        return CanonicalDigest(str(value)) if value is not None else None
 
 
 def interpreter_identity() -> str:

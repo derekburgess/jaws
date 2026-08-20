@@ -17,6 +17,7 @@ from jaws.domain import (
     CanonicalDigest,
     ExperimentRun,
     ExperimentSpec,
+    ObservationReport,
     RunId,
     canonical_json,
     primitive,
@@ -135,6 +136,70 @@ class ExperimentBundleStore:
             shutil.rmtree(staging, ignore_errors=True)
             raise
 
+    def write_observation(
+        self,
+        specification: ExperimentSpec,
+        report: ObservationReport,
+        evaluations: Mapping[str, object],
+    ) -> tuple[Path, CanonicalDigest]:
+        """Publish a comparison/report bundle that protects its contributing runs."""
+
+        if report.experiment_id != specification.experiment_id:
+            raise ValueError("observation and specification experiment identities differ")
+        destination = (
+            self.root
+            / "experiments"
+            / specification.experiment_id.value
+            / "reports"
+            / report.observation_id
+        )
+        if destination.exists():
+            verification = self.verify(destination)
+            if verification.valid:
+                return destination, _digest((destination / MANIFEST_PATH).read_bytes())
+            raise FileExistsError(f"invalid observation bundle already exists: {destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        staging = Path(mkdtemp(prefix=f".{report.observation_id}-", dir=destination.parent))
+        try:
+            payloads = {
+                "experiment/spec.json": _json_bytes(specification),
+                "observation/report.json": _json_bytes(report),
+                **{
+                    f"evaluations/{name}.json": _json_bytes(value)
+                    for name, value in evaluations.items()
+                },
+            }
+            checksums: dict[str, str] = {}
+            for logical_path, content in sorted(payloads.items()):
+                path = staging / _safe_relative(logical_path)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+                checksums[logical_path] = str(_digest(content))
+            assert report.control_run_id is not None and report.treatment_run_id is not None
+            manifest = {
+                "format": BUNDLE_FORMAT,
+                "version": BUNDLE_VERSION,
+                "experiment_id": specification.experiment_id.value,
+                "observation_id": report.observation_id,
+                "state": "completed",
+                "specification_digest": str(specification.digest),
+                "referenced_run_ids": sorted(
+                    (report.control_run_id.value, report.treatment_run_id.value)
+                ),
+                "artifacts": checksums,
+                "raw_capture_redistributed": False,
+            }
+            manifest_bytes = _json_bytes(manifest)
+            (staging / MANIFEST_PATH).write_bytes(manifest_bytes)
+            verification = self.verify(staging)
+            if not verification.valid:
+                raise OSError(f"staged observation verification failed: {verification}")
+            os.replace(staging, destination)
+            return destination, _digest(manifest_bytes)
+        except BaseException:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
+
     def verify(self, bundle: Path) -> BundleVerification:
         path = bundle.resolve()
         manifest_path = path / MANIFEST_PATH
@@ -240,19 +305,23 @@ class ExperimentBundleStore:
             raise
 
     def garbage_collect(self, *, execute: bool = False) -> GarbageCollectionPlan:
-        bundles = tuple(self.root.glob("experiments/*/runs/*"))
+        run_bundles = tuple(self.root.glob("experiments/*/runs/*"))
+        report_bundles = tuple(self.root.glob("experiments/*/reports/*"))
+        bundles = (*run_bundles, *report_bundles)
         references: set[str] = set()
         valid: dict[Path, Mapping[str, Any]] = {}
         for bundle in bundles:
-            inspection = self.inspect(bundle)
-            if inspection.verification.valid:
-                valid[bundle] = inspection.manifest
-                references.update(str(item) for item in inspection.manifest["referenced_run_ids"])
+            verification = self.verify(bundle)
+            if verification.valid:
+                manifest = self._read_json(bundle / MANIFEST_PATH)
+                valid[bundle] = manifest
+                references.update(str(item) for item in manifest["referenced_run_ids"])
         removable = tuple(
             sorted(
                 bundle
                 for bundle, manifest in valid.items()
-                if manifest["run_id"] not in references
+                if "run_id" in manifest
+                and manifest["run_id"] not in references
                 and manifest["state"] in {"failed", "cancelled", "superseded"}
             )
         )

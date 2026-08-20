@@ -1,0 +1,17 @@
+{
+  "captures": ["sample-capture"],
+  "components": [
+    {"component_id": "numeric", "kind": "representation", "version": "1"},
+    {"component_id": "peer", "kind": "reference", "version": "1"},
+    {
+      "compatible_representations": ["numeric"],
+      "component_id": "sample_ranker",
+      "kind": "ranker",
+      "version": "1"
+    },
+    {"component_id": "standard_metrics", "kind": "evaluator", "version": "1"},
+    {"component_id": "json", "kind": "renderer", "version": "1"}
+  ],
+  "datasets": ["sample-dataset"],
+  "labels": ["sample-labels:1"]
+}

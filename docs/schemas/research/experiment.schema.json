@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/research/experiment-1.0.0.json",
+  "properties": {
+    "dataset_ids": {"items": {"type": "string"}, "type": "array", "uniqueItems": true},
+    "deterministic_settings": {"type": "object"},
+    "evidence_digests": {"additionalProperties": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "type": "object"},
+    "entity": {"$ref": "#/$defs/componentShape"},
+    "evaluator": {"$ref": "#/$defs/component"},
+    "hypothesis": {"$ref": "hypothesis.schema.json"},
+    "label_source_versions": {"type": "object"},
+    "observation": {"properties": {"capture_ids": {"items": {"type": "string"}, "minItems": 1, "type": "array"}, "schema_version": {"const": "1.0.0"}}, "required": ["schema_version", "capture_ids"], "type": "object"},
+    "ranker": {"$ref": "#/$defs/componentShape"},
+    "reference": {"$ref": "#/$defs/componentShape"},
+    "renderer": {"$ref": "#/$defs/component"},
+    "representation": {"$ref": "#/$defs/componentShape"},
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["schema_version", "hypothesis", "observation", "entity", "representation", "reference", "ranker", "evaluator", "renderer", "evidence_digests"],
+  "title": "ExperimentSpec 1.0.0",
+  "type": "object",
+  "$defs": {
+    "component": {"properties": {"component_id": {"minLength": 1, "type": "string"}, "schema_version": {"const": "1.0.0"}, "version": {"minLength": 1, "type": "string"}}, "required": ["schema_version", "component_id", "version"], "type": "object"},
+    "componentShape": {"properties": {"schema_version": {"const": "1.0.0"}, "version": {"minLength": 1, "type": "string"}}, "required": ["schema_version", "version"], "type": "object"}
+  }
+}

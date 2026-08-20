@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/research/ranked-finding-1.0.0.json",
+  "properties": {
+    "entity_id": {"minLength": 1, "type": "string"},
+    "evidence": {"type": "array"},
+    "finding_id": {"minLength": 1, "type": "string"},
+    "outlier": {"enum": ["outlier", "inlier", "not_scored"]},
+    "rank": {"minimum": 1, "type": "integer"},
+    "schema_version": {"const": "1.0.0"},
+    "score": {"properties": {"direction": {"enum": ["higher_is_more_anomalous", "lower_is_more_anomalous"]}, "value": {"type": "number"}}, "required": ["value", "direction"], "type": "object"}
+  },
+  "required": ["schema_version", "finding_id", "entity_id", "rank", "score", "outlier", "evidence"],
+  "title": "RankedFinding 1.0.0",
+  "type": "object"
+}

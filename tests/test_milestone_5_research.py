@@ -34,6 +34,7 @@ from jaws.domain import (
     canonical_json,
     ranked_findings_digest,
 )
+from jaws.ports import InMemoryExperimentIndexRepository
 from jaws.services.research import (
     ComponentDescriptor,
     ExperimentService,
@@ -62,15 +63,17 @@ def _spec() -> ExperimentSpec:
         evaluator=ComponentSpec(component_id="metrics", version="5"),
         renderer=ComponentSpec(component_id="json", version="6"),
         dataset_ids=(DatasetId("dataset-1"),),
+        evidence_digests={
+            "capture-1": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "dataset-1": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        },
         label_source_versions={"truth": "1"},
         deterministic_settings={"threads": 1, "api_token": "must-not-leak"},
     )
 
 
 def _catalog() -> ResearchCatalog:
-    catalog = ResearchCatalog(
-        datasets={"dataset-1"}, captures={"capture-1"}, labels={"truth:1"}
-    )
+    catalog = ResearchCatalog(datasets={"dataset-1"}, captures={"capture-1"}, labels={"truth:1"})
     for descriptor in (
         ComponentDescriptor("representation", "numeric", "2"),
         ComponentDescriptor("reference", "peer", "3"),
@@ -86,7 +89,9 @@ class _Engine:
     def represent(self, specification: ExperimentSpec, variant: str) -> object:
         return {"variant": variant, "values": [1.0, 2.0]}
 
-    def reference(self, specification: ExperimentSpec, variant: str, representation: object) -> object:
+    def reference(
+        self, specification: ExperimentSpec, variant: str, representation: object
+    ) -> object:
         return {"median": 1.5, "representation": representation}
 
     def rank(
@@ -230,9 +235,7 @@ def test_matrix_replay_cache_observation_and_offline_bundle(tmp_path: Path) -> N
 
 def test_cancellation_failure_and_corruption_never_look_complete(tmp_path: Path) -> None:
     service, _ = _service(tmp_path)
-    execution = service.execute(
-        _spec(), "control", _Engine(), cancellation=_CancelImmediately()
-    )
+    execution = service.execute(_spec(), "control", _Engine(), cancellation=_CancelImmediately())
     assert execution.run.state is RunState.CANCELLED
     assert execution.evaluation is None
     store = ExperimentBundleStore(tmp_path / "bundles")
@@ -281,3 +284,23 @@ def test_catalog_and_hypothesis_validation_precede_execution() -> None:
         incompatible.validate(specification)
     payload = json.loads(canonical_json(incompatible.snapshot()))
     assert payload["datasets"] == ["dataset-1"]
+
+
+def test_completed_bundle_is_discoverable_through_repository_protocol(tmp_path: Path) -> None:
+    index = InMemoryExperimentIndexRepository()
+    runs = ResearchRunRepository()
+    ticks = iter(NOW + timedelta(seconds=value) for value in range(20))
+    service = ExperimentService(
+        _catalog(),
+        runs,
+        ExperimentBundleStore(tmp_path / "bundles"),
+        ProvenanceCollector(Path.cwd()),
+        now=lambda: next(ticks),
+        index=index,
+    )
+    execution = service.execute(_spec(), "control", _Engine())
+    indexed = index.get(execution.run.run_id)  # type: ignore[arg-type]
+    assert indexed is not None
+    assert indexed.state is RunState.COMPLETED
+    assert indexed.artifact_uri == Path(execution.bundle).resolve().as_uri()
+    assert indexed.artifact_digest is not None

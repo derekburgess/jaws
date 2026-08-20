@@ -52,12 +52,24 @@ def primitive(value: Any) -> Any:
         return value.value
     if is_dataclass(value) and not isinstance(value, type):
         return {
-            field.name: REDACTED if sensitive_key(field.name) else primitive(getattr(value, field.name))
+            field.name: (
+                primitive(getattr(value, field.name))
+                if isinstance(getattr(value, field.name), Secret)
+                else REDACTED
+                if sensitive_key(field.name)
+                else primitive(getattr(value, field.name))
+            )
             for field in fields(value)
         }
     if isinstance(value, Mapping):
         return {
-            str(key): REDACTED if sensitive_key(key) else primitive(item)
+            str(key): (
+                primitive(item)
+                if isinstance(item, Secret)
+                else REDACTED
+                if sensitive_key(key)
+                else primitive(item)
+            )
             for key, item in value.items()
         }
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):

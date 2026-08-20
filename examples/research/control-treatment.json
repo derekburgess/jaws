@@ -1,0 +1,59 @@
+{
+  "dataset_ids": ["sample-dataset"],
+  "deterministic_settings": {
+    "fixtures": {
+      "control": {
+        "metrics": {"benign_burden": 1, "recall_at_3": 0.5, "runtime_seconds": 1},
+        "ranking": [
+          {"entity_id": "benign.example", "outlier": "outlier", "score": 0.9},
+          {"entity_id": "target.example", "outlier": "inlier", "score": 0.7}
+        ]
+      },
+      "treatment": {
+        "metrics": {"benign_burden": 0, "recall_at_3": 1, "runtime_seconds": 1.2},
+        "ranking": [
+          {"entity_id": "target.example", "outlier": "outlier", "score": 0.95},
+          {"entity_id": "benign.example", "outlier": "inlier", "score": 0.5}
+        ]
+      }
+    },
+    "threads": 1
+  },
+  "entity": {"entity_type": "endpoint_ip", "schema_version": "1.0.0", "version": "1"},
+  "evidence_digests": {
+    "sample-capture": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sample-dataset": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "evaluator": {"component_id": "standard_metrics", "schema_version": "1.0.0", "version": "1"},
+  "hypothesis": {
+    "claim": "the treatment improves recall without increasing benign burden",
+    "control": "control",
+    "metrics": ["recall_at_3"],
+    "regression_budgets": {"benign_burden": 0},
+    "schema_version": "1.0.0",
+    "treatments": ["treatment"]
+  },
+  "label_source_versions": {"sample-labels": "1"},
+  "observation": {
+    "capture_ids": ["sample-capture"],
+    "filters": [],
+    "schema_version": "1.0.0"
+  },
+  "ranker": {
+    "direction": "higher_is_more_anomalous",
+    "parameters": {},
+    "ranker_id": "sample_ranker",
+    "schema_version": "1.0.0",
+    "seed": 7,
+    "version": "1"
+  },
+  "reference": {"kind": "peer", "parameters": {}, "schema_version": "1.0.0", "version": "1"},
+  "renderer": {"component_id": "json", "schema_version": "1.0.0", "version": "1"},
+  "representation": {
+    "parameters": {},
+    "representation_id": "numeric",
+    "schema_version": "1.0.0",
+    "version": "1"
+  },
+  "schema_version": "1.0.0"
+}

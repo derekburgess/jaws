@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/research/observation-report-1.0.0.json",
+  "properties": {
+    "control_run_id": {"type": "string"},
+    "cost_deltas": {"additionalProperties": {"type": "number"}, "type": "object"},
+    "experiment_id": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "human_interpretation": {"type": ["string", "null"]},
+    "metric_deltas": {"additionalProperties": {"type": "number"}, "type": "object"},
+    "observation_id": {"minLength": 1, "type": "string"},
+    "outcome": {"enum": ["supported", "refuted", "inconclusive"]},
+    "rank_movements": {"type": "array"},
+    "rationale": {"items": {"type": "string"}, "type": "array"},
+    "regressions": {"items": {"type": "string"}, "type": "array"},
+    "schema_version": {"const": "1.0.0"},
+    "treatment_run_id": {"type": "string"}
+  },
+  "required": ["schema_version", "observation_id", "experiment_id", "control_run_id", "treatment_run_id", "metric_deltas", "rank_movements", "regressions", "cost_deltas", "outcome", "rationale"],
+  "title": "ObservationReport 1.0.0",
+  "type": "object"
+}

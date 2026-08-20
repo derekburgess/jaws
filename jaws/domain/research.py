@@ -70,8 +70,11 @@ class StrategyProvenance:
     version: str
     schema_version: SchemaVersion = SchemaVersion("1.0.0")
     model: str | None = None
+    model_version: str | None = None
     prompt_digest: CanonicalDigest | None = None
+    template_version: str | None = None
     provider: str | None = None
+    provider_version: str | None = None
 
     def __post_init__(self) -> None:
         if not self.kind.strip() or not self.component_id.strip() or not self.version.strip():
@@ -125,7 +128,9 @@ class ProvenanceRecord(VersionedSpec):
     def __post_init__(self) -> None:
         if self.memory_bytes is not None and self.memory_bytes < 0:
             raise ValueError("memory size cannot be negative")
-        object.__setattr__(self, "dependencies", tuple(sorted(self.dependencies, key=lambda x: x.name)))
+        object.__setattr__(
+            self, "dependencies", tuple(sorted(self.dependencies, key=lambda x: x.name))
+        )
         object.__setattr__(self, "schema_versions", _mapping(self.schema_versions))
         object.__setattr__(self, "evidence_digests", _mapping(self.evidence_digests))
         object.__setattr__(self, "label_source_versions", _mapping(self.label_source_versions))
@@ -268,9 +273,7 @@ class ExperimentRun(VersionedSpec):
     ) -> ExperimentRun:
         require_transition(self.state, target, RUN_TRANSITIONS)
         timestamp = normalize_utc(at)
-        event = RunTransition(
-            len(self.transitions) + 1, self.state, target, timestamp, reason
-        )
+        event = RunTransition(len(self.transitions) + 1, self.state, target, timestamp, reason)
         return replace(
             self,
             state=target,
@@ -307,7 +310,11 @@ class EvaluationResult(VersionedSpec):
     coverage: MetricValues = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if self.run_id is None or not self.evaluator_id.strip() or not self.evaluator_version.strip():
+        if (
+            self.run_id is None
+            or not self.evaluator_id.strip()
+            or not self.evaluator_version.strip()
+        ):
             raise ValueError("evaluation requires run and versioned evaluator identities")
         if len(set(self.ranked_entity_ids)) != len(self.ranked_entity_ids):
             raise ValueError("ranked entity IDs must be unique")

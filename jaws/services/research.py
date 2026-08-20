@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import resource
 import threading
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Protocol
 
-from jaws.adapters.experiment_bundles import ExperimentBundleStore
-from jaws.adapters.provenance import ProvenanceCollector
 from jaws.domain import (
     ArtifactOrigin,
     ArtifactRecord,
@@ -19,10 +19,12 @@ from jaws.domain import (
     ErrorCategory,
     EvaluationResult,
     ExperimentRun,
+    ExperimentRunIndex,
     ExperimentSpec,
     HypothesisOutcome,
     HypothesisSpec,
     ObservationReport,
+    ProvenanceRecord,
     RankedFinding,
     RankMovement,
     ResourceUsage,
@@ -32,7 +34,7 @@ from jaws.domain import (
     canonical_digest,
     canonical_json,
 )
-from jaws.ports import CancellationSignal
+from jaws.ports import CancellationSignal, ExperimentIndexRepository
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +75,9 @@ class ResearchCatalog:
         assert specification.observation is not None
         assert specification.representation is not None
         assert specification.ranker is not None
-        missing_datasets = sorted(item.value for item in specification.dataset_ids if item.value not in self.datasets)
+        missing_datasets = sorted(
+            item.value for item in specification.dataset_ids if item.value not in self.datasets
+        )
         missing_captures = sorted(
             item.value
             for item in specification.observation.capture_ids
@@ -83,8 +87,27 @@ class ResearchCatalog:
             raise ValueError(
                 f"unavailable experiment evidence: datasets={missing_datasets}, captures={missing_captures}"
             )
+        if isinstance(specification.hypothesis, HypothesisSpec):
+            evidence_ids = {
+                *(item.value for item in specification.dataset_ids),
+                *(item.value for item in specification.observation.capture_ids),
+            }
+            missing_digests = sorted(evidence_ids - set(specification.evidence_digests))
+            missing_labels = sorted(
+                f"{name}:{version}"
+                for name, version in specification.label_source_versions.items()
+                if f"{name}:{version}" not in self.labels
+            )
+            if missing_digests or missing_labels:
+                raise ValueError(
+                    f"incomplete evidence provenance: digests={missing_digests}, labels={missing_labels}"
+                )
         requested = (
-            ("representation", specification.representation.representation_id, specification.representation.version),
+            (
+                "representation",
+                specification.representation.representation_id,
+                specification.representation.version,
+            ),
             ("reference", specification.reference.kind.value, specification.reference.version),
             ("ranker", specification.ranker.ranker_id, specification.ranker.version),
             ("evaluator", specification.evaluator.component_id, specification.evaluator.version),
@@ -105,7 +128,12 @@ class ResearchCatalog:
             tuple(sorted(self.datasets)),
             tuple(sorted(self.captures)),
             tuple(sorted(self.labels)),
-            tuple(sorted(self.components.values(), key=lambda item: (item.kind, item.component_id, item.version))),
+            tuple(
+                sorted(
+                    self.components.values(),
+                    key=lambda item: (item.kind, item.component_id, item.version),
+                )
+            ),
             tuple(sorted(self.prior_experiments)),
             tuple(self.benchmark_summaries),
         )
@@ -132,9 +160,10 @@ class HypothesizeService:
 class ResearchRunRepository:
     """Thread-safe optimistic repository for atomic lifecycle snapshots."""
 
-    def __init__(self) -> None:
+    def __init__(self, snapshot_writer: Callable[[ExperimentRun], None] | None = None) -> None:
         self._runs: dict[RunId, ExperimentRun] = {}
         self._lock = threading.Lock()
+        self._snapshot_writer = snapshot_writer
 
     def add(self, run: ExperimentRun) -> None:
         assert run.run_id is not None
@@ -143,6 +172,8 @@ class ResearchRunRepository:
                 raise ValueError(f"run already exists: {run.run_id}")
             if run.state is not RunState.PLANNED:
                 raise ValueError("new run must be planned")
+            if self._snapshot_writer is not None:
+                self._snapshot_writer(run)
             self._runs[run.run_id] = run
 
     def get(self, run_id: RunId) -> ExperimentRun | None:
@@ -168,6 +199,8 @@ class ResearchRunRepository:
             )
             if immutable != current_immutable:
                 raise ValueError("run identity metadata cannot change")
+            if self._snapshot_writer is not None:
+                self._snapshot_writer(run)
             self._runs[run.run_id] = run
 
     def list(self) -> tuple[ExperimentRun, ...]:
@@ -202,6 +235,27 @@ class ResearchEngine(Protocol):
         run_id: RunId,
         findings: tuple[RankedFinding, ...],
     ) -> EvaluationResult: ...
+
+
+class ExperimentBundleWriter(Protocol):
+    def write(
+        self,
+        specification: ExperimentSpec,
+        run: ExperimentRun,
+        artifacts: Mapping[str, bytes],
+        *,
+        referenced_run_ids: Sequence[RunId] = (),
+    ) -> tuple[Path, CanonicalDigest]: ...
+
+
+class ProvenanceProvider(Protocol):
+    def collect(
+        self,
+        specification: ExperimentSpec,
+        *,
+        evidence_digests: Mapping[str, CanonicalDigest] | None = None,
+        usage: ResourceUsage | None = None,
+    ) -> ProvenanceRecord: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,11 +300,13 @@ class ExperimentService:
         self,
         catalog: ResearchCatalog,
         runs: ResearchRunRepository,
-        bundles: ExperimentBundleStore,
-        provenance: ProvenanceCollector,
+        bundles: ExperimentBundleWriter,
+        provenance: ProvenanceProvider,
         *,
         cache: StageCache | None = None,
         now: Callable[[], datetime] | None = None,
+        cancellation_factory: Callable[[RunId], CancellationSignal] | None = None,
+        index: ExperimentIndexRepository | None = None,
     ) -> None:
         self.catalog = catalog
         self.runs = runs
@@ -258,6 +314,8 @@ class ExperimentService:
         self.provenance = provenance
         self.cache = cache or StageCache()
         self.now = now or (lambda: datetime.now(UTC))
+        self.cancellation_factory = cancellation_factory
+        self.index = index
 
     def execute_matrix(
         self,
@@ -294,9 +352,26 @@ class ExperimentService:
             retry_of_run_id=retry_of.run_id if retry_of else None,
         )
         self.runs.add(run)
+        if self.index is not None:
+            assert run.run_id is not None and run.created_at is not None
+            self.index.add(
+                ExperimentRunIndex(
+                    run.run_id,
+                    specification.experiment_id,
+                    specification.digest,
+                    RunState.PLANNED,
+                    run.created_at,
+                    supersedes_run_id=retry_of.run_id if retry_of else None,
+                )
+            )
         run = self._transition(run, RunState.QUEUED)
         run = self._transition(run, RunState.RUNNING)
-        signal = cancellation or _NeverCancelled()
+        assert run.run_id is not None
+        signal = cancellation or (
+            self.cancellation_factory(run.run_id)
+            if self.cancellation_factory is not None
+            else _NeverCancelled()
+        )
         started = time.perf_counter()
         artifacts: dict[str, bytes] = {}
         records: list[ArtifactRecord] = []
@@ -359,7 +434,22 @@ class ExperimentService:
             artifacts[evaluation_record.logical_path] = evaluation_content
             records.append(evaluation_record)
             completed.append("evaluation")
-            usage = ResourceUsage(runtime_seconds=time.perf_counter() - started)
+            usage = ResourceUsage(
+                runtime_seconds=time.perf_counter() - started,
+                peak_memory_bytes=int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
+                peak_gpu_memory_bytes=self._optional_int_metric(
+                    evaluation.metrics, "peak_gpu_memory_bytes"
+                ),
+                external_api_calls=self._optional_int_metric(
+                    evaluation.metrics, "external_api_calls"
+                )
+                or 0,
+                external_api_tokens=self._optional_int_metric(
+                    evaluation.metrics, "external_api_tokens"
+                )
+                or 0,
+                estimated_cost=evaluation.metrics.get("estimated_cost"),
+            )
             provenance = self.provenance.collect(specification, usage=usage)
             artifacts["provenance/provenance.json"] = (canonical_json(provenance) + "\n").encode()
             run = self._transition(
@@ -388,7 +478,8 @@ class ExperimentService:
                 artifacts=tuple(records),
             )
         artifacts["run/variant.json"] = (canonical_json({"variant": variant}) + "\n").encode()
-        bundle, _ = self.bundles.write(specification, run, artifacts)
+        bundle, bundle_digest = self.bundles.write(specification, run, artifacts)
+        self._complete_index(run, bundle.resolve().as_uri(), bundle_digest)
         if retry_of is not None and run.state is RunState.COMPLETED:
             assert run.run_id is not None
             superseded = retry_of.transition(
@@ -398,6 +489,7 @@ class ExperimentService:
                 superseded_by_run_id=run.run_id,
             )
             self.runs.transition(superseded, expected=RunState.FAILED)
+            self._supersede_index(superseded)
         return ExperimentExecution(variant, run, evaluation, str(bundle))
 
     def cancel(self, run_id: RunId) -> ExperimentRun:
@@ -411,7 +503,47 @@ class ExperimentService:
     def _transition(self, run: ExperimentRun, target: RunState, **kwargs: Any) -> ExperimentRun:
         updated = run.transition(target, self.now(), **kwargs)
         self.runs.transition(updated, expected=run.state)
+        if self.index is not None and target in {RunState.QUEUED, RunState.RUNNING}:
+            indexed = self.index.get(updated.run_id)  # type: ignore[arg-type]
+            if indexed is None:
+                raise KeyError(f"run index not found: {updated.run_id}")
+            transitioned = indexed.transition(target, updated.transitions[-1].at)
+            self.index.transition(transitioned, expected_state=run.state)
         return updated
+
+    def _complete_index(
+        self, run: ExperimentRun, artifact_uri: str, artifact_digest: CanonicalDigest
+    ) -> None:
+        if self.index is None:
+            return
+        assert run.run_id is not None
+        indexed = self.index.get(run.run_id)
+        if indexed is None:
+            raise KeyError(f"run index not found: {run.run_id}")
+        transitioned = indexed.transition(
+            run.state,
+            run.transitions[-1].at,
+            artifact_uri=artifact_uri,
+            artifact_digest=artifact_digest,
+            failure_code=(run.failure.category.value if run.failure is not None else None),
+        )
+        self.index.transition(transitioned, expected_state=indexed.state)
+
+    def _supersede_index(self, run: ExperimentRun) -> None:
+        if self.index is None:
+            return
+        assert run.run_id is not None
+        indexed = self.index.get(run.run_id)
+        if indexed is None:
+            raise KeyError(f"run index not found: {run.run_id}")
+        assert indexed.artifact_uri is not None and indexed.artifact_digest is not None
+        transitioned = indexed.transition(
+            RunState.SUPERSEDED,
+            run.transitions[-1].at,
+            artifact_uri=indexed.artifact_uri,
+            artifact_digest=indexed.artifact_digest,
+        )
+        self.index.transition(transitioned, expected_state=indexed.state)
 
     def _stage(
         self,
@@ -457,6 +589,11 @@ class ExperimentService:
     @staticmethod
     def _bytes_digest(content: bytes) -> CanonicalDigest:
         return CanonicalDigest(hashlib.sha256(content).hexdigest())
+
+    @staticmethod
+    def _optional_int_metric(metrics: Mapping[str, float], key: str) -> int | None:
+        value = metrics.get(key)
+        return int(value) if value is not None else None
 
     @staticmethod
     def _check_cancelled(signal: CancellationSignal) -> None:

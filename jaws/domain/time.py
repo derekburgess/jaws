@@ -39,9 +39,7 @@ RUN_TRANSITIONS: dict[RunState, frozenset[RunState]] = {
     # the research runner itself always records the queued state.
     RunState.PLANNED: frozenset({RunState.QUEUED, RunState.RUNNING, RunState.CANCELLED}),
     RunState.QUEUED: frozenset({RunState.RUNNING, RunState.CANCELLED}),
-    RunState.RUNNING: frozenset(
-        {RunState.COMPLETED, RunState.FAILED, RunState.CANCELLED}
-    ),
+    RunState.RUNNING: frozenset({RunState.COMPLETED, RunState.FAILED, RunState.CANCELLED}),
     RunState.COMPLETED: frozenset({RunState.SUPERSEDED}),
     RunState.FAILED: frozenset({RunState.SUPERSEDED}),
     RunState.CANCELLED: frozenset({RunState.SUPERSEDED}),

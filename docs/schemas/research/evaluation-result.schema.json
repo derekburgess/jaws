@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/research/evaluation-result-1.0.0.json",
+  "properties": {
+    "coverage": {"additionalProperties": {"type": "number"}, "type": "object"},
+    "evaluator_id": {"minLength": 1, "type": "string"},
+    "evaluator_version": {"minLength": 1, "type": "string"},
+    "findings_digest": {"pattern": "^[0-9a-f]{64}$", "type": ["string", "null"]},
+    "metrics": {"additionalProperties": {"type": "number"}, "type": "object"},
+    "ranked_entity_ids": {"items": {"type": "string"}, "type": "array", "uniqueItems": true},
+    "run_id": {"minLength": 1, "type": "string"},
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["schema_version", "run_id", "evaluator_id", "evaluator_version", "metrics", "ranked_entity_ids", "coverage"],
+  "title": "EvaluationResult 1.0.0",
+  "type": "object"
+}

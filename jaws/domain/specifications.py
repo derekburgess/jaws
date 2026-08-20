@@ -525,6 +525,7 @@ class ExperimentSpec(VersionedSpec):
     )
     renderer: ComponentSpec = field(default_factory=lambda: ComponentSpec(component_id="json"))
     dataset_ids: tuple[DatasetId, ...] = ()
+    evidence_digests: Parameters = field(default_factory=dict)
     label_source_versions: Parameters = field(default_factory=dict)
     deterministic_settings: Parameters = field(default_factory=dict)
 
@@ -535,8 +536,18 @@ class ExperimentSpec(VersionedSpec):
             raise ValueError("experiment requires observation, representation, and ranker specs")
         if len(set(self.dataset_ids)) != len(self.dataset_ids):
             raise ValueError("experiment dataset IDs must be unique")
+        evidence_digests = _immutable_mapping(self.evidence_digests)
+        if any(
+            len(str(digest)) != 64
+            or any(character not in "0123456789abcdef" for character in str(digest))
+            for digest in evidence_digests.values()
+        ):
+            raise ValueError("evidence digests must be lowercase SHA-256 text")
         object.__setattr__(self, "dataset_ids", tuple(self.dataset_ids))
-        object.__setattr__(self, "label_source_versions", _immutable_mapping(self.label_source_versions))
+        object.__setattr__(self, "evidence_digests", evidence_digests)
+        object.__setattr__(
+            self, "label_source_versions", _immutable_mapping(self.label_source_versions)
+        )
         object.__setattr__(
             self, "deterministic_settings", _immutable_mapping(self.deterministic_settings)
         )
