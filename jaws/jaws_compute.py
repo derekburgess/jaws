@@ -15,6 +15,7 @@ from jaws.config import (
     get_openai_client,
 )
 from jaws.domain import (
+    ENDPOINT_NUMERIC_FEATURE_SET_V1,
     MIN_TIMING_PACKETS,
     CaptureId,
     EndpointProfile,
@@ -271,6 +272,7 @@ def build_endpoint_profiles(
     *,
     entity_definition=None,
     observation_window=None,
+    numeric_feature_set=None,
 ):
     """Aggregate every packet into one profile per IP address, split by direction.
 
@@ -291,6 +293,7 @@ def build_endpoint_profiles(
         evidence,
         entity_definition=entity_definition or _ENDPOINT_ENTITY_DEFINITION,
         observation_window=window,
+        numeric_feature_set=numeric_feature_set or ENDPOINT_NUMERIC_FEATURE_SET_V1,
         metadata=_metadata_records(metadata),
     )
     return [_legacy_profile(draft) for draft in result.profiles]
@@ -512,6 +515,7 @@ def main():
         metadata,
         entity_definition=_ENDPOINT_ENTITY_DEFINITION,
         observation_window=profile_observation_window(capture_id, session_ids, packets),
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
     )
 
     model_name = PACKET_MODELS[args.model] if args.api == "transformers" else OPENAI_EMBEDDING_MODEL

@@ -1,11 +1,11 @@
 # Endpoint profiling service contract
 
 `EndpointProfiler` is the deterministic packet-to-entity aggregation boundary. It requires
-an `EntityDefinition`, an `ObservationWindow`, immutable `PacketRecord` evidence, and
-optional `EntityMetadata` display projections. It returns an `EndpointProfilingResult`
-containing those exact declarations, the source packet count, and address-sorted
-`EndpointProfileDraft` values. It imports no pandas, NumPy, Neo4j, embedding provider,
-configuration, CLI, or reporting dependency.
+an `EntityDefinition`, an `ObservationWindow`, a `NumericFeatureSet`, immutable
+`PacketRecord` evidence, and optional `EntityMetadata` display projections. It returns an
+`EndpointProfilingResult` containing those exact declarations, the source packet count,
+and address-sorted `EndpointProfileDraft` values. It imports no pandas, NumPy, Neo4j,
+embedding provider, configuration, CLI, or reporting dependency.
 
 The draft is deliberately pre-representation and pre-embedding. It binds normalized IP
 identity, deterministic address classification, directional packet features, display
@@ -29,6 +29,39 @@ evidence-selection adapters own evaluation of their external filter syntax.
 
 Observation windows reject duplicate capture IDs and empty filter declarations. Entity
 definition versions are normalized and cannot be blank.
+
+## Numeric feature declaration
+
+The current numeric representation is `endpoint_profile_numeric` version `1`. Feature
+order is contractual because every matrix column, historical median, reason code, and
+unit label depends on it. `jaws-finder` derives those legacy projections from this
+declaration rather than maintaining independent constants.
+
+| Order | Feature | Family | Unit | Raw transformation | Missing values |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | `bytes_out` | base | bytes | identity | forbidden |
+| 2 | `bytes_in` | base | bytes | identity | forbidden |
+| 3 | `packets_out` | base | packets | identity | forbidden |
+| 4 | `packets_in` | base | packets | identity | forbidden |
+| 5 | `out_peers` | base | peers | identity | forbidden |
+| 6 | `in_peers` | base | peers | identity | forbidden |
+| 7 | `bytes_out_in_ratio` | shape | ratio | `bytes_out / (bytes_in + 1)` | forbidden |
+| 8 | `packets_out_in_ratio` | shape | ratio | `packets_out / (packets_in + 1)` | forbidden |
+| 9 | `bytes_per_packet` | shape | bytes/packet | `(bytes_out + bytes_in) / (packets_out + packets_in + 1)` | forbidden |
+| 10 | `bytes_per_peer` | shape | bytes/peer | `bytes_out / (out_peers + 1)` | forbidden |
+| 11 | `interval_mean` | timing | seconds | identity | population median, or zero if all missing |
+| 12 | `interval_cv` | timing | ratio | identity | population median, or zero if all missing |
+
+All twelve raw columns declare `log1p` as their analysis transformation before robust
+scoring or numeric clustering. The `+1` safe-ratio offsets and timing imputation are
+therefore versioned behavior, not implementation accidents. Changing a source field,
+order, unit, transformation, offset, or missing-value policy changes the feature-set
+digest and requires a new feature-set version.
+
+The pure profiler currently accepts only this exact feature set and rejects other IDs,
+versions, or definitions with `UnsupportedNumericFeatureSetError`. The legacy compute
+adapter supplies version 1 for existing callers, so current CLI and Benchmark 0 output
+remain unchanged.
 
 ## Directional aggregation invariants
 
@@ -80,5 +113,5 @@ into the complete declared capture set, and a legacy graph with no capture recor
 explicit `legacy-unscoped` compatibility identity. Direct legacy callers may omit the new
 arguments only at this outer adapter; the pure service has no implicit entity or scope.
 
-The next profile-service slice versions numeric feature definitions, transformations,
-missing-value policy, and units.
+The next profile-service slice versions the endpoint text-description template separately
+from embedding-provider and model identity.

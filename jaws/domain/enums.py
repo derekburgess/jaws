@@ -77,11 +77,34 @@ class OutlierStatus(StrEnum):
 class MeasurementUnit(StrEnum):
     BYTES = "bytes"
     PACKETS = "packets"
+    PEERS = "peers"
     SECONDS = "seconds"
     MILLISECONDS = "milliseconds"
     RATIO = "ratio"
+    BYTES_PER_PACKET = "bytes/packet"
+    BYTES_PER_PEER = "bytes/peer"
     RANK = "rank"
     SCORE = "score"
+
+
+class NumericFeatureFamily(StrEnum):
+    BASE = "base"
+    SHAPE = "shape"
+    TIMING = "timing"
+
+
+class NumericFeatureTransformation(StrEnum):
+    IDENTITY = "identity"
+    SAFE_RATIO = "safe_ratio"
+
+
+class NumericAnalysisTransformation(StrEnum):
+    LOG1P = "log1p"
+
+
+class MissingValuePolicy(StrEnum):
+    FORBID = "forbid"
+    POPULATION_MEDIAN_OR_ZERO = "population_median_or_zero"
 
 
 class ErrorCategory(StrEnum):

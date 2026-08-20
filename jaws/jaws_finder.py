@@ -12,8 +12,13 @@ from sklearn.preprocessing import StandardScaler
 
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
 from jaws.domain import (
+    ENDPOINT_NUMERIC_FEATURE_SET_V1,
     CaptureId,
     EntityId,
+    MissingValuePolicy,
+    NumericAnalysisTransformation,
+    NumericFeatureFamily,
+    NumericFeatureTransformation,
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
@@ -48,20 +53,12 @@ def _load_plotting():
 # (e.g. unusual outbound bytes) separate geometrically — text embeddings alone
 # barely encode magnitude. Log-scaled (they span orders of magnitude) then
 # standardized to unit variance, matching the standardized text components.
-BASE_FEATURES = ["bytes_out", "bytes_in", "packets_out", "packets_in", "out_peers", "in_peers"]
-
-# Derived shape features. Raw counts mostly re-flag the busiest host; ratios encode
-# *shape* instead of volume, so they catch exfil (out >> in), beaconing (small constant
-# packets), and low-fan-out chatter regardless of absolute size. The +1 denominators
-# keep them finite when a direction is empty.
-RATIO_FEATURES = {
-    "bytes_out_in_ratio": lambda d: d["bytes_out"] / (d["bytes_in"] + 1.0),
-    "packets_out_in_ratio": lambda d: d["packets_out"] / (d["packets_in"] + 1.0),
-    "bytes_per_packet": lambda d: (
-        (d["bytes_out"] + d["bytes_in"]) / (d["packets_out"] + d["packets_in"] + 1.0)
-    ),
-    "bytes_per_peer": lambda d: d["bytes_out"] / (d["out_peers"] + 1.0),
-}
+NUMERIC_FEATURE_SET = ENDPOINT_NUMERIC_FEATURE_SET_V1
+BASE_FEATURES = [
+    feature.name
+    for feature in NUMERIC_FEATURE_SET.features
+    if feature.family is NumericFeatureFamily.BASE
+]
 
 # Temporal cadence features (set by jaws_compute, from the endpoint's more regular
 # single DIRECTION — a combined stream's request/response pairing forces CV toward 1.0
@@ -70,31 +67,22 @@ RATIO_FEATURES = {
 # high CV means bursty/human traffic. INTERVAL_MEAN is the typical period. Endpoints
 # with too few packets in each direction carry None and are median-imputed below so
 # they read as "average regularity" rather than as perfect beacons.
-TIMING_FEATURES = ["interval_mean", "interval_cv"]
+TIMING_FEATURES = [
+    feature.name
+    for feature in NUMERIC_FEATURE_SET.features
+    if feature.family is NumericFeatureFamily.TIMING
+]
 
-NUMERIC_FEATURE_COUNT = len(BASE_FEATURES) + len(RATIO_FEATURES) + len(TIMING_FEATURES)
+NUMERIC_FEATURE_COUNT = len(NUMERIC_FEATURE_SET.features)
 
 # Column order of build_numeric_features (base, then ratios, then timing), so a
 # robust-z column index maps back to the feature it scored.
-NUMERIC_FEATURE_NAMES = BASE_FEATURES + list(RATIO_FEATURES) + TIMING_FEATURES
+NUMERIC_FEATURE_NAMES = list(NUMERIC_FEATURE_SET.feature_names)
 
 # Human-readable unit per numeric feature, surfaced in the result so the raw
 # magnitudes aren't left unlabeled (bytes_out is bytes, interval_mean is seconds,
 # the coefficient of variation and the out/in ratios are dimensionless).
-FEATURE_UNITS = {
-    "bytes_out": "bytes",
-    "bytes_in": "bytes",
-    "packets_out": "packets",
-    "packets_in": "packets",
-    "out_peers": "peers",
-    "in_peers": "peers",
-    "bytes_out_in_ratio": "ratio",
-    "packets_out_in_ratio": "ratio",
-    "bytes_per_packet": "bytes/packet",
-    "bytes_per_peer": "bytes/peer",
-    "interval_mean": "seconds",
-    "interval_cv": "ratio",
-}
+FEATURE_UNITS = {feature.name: feature.unit.value for feature in NUMERIC_FEATURE_SET.features}
 
 # A feature must deviate by at least this robust-z to be cited as a reason an
 # endpoint was anomalous. ~2.5 robust deviations is a clear departure from the pack
@@ -171,7 +159,7 @@ def build_baseline_centers(data, history, feature_names, raw):
     monotonic: median(log1p(x)) == log1p(median(x)), so an un-baselined cell's center IS
     the value robust_z_scores would have subtracted anyway. Only the center moves.
     """
-    x = np.log1p(raw)
+    x = transform_numeric_features(raw)
     centers = np.tile(np.median(x, axis=0), (len(data), 1))
     baseline_sessions = np.zeros(len(data), dtype=int)
     if not history:
@@ -188,7 +176,9 @@ def build_baseline_centers(data, history, feature_names, raw):
                 continue
             value = entry["medians"].get(name)
             if value is not None and np.isfinite(value):
-                centers[i, j] = np.log1p(max(float(value), 0.0))
+                centers[i, j] = _transform_numeric_feature(
+                    max(float(value), 0.0), NUMERIC_FEATURE_SET.features[j]
+                )
     return centers, baseline_sessions
 
 
@@ -266,24 +256,66 @@ def host_relative_gloss(feature, is_local):
 
 
 def build_numeric_features(data):
-    """Assemble the raw numeric matrix: base counts + derived ratios + timing.
+    """Assemble the declared raw numeric matrix in feature-set order.
 
     Timing columns may contain None (sparse endpoints); each is imputed with the
     median of its present values so missingness reads as neutral, not anomalous.
     Returns a float array of shape (n_endpoints, NUMERIC_FEATURE_COUNT).
     """
-    base = [[float(d[f]) for f in BASE_FEATURES] for d in data]
-    ratios = [[fn(d) for fn in RATIO_FEATURES.values()] for d in data]
+    columns = []
+    for feature in NUMERIC_FEATURE_SET.features:
+        column = []
+        source_fields = feature.numerator_fields + feature.denominator_fields
+        for item in data:
+            source_values = [
+                item.get(field)
+                if feature.missing_value_policy is MissingValuePolicy.POPULATION_MEDIAN_OR_ZERO
+                else item[field]
+                for field in source_fields
+            ]
+            if any(value is None for value in source_values):
+                column.append(None)
+                continue
+            numerator_count = len(feature.numerator_fields)
+            numerator = sum(float(value) for value in source_values[:numerator_count])
+            if feature.transformation is NumericFeatureTransformation.IDENTITY:
+                column.append(numerator)
+            elif feature.transformation is NumericFeatureTransformation.SAFE_RATIO:
+                denominator = sum(float(value) for value in source_values[numerator_count:])
+                column.append(numerator / (denominator + feature.denominator_offset))
+            else:  # pragma: no cover - closed enum guarded by the typed contract
+                raise ValueError(f"unsupported numeric transformation: {feature.transformation}")
 
-    timing_cols = []
-    for f in TIMING_FEATURES:
-        col = [d.get(f) for d in data]
-        present = [v for v in col if v is not None]
-        median = float(np.median(present)) if present else 0.0
-        timing_cols.append([float(v) if v is not None else median for v in col])
-    timing = np.array(timing_cols).T if timing_cols else np.empty((len(data), 0))
+        if any(value is None for value in column):
+            if feature.missing_value_policy is MissingValuePolicy.FORBID:
+                raise ValueError(f"numeric feature {feature.name} forbids missing values")
+            present = [value for value in column if value is not None]
+            replacement = float(np.median(present)) if present else 0.0
+            column = [replacement if value is None else value for value in column]
+        columns.append(column)
 
-    return np.hstack([np.array(base), np.array(ratios), timing])
+    if not data:
+        return np.empty((0, NUMERIC_FEATURE_COUNT))
+    return np.asarray(columns, dtype=float).T
+
+
+def _transform_numeric_feature(value, feature):
+    if feature.analysis_transformation is NumericAnalysisTransformation.LOG1P:
+        return np.log1p(value)
+    raise ValueError(
+        f"unsupported numeric analysis transformation: {feature.analysis_transformation}"
+    )
+
+
+def transform_numeric_features(raw):
+    """Apply each declared analysis transformation without changing column order."""
+
+    if raw.ndim != 2 or raw.shape[1] != NUMERIC_FEATURE_COUNT:
+        raise ValueError("numeric matrix does not match the declared feature set")
+    transformed = np.empty_like(raw, dtype=float)
+    for column, feature in enumerate(NUMERIC_FEATURE_SET.features):
+        transformed[:, column] = _transform_numeric_feature(raw[:, column], feature)
+    return transformed
 
 
 def _robust_center_scale(x):
@@ -301,15 +333,22 @@ def _robust_center_scale(x):
     return median, scale
 
 
-def robust_z_scores(raw):
+def robust_z_scores(raw, *, feature_set=NUMERIC_FEATURE_SET):
     """Per-column robust z-scores: (x - median) / (1.4826 * MAD), on log1p-scaled
     features.
 
     log1p first so multiplicative spread (bytes span orders of magnitude) reads on a
     single scale and one busy host doesn't swamp every column. Returns an array shaped
-    like `raw`, columns aligned with NUMERIC_FEATURE_NAMES.
+    like `raw`. Endpoint columns use their declared transformations; `feature_set=None`
+    preserves the separate legacy host-outbound scorer until host-destination profiles
+    become a first-class entity definition.
     """
-    x = np.log1p(raw)
+    if feature_set is None:
+        x = np.log1p(raw)
+    elif feature_set == NUMERIC_FEATURE_SET:
+        x = transform_numeric_features(raw)
+    else:
+        raise ValueError("unsupported numeric feature set")
     median, scale = _robust_center_scale(x)
     z = np.zeros_like(x)
     usable = scale > 1e-9
@@ -350,7 +389,7 @@ def baselined_z_scores(raw, centers, baselined, feature_names):
     if not columns:
         return z
 
-    residual = np.log1p(raw) - centers
+    residual = transform_numeric_features(raw) - centers
     median, scale = _robust_center_scale(residual[baselined])
     scale = np.maximum(scale, BASELINE_SCALE_FLOOR)
     z_history = (residual - median) / scale
@@ -511,7 +550,7 @@ def score_host_outbound(rows):
     for r in rows:
         r["upload_download_ratio"] = r["upload_bytes"] / (r["download_bytes"] + 1.0)
     raw = np.array([[float(r[f]) for f in HOST_OUTBOUND_FEATURES] for r in rows])
-    z = robust_z_scores(raw)
+    z = robust_z_scores(raw, feature_set=None)
     scores = deviation_score(z, HOST_OUTBOUND_FEATURES)
 
     ranked = []
@@ -586,7 +625,7 @@ def build_feature_matrix(embeddings, data, components, whiten, feature_weight):
         return text_block, pca
 
     raw = build_numeric_features(data)
-    numeric_block = StandardScaler().fit_transform(np.log1p(raw))
+    numeric_block = StandardScaler().fit_transform(transform_numeric_features(raw))
     features = np.hstack([text_block, feature_weight * numeric_block])
     return features, pca
 
@@ -971,7 +1010,9 @@ def run_ablation(embeddings, data, components, whiten, feature_weight):
     Reuses embeddings already on the nodes — nothing is re-embedded.
     """
     text_only, _ = build_feature_matrix(embeddings, data, components, whiten, 0.0)
-    numeric_only = StandardScaler().fit_transform(np.log1p(build_numeric_features(data)))
+    numeric_only = StandardScaler().fit_transform(
+        transform_numeric_features(build_numeric_features(data))
+    )
     blended, _ = build_feature_matrix(
         embeddings, data, components, whiten, feature_weight if feature_weight > 0 else 1.0
     )

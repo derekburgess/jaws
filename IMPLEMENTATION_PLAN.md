@@ -576,7 +576,7 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Extract packet-to-entity aggregation from `jaws_compute.build_endpoint_profiles` into a pure profiler (`EndpointProfiler`; [profiling contract](docs/services/profiling.md)).
 - [x] Make entity definition and observation window inputs explicit (`EndpointProfilingResult`; `ProfilingWindowError`; [profiling contract](docs/services/profiling.md)).
 - [x] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0 (`tests/test_profile_service.py`; report-only benchmark parity).
-- [ ] Version numeric feature definitions, transformations, missing-value policy, and units.
+- [x] Version numeric feature definitions, transformations, missing-value policy, and units (`NumericFeatureSet`; `ENDPOINT_NUMERIC_FEATURE_SET_V1`; [profiling contract](docs/services/profiling.md)).
 - [ ] Version the endpoint text-description template separately from embedding models.
 - [ ] Make timing direction and minimum-evidence requirements visible in representation metadata.
 - [ ] Ensure profile generation is deterministic for identical evidence and spec.
@@ -1247,11 +1247,29 @@ pacing and retry/backoff, and the thin IPinfo adapter. A standard-library
 `EndpointProfiler` now owns deterministic packet-to-entity aggregation while the legacy
 pandas function is a compatibility projection. Profiling now requires and retains explicit
 entity-definition and observation-window declarations, rejecting unsupported semantics or
-out-of-window evidence before aggregation (21 of 37 checklist items complete). Versioning
-numeric feature definitions, transformations, missing-value policy, and units is the next
-active Milestone 3 slice.
+out-of-window evidence before aggregation. The twelve endpoint numeric features now have a
+single ordered, versioned contract for families, source fields, safe-ratio offsets, units,
+missing-value behavior, and analysis transforms (22 of 37 checklist items complete).
+Versioning the endpoint text-description template separately from embedding models is the
+next active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 versioned numeric feature contract
+
+- Added `NumericFeatureDefinition` and `NumericFeatureSet` contracts and declared
+  `endpoint_profile_numeric` version 1 as six base counts, four shape ratios, and two
+  timing features in the exact Benchmark 0 column order.
+- Made units, source fields, identity/safe-ratio transformations, `+1` denominator
+  offsets, timing population-median-or-zero imputation, and per-column `log1p` analysis
+  transformations explicit and digest-covered.
+- Made the feature set a mandatory pure-profiler input retained by
+  `EndpointProfilingResult`; unsupported IDs, versions, or definitions fail explicitly.
+- Derived the legacy detector's names, units, raw matrix, imputation, and analysis
+  transforms from the versioned declaration while preserving detector behavior.
+- Passed strict types, Ruff format/lint, 273 offline tests, and all 15 disposable-Neo4j
+  tests on 5.26.28. Report-only Recall@3 remains 5/5 with the same three named benign
+  false positives.
 
 ### 2026-08-20 — Milestone 3 explicit profiling semantics and scope
 

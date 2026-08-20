@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from jaws.domain import (
+    ENDPOINT_NUMERIC_FEATURE_SET_V1,
     CaptureId,
     EntityDefinition,
     EntityId,
@@ -25,6 +26,7 @@ from jaws.services import (
     EndpointProfiler,
     ProfilingWindowError,
     UnsupportedEntityDefinitionError,
+    UnsupportedNumericFeatureSetError,
     interval_timing_seconds,
 )
 
@@ -75,6 +77,7 @@ def _profiles(packets, metadata=(), *, profiler=None, window=None, entity=ENDPOI
         packets,
         entity_definition=entity,
         observation_window=window or _window(*packets),
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
         metadata=metadata,
     )
     return result.profiles
@@ -236,10 +239,12 @@ def test_profile_result_retains_exact_entity_and_single_capture_window():
         (packet,),
         entity_definition=ENDPOINT_IP_V1,
         observation_window=window,
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
     )
 
     assert result.entity_definition is ENDPOINT_IP_V1
     assert result.observation_window is window
+    assert result.numeric_feature_set is ENDPOINT_NUMERIC_FEATURE_SET_V1
     assert result.source_packet_count == 1
     assert len(result.profiles) == 2
 
@@ -256,11 +261,13 @@ def test_pooled_window_accepts_declared_capture_set_and_empty_window_is_valid():
         packets,
         entity_definition=ENDPOINT_IP_V1,
         observation_window=window,
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
     )
     empty = EndpointProfiler().profile(
         (),
         entity_definition=ENDPOINT_IP_V1,
         observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
     )
 
     assert pooled.observation_window.capture_ids == (CAPTURE, second_capture)
@@ -292,6 +299,7 @@ def test_profiler_rejects_packet_evidence_outside_declared_window(window, messag
             (_packet(0, "10.0.0.2", "8.8.8.8"),),
             entity_definition=ENDPOINT_IP_V1,
             observation_window=window,
+            numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
         )
 
 
@@ -308,6 +316,19 @@ def test_profiler_rejects_unsupported_entity_type_or_version(entity):
             (),
             entity_definition=entity,
             observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+            numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+        )
+
+
+def test_profiler_rejects_unsupported_numeric_feature_set_version():
+    unsupported = replace(ENDPOINT_NUMERIC_FEATURE_SET_V1, version="2")
+
+    with pytest.raises(UnsupportedNumericFeatureSetError, match="endpoint_profile_numeric.*'1'"):
+        EndpointProfiler().profile(
+            (),
+            entity_definition=ENDPOINT_IP_V1,
+            observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+            numeric_feature_set=unsupported,
         )
 
 

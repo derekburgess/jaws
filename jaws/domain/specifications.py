@@ -5,10 +5,21 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
+from math import isfinite
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from .enums import EntityType, OutlierStatus, ReferenceKind, ScoreDirection
+from .enums import (
+    EntityType,
+    MeasurementUnit,
+    MissingValuePolicy,
+    NumericAnalysisTransformation,
+    NumericFeatureFamily,
+    NumericFeatureTransformation,
+    OutlierStatus,
+    ReferenceKind,
+    ScoreDirection,
+)
 from .identifiers import (
     CanonicalDigest,
     CaptureId,
@@ -79,6 +90,181 @@ class EntityDefinition(VersionedSpec):
         if not version:
             raise ValueError("entity definition version cannot be empty")
         object.__setattr__(self, "version", version)
+
+
+@dataclass(frozen=True, slots=True)
+class NumericFeatureDefinition:
+    """One ordered numeric value and the exact rule that produces it."""
+
+    name: str
+    family: NumericFeatureFamily
+    unit: MeasurementUnit
+    transformation: NumericFeatureTransformation
+    numerator_fields: tuple[str, ...]
+    denominator_fields: tuple[str, ...] = ()
+    denominator_offset: float = 0.0
+    missing_value_policy: MissingValuePolicy = MissingValuePolicy.FORBID
+    analysis_transformation: NumericAnalysisTransformation = NumericAnalysisTransformation.LOG1P
+
+    def __post_init__(self) -> None:
+        name = self.name.strip()
+        numerator = tuple(value.strip() for value in self.numerator_fields)
+        denominator = tuple(value.strip() for value in self.denominator_fields)
+        if not name:
+            raise ValueError("numeric feature name cannot be empty")
+        if not numerator or any(not value for value in numerator):
+            raise ValueError("numeric feature numerator fields cannot be empty")
+        if len(set(numerator + denominator)) != len(numerator + denominator):
+            raise ValueError("numeric feature source fields must be unique")
+        if any(not value for value in denominator):
+            raise ValueError("numeric feature denominator fields cannot be empty")
+        if self.transformation is NumericFeatureTransformation.IDENTITY:
+            if len(numerator) != 1 or denominator or self.denominator_offset != 0.0:
+                raise ValueError("identity numeric features require exactly one source field")
+        elif self.transformation is NumericFeatureTransformation.SAFE_RATIO:
+            if (
+                not denominator
+                or not isfinite(self.denominator_offset)
+                or self.denominator_offset <= 0.0
+            ):
+                raise ValueError(
+                    "safe-ratio features require denominator fields and positive offset"
+                )
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "numerator_fields", numerator)
+        object.__setattr__(self, "denominator_fields", denominator)
+
+
+@dataclass(frozen=True, slots=True)
+class NumericFeatureSet(VersionedSpec):
+    """Versioned, ordered numeric representation contract."""
+
+    feature_set_id: str = ""
+    version: str = "1"
+    features: tuple[NumericFeatureDefinition, ...] = ()
+
+    def __post_init__(self) -> None:
+        feature_set_id = self.feature_set_id.strip()
+        version = self.version.strip()
+        features = tuple(self.features)
+        if not feature_set_id:
+            raise ValueError("numeric feature-set ID cannot be empty")
+        if not version:
+            raise ValueError("numeric feature-set version cannot be empty")
+        if not features:
+            raise ValueError("numeric feature set requires at least one feature")
+        names = tuple(feature.name for feature in features)
+        if len(set(names)) != len(names):
+            raise ValueError("numeric feature names must be unique")
+        object.__setattr__(self, "feature_set_id", feature_set_id)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "features", features)
+
+    @property
+    def feature_names(self) -> tuple[str, ...]:
+        return tuple(feature.name for feature in self.features)
+
+
+ENDPOINT_NUMERIC_FEATURE_SET_V1 = NumericFeatureSet(
+    feature_set_id="endpoint_profile_numeric",
+    version="1",
+    features=(
+        NumericFeatureDefinition(
+            "bytes_out",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.BYTES,
+            NumericFeatureTransformation.IDENTITY,
+            ("bytes_out",),
+        ),
+        NumericFeatureDefinition(
+            "bytes_in",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.BYTES,
+            NumericFeatureTransformation.IDENTITY,
+            ("bytes_in",),
+        ),
+        NumericFeatureDefinition(
+            "packets_out",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PACKETS,
+            NumericFeatureTransformation.IDENTITY,
+            ("packets_out",),
+        ),
+        NumericFeatureDefinition(
+            "packets_in",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PACKETS,
+            NumericFeatureTransformation.IDENTITY,
+            ("packets_in",),
+        ),
+        NumericFeatureDefinition(
+            "out_peers",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PEERS,
+            NumericFeatureTransformation.IDENTITY,
+            ("out_peers",),
+        ),
+        NumericFeatureDefinition(
+            "in_peers",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PEERS,
+            NumericFeatureTransformation.IDENTITY,
+            ("in_peers",),
+        ),
+        NumericFeatureDefinition(
+            "bytes_out_in_ratio",
+            NumericFeatureFamily.SHAPE,
+            MeasurementUnit.RATIO,
+            NumericFeatureTransformation.SAFE_RATIO,
+            ("bytes_out",),
+            ("bytes_in",),
+            1.0,
+        ),
+        NumericFeatureDefinition(
+            "packets_out_in_ratio",
+            NumericFeatureFamily.SHAPE,
+            MeasurementUnit.RATIO,
+            NumericFeatureTransformation.SAFE_RATIO,
+            ("packets_out",),
+            ("packets_in",),
+            1.0,
+        ),
+        NumericFeatureDefinition(
+            "bytes_per_packet",
+            NumericFeatureFamily.SHAPE,
+            MeasurementUnit.BYTES_PER_PACKET,
+            NumericFeatureTransformation.SAFE_RATIO,
+            ("bytes_out", "bytes_in"),
+            ("packets_out", "packets_in"),
+            1.0,
+        ),
+        NumericFeatureDefinition(
+            "bytes_per_peer",
+            NumericFeatureFamily.SHAPE,
+            MeasurementUnit.BYTES_PER_PEER,
+            NumericFeatureTransformation.SAFE_RATIO,
+            ("bytes_out",),
+            ("out_peers",),
+            1.0,
+        ),
+        NumericFeatureDefinition(
+            "interval_mean",
+            NumericFeatureFamily.TIMING,
+            MeasurementUnit.SECONDS,
+            NumericFeatureTransformation.IDENTITY,
+            ("interval_mean",),
+            missing_value_policy=MissingValuePolicy.POPULATION_MEDIAN_OR_ZERO,
+        ),
+        NumericFeatureDefinition(
+            "interval_cv",
+            NumericFeatureFamily.TIMING,
+            MeasurementUnit.RATIO,
+            NumericFeatureTransformation.IDENTITY,
+            ("interval_cv",),
+            missing_value_policy=MissingValuePolicy.POPULATION_MEDIAN_OR_ZERO,
+        ),
+    ),
+)
 
 
 @dataclass(frozen=True, slots=True)

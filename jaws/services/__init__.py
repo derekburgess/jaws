@@ -16,6 +16,7 @@ from .profiling import (
     ProfilePacketEvidence,
     ProfilingWindowError,
     UnsupportedEntityDefinitionError,
+    UnsupportedNumericFeatureSetError,
     interval_timing_seconds,
 )
 from .retention import RetentionService, UnsupportedRetentionPolicyError
@@ -36,6 +37,7 @@ __all__ = [
     "RetentionService",
     "UnsupportedRetentionPolicyError",
     "UnsupportedEntityDefinitionError",
+    "UnsupportedNumericFeatureSetError",
     "cleanup_legacy_unknown",
     "interval_timing_seconds",
 ]

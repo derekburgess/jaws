@@ -9,6 +9,7 @@ from math import fsum, isfinite, sqrt
 from typing import Protocol
 
 from jaws.domain import (
+    ENDPOINT_NUMERIC_FEATURE_SET_V1,
     MIN_TIMING_PACKETS,
     CaptureId,
     EndpointProfileDraft,
@@ -16,6 +17,7 @@ from jaws.domain import (
     EntityId,
     EntityMetadata,
     EntityType,
+    NumericFeatureSet,
     ObservationWindow,
     classify_ip_address,
 )
@@ -29,6 +31,10 @@ class UnsupportedEntityDefinitionError(ValueError):
 
 class ProfilingWindowError(ValueError):
     """Supplied packet evidence falls outside its declared observation window."""
+
+
+class UnsupportedNumericFeatureSetError(ValueError):
+    """The profiler does not implement the declared numeric profile contract."""
 
 
 class ProfilePacketEvidence(Protocol):
@@ -91,6 +97,7 @@ class EndpointProfilingResult:
 
     entity_definition: EntityDefinition
     observation_window: ObservationWindow
+    numeric_feature_set: NumericFeatureSet
     source_packet_count: int
     profiles: tuple[EndpointProfileDraft, ...]
 
@@ -156,6 +163,7 @@ class EndpointProfiler:
         *,
         entity_definition: EntityDefinition,
         observation_window: ObservationWindow,
+        numeric_feature_set: NumericFeatureSet,
         metadata: Sequence[EntityMetadata] = (),
     ) -> EndpointProfilingResult:
         """Validate declared semantics and return one address-sorted draft per IP."""
@@ -166,6 +174,11 @@ class EndpointProfiler:
         ):
             raise UnsupportedEntityDefinitionError(
                 "endpoint profiler supports only entity_type='endpoint_ip', version='1'"
+            )
+        if numeric_feature_set != ENDPOINT_NUMERIC_FEATURE_SET_V1:
+            raise UnsupportedNumericFeatureSetError(
+                "endpoint profiler supports only feature_set_id='endpoint_profile_numeric', "
+                "version='1'"
             )
         capture_ids = frozenset(observation_window.capture_ids)
         for packet in packets:
@@ -242,6 +255,7 @@ class EndpointProfiler:
         return EndpointProfilingResult(
             entity_definition=entity_definition,
             observation_window=observation_window,
+            numeric_feature_set=numeric_feature_set,
             source_packet_count=len(packets),
             profiles=tuple(drafts),
         )
