@@ -78,6 +78,10 @@ accumulating contradictory provider organizations.
 
 ## ProfileRepository
 
+Packet aggregation and the typed pre-embedding draft are defined separately by the
+[profiling service contract](../services/profiling.md); this repository receives only
+scope- and representation-bound `EndpointProfile` records.
+
 `ProfileRepository` atomically replaces all profiles in one explicit observation scope,
 reads a scope, reads earlier concrete scopes by capture evidence time, lists computed
 scopes, applies complete tri-state outlier verdict batches, and deletes an exact previously

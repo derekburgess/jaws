@@ -10,6 +10,7 @@ from .enrichment import (
 )
 from .evidence import EvidenceTransferService
 from .ingest import IngestService
+from .profiling import EndpointProfiler, ProfilePacketEvidence, interval_timing_seconds
 from .retention import RetentionService, UnsupportedRetentionPolicyError
 
 __all__ = [
@@ -20,8 +21,11 @@ __all__ = [
     "EnrichmentBatchResult",
     "EnrichmentAcquisitionPolicy",
     "EnrichmentService",
+    "EndpointProfiler",
+    "ProfilePacketEvidence",
     "IngestService",
     "RetentionService",
     "UnsupportedRetentionPolicyError",
     "cleanup_legacy_unknown",
+    "interval_timing_seconds",
 ]

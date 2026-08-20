@@ -79,7 +79,7 @@ from .identifiers import (
 from .inspection import EndpointInspection, EndpointPacketSample, EndpointPeerTraffic
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
 from .packets import PacketObservation, PacketRecord
-from .profiles import EndpointProfile, ProfileScopeSummary
+from .profiles import MIN_TIMING_PACKETS, EndpointProfile, EndpointProfileDraft, ProfileScopeSummary
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
@@ -138,6 +138,7 @@ __all__ = [
     "EntityId",
     "EntityType",
     "EndpointProfile",
+    "EndpointProfileDraft",
     "EndpointInspection",
     "EndpointPacketSample",
     "EndpointPeerTraffic",
@@ -166,6 +167,7 @@ __all__ = [
     "IdGenerator",
     "Measurement",
     "MeasurementUnit",
+    "MIN_TIMING_PACKETS",
     "NON_CONVERSATIONAL_CLASSIFICATIONS",
     "ObservationWindow",
     "ObservationScope",

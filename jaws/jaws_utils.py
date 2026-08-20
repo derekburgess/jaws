@@ -14,6 +14,7 @@ from jaws.config import (
     PACKET_MODELS,
     get_neo4j_driver,
 )
+from jaws.domain import MIN_TIMING_PACKETS as MIN_TIMING_PACKETS
 from jaws.domain import (
     NON_CONVERSATIONAL_CLASSIFICATIONS,
     classify_ip_address,
@@ -43,17 +44,6 @@ def classify_endpoint(ip_string):
     loopback/link-local addresses are also is_private, so they are checked first.
     """
     return classify_ip_address(ip_string)
-
-
-# Minimum packets in a single-direction stream before its timing is meaningful.
-# Six packets give five inter-packet intervals — enough for a coefficient of variation
-# that reflects cadence rather than a single burst. Below this in BOTH directions,
-# timing is left undefined (None) at compute time and the finder imputes it, so sparse
-# endpoints aren't mistaken for perfectly regular beacons (the old gate of 3 let a lone
-# handshake read as interval_cv ≈ 0.33, i.e. "beacon-like"). Lives here so
-# jaws_compute (the gate) and jaws_finder (suppression for graphs computed under the
-# old gate) share one value.
-MIN_TIMING_PACKETS = 6
 
 
 # Utility functions imported elsewhere.

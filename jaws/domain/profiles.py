@@ -7,9 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .captures import ProfileIdentity
+from .enrichment import AddressClassification, normalized_ip
 from .enums import OutlierStatus, ProfileStatus
-from .identifiers import ObservationScopeId
+from .identifiers import EntityId, ObservationScopeId
 from .time import normalize_utc
+
+MIN_TIMING_PACKETS = 6
 
 
 def _count(value: int, name: str) -> int:
@@ -30,6 +33,58 @@ def _strings(values: tuple[str, ...], name: str) -> tuple[str, ...]:
     if any(not value for value in normalized):
         raise ValueError(f"profile {name} cannot contain empty values")
     return normalized
+
+
+def _optional_text(value: str | None) -> str | None:
+    text = value.strip() if value else None
+    return text or None
+
+
+@dataclass(frozen=True, slots=True)
+class EndpointProfileDraft:
+    """Typed packet aggregation before scope, representation, and embedding are bound."""
+
+    entity_id: EntityId
+    ip_address: str
+    address_classification: AddressClassification
+    organization: str | None = None
+    hostname: str | None = None
+    location: str | None = None
+    bytes_out: int = 0
+    packets_out: int = 0
+    out_peers: int = 0
+    out_ports: tuple[int, ...] = ()
+    bytes_in: int = 0
+    packets_in: int = 0
+    in_peers: int = 0
+    in_ports: tuple[int, ...] = ()
+    protocols: tuple[str, ...] = ()
+    interval_mean: float | None = None
+    interval_cv: float | None = None
+
+    def __post_init__(self) -> None:
+        address = normalized_ip(self.ip_address)
+        if self.entity_id != EntityId(f"ip:{address}"):
+            raise ValueError("profile draft entity_id must match its normalized IP address")
+        for field_name in (
+            "bytes_out",
+            "packets_out",
+            "out_peers",
+            "bytes_in",
+            "packets_in",
+            "in_peers",
+        ):
+            object.__setattr__(self, field_name, _count(getattr(self, field_name), field_name))
+        for field_name in ("interval_mean", "interval_cv"):
+            value = getattr(self, field_name)
+            if value is not None and (not math.isfinite(value) or value < 0):
+                raise ValueError(f"profile {field_name} must be finite and nonnegative")
+        object.__setattr__(self, "ip_address", address)
+        for field_name in ("organization", "hostname", "location"):
+            object.__setattr__(self, field_name, _optional_text(getattr(self, field_name)))
+        object.__setattr__(self, "out_ports", _ports(self.out_ports))
+        object.__setattr__(self, "in_ports", _ports(self.in_ports))
+        object.__setattr__(self, "protocols", _strings(self.protocols, "protocols"))
 
 
 @dataclass(frozen=True, slots=True)

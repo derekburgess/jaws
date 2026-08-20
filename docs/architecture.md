@@ -35,7 +35,10 @@ beside the contracts because service unit tests need the same lightweight instal
 `jaws.services` contains deterministic use-case coordination over inward ports. Ingest
 assigns capture identity, binds source packet observations to that session, writes bounded
 batches, and finalizes complete, partial, failed, or cancelled state without owning packet
-capture privileges. Retention planning consumes typed policies and profile summaries,
+capture privileges. Enrichment classifies addresses and coordinates bounded provider
+acquisition. Profiling converts typed packet evidence into deterministic pre-embedding
+endpoint drafts without pandas or NumPy ([profiling contract](services/profiling.md)).
+Retention planning consumes typed policies and profile summaries,
 produces a mutation-free dry-run plan, and applies only an unchanged exact plan. Evidence
 transfer consumes typed snapshots, builds checksummed bundles, and imports only into an
 unchanged compatible empty target. The service layer does not import Neo4j, configuration,

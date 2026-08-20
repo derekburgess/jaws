@@ -1,6 +1,7 @@
 import argparse
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
-import numpy as np
 import pandas as pd
 from rich.console import Group
 
@@ -14,25 +15,27 @@ from jaws.config import (
     get_openai_client,
 )
 from jaws.domain import (
+    MIN_TIMING_PACKETS,
     CaptureId,
     EndpointProfile,
+    EndpointProfileDraft,
     EntityId,
+    EntityMetadata,
     ObservationScopeId,
     ObservationWindow,
     ProfileIdentity,
     ProfileStatus,
     RetentionPolicy,
+    normalized_ip,
 )
 from jaws.jaws_utils import (
-    MIN_TIMING_PACKETS,
     Reporter,
-    classify_endpoint,
     dbms_connection,
     render_activity_panel,
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
-from jaws.services import RetentionService
+from jaws.services import EndpointProfiler, RetentionService, interval_timing_seconds
 from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 
@@ -122,22 +125,107 @@ def endpoint_timing(ts_groups):
     signal: a low CV means highly regular callbacks (C2-like), a high CV means
     bursty/human traffic. `interval_mean` is the typical gap, i.e. the period.
     """
-    diffs = []
-    for ts_ms in ts_groups:
-        ts = np.sort(np.asarray(ts_ms, dtype=float)) / 1000.0
-        ts = ts[~np.isnan(ts)]
-        if len(ts) >= 2:
-            diffs.append(np.diff(ts))
-    if not diffs:
-        return None, None
-    diffs = np.concatenate(diffs)
-    if len(diffs) < MIN_TIMING_PACKETS - 1:
-        return None, None
-    mean = float(diffs.mean())
-    if mean <= 0:
-        return None, None
-    cv = float(diffs.std() / mean)
-    return mean, cv
+    return interval_timing_seconds(
+        (
+            (float(value) / 1000.0 for value in timestamps if not pd.isna(value))
+            for timestamps in ts_groups
+        ),
+        minimum_packets=MIN_TIMING_PACKETS,
+    )
+
+
+_MISSING_PROTOCOL = "jaws-legacy-missing-protocol"
+
+
+@dataclass(frozen=True, slots=True)
+class _LegacyProfilePacket:
+    """Outer compatibility projection; not valid modern packet evidence."""
+
+    capture_id: CaptureId
+    observed_at: datetime
+    protocol: str
+    size_bytes: int
+    source_ip: str
+    destination_ip: str
+    source_port: int | None
+    destination_port: int | None
+
+
+def _optional_frame_port(value):
+    return None if pd.isna(value) else int(value)
+
+
+def _frame_profile_packets(packets):
+    records = []
+    for _, row in packets.iterrows():
+        raw_capture_id = row.get("capture_id")
+        capture_id = (
+            "legacy-unscoped"
+            if raw_capture_id is None or pd.isna(raw_capture_id) or not str(raw_capture_id).strip()
+            else str(raw_capture_id)
+        )
+        raw_timestamp = row.get("ts_ms")
+        timestamp_seconds = (
+            0.0
+            if raw_timestamp is None or pd.isna(raw_timestamp)
+            else float(raw_timestamp) / 1000.0
+        )
+        raw_protocol = row.get("protocol")
+        protocol = (
+            _MISSING_PROTOCOL
+            if raw_protocol is None or pd.isna(raw_protocol) or not str(raw_protocol).strip()
+            else str(raw_protocol)
+        )
+        records.append(
+            _LegacyProfilePacket(
+                capture_id=CaptureId(capture_id),
+                observed_at=datetime.fromtimestamp(timestamp_seconds, UTC),
+                protocol=protocol,
+                size_bytes=int(row["size"]),
+                source_ip=str(row["src_ip"]),
+                destination_ip=str(row["dst_ip"]),
+                source_port=_optional_frame_port(row.get("src_port")),
+                destination_port=_optional_frame_port(row.get("dst_port")),
+            )
+        )
+    return tuple(records)
+
+
+def _metadata_records(metadata):
+    records = []
+    for key, values in metadata.items():
+        address = normalized_ip(str(values.get("ip_address") or key))
+        records.append(
+            EntityMetadata(
+                entity_id=EntityId(f"ip:{address}"),
+                ip_address=address,
+                organization=values.get("org"),
+                hostname=values.get("hostname"),
+                location=values.get("location"),
+            )
+        )
+    return tuple(records)
+
+
+def _legacy_profile(draft: EndpointProfileDraft):
+    return {
+        "ip_address": draft.ip_address,
+        "endpoint_type": draft.address_classification,
+        "org": draft.organization,
+        "hostname": draft.hostname,
+        "location": draft.location,
+        "bytes_out": draft.bytes_out,
+        "packets_out": draft.packets_out,
+        "out_peers": draft.out_peers,
+        "out_ports": list(draft.out_ports),
+        "bytes_in": draft.bytes_in,
+        "packets_in": draft.packets_in,
+        "in_peers": draft.in_peers,
+        "in_ports": list(draft.in_ports),
+        "protocols": [protocol for protocol in draft.protocols if protocol != _MISSING_PROTOCOL],
+        "interval_mean": draft.interval_mean,
+        "interval_cv": draft.interval_cv,
+    }
 
 
 def build_endpoint_profiles(packets, metadata):
@@ -147,90 +235,11 @@ def build_endpoint_profiles(packets, metadata):
     source) and inbound traffic (as the destination), so outbound anomalies are
     first-class. The local host is included intentionally.
     """
-    if packets.empty:
-        return []
-    # '0.0.0.0' is the placeholder for packets with no IP layer — not a real endpoint.
-    packets = packets[(packets["src_ip"] != "0.0.0.0") & (packets["dst_ip"] != "0.0.0.0")]
-    if packets.empty:
-        return []
-
-    def aggregate(ip_col, peer_col, port_col):
-        result = {}
-        for ip, g in packets.groupby(ip_col):
-            result[ip] = {
-                "bytes": int(g["size"].sum()),
-                "packets": int(len(g)),
-                "peers": int(g[peer_col].nunique()),
-                "ports": sorted({int(p) for p in g[port_col].dropna()})[:20],
-                "protocols": sorted({str(p) for p in g["protocol"].dropna()}),
-            }
-        return result
-
-    # Outbound: IP is the source — peers are destinations, ports are services it contacted.
-    outbound = aggregate("src_ip", "dst_ip", "dst_port")
-    # Inbound: IP is the destination — peers are sources, ports are its own that received.
-    inbound = aggregate("dst_ip", "src_ip", "dst_port")
-
-    # Timing is computed PER DIRECTION (packets the IP sends; packets it receives)
-    # and the more regular qualifying direction is reported. A combined stream
-    # interleaves request/response pairs, and alternating near-zero reply gaps with
-    # the true period forces CV toward 1.0 for ANY regular ping-pong — masking a
-    # metronomic beacon (per-direction CV ≈ 0) behind an arithmetic artifact, while
-    # interval_mean halves to the pair gap instead of the period. Within a direction,
-    # a busy multi-peer server's interleaved conversations still read as high-CV.
-    # Each direction's stream is split per capture session (legacy packets with no
-    # CAPTURE_ID group together) so intervals never span the gap between two runs.
-    has_ts = "ts_ms" in packets.columns
-    timing = {}
-    if has_ts:
-        session_col = (
-            packets["capture_id"].fillna("")
-            if "capture_id" in packets.columns
-            else pd.Series("", index=packets.index)
-        )
-        for ip in set(packets["src_ip"]) | set(packets["dst_ip"]):
-            directions = []
-            for ip_col in ("src_ip", "dst_ip"):
-                mask = packets[ip_col] == ip
-                stream = packets.loc[mask, "ts_ms"]
-                groups = [g.values for _, g in stream.groupby(session_col.loc[mask])]
-                mean, cv = endpoint_timing(groups)
-                if cv is not None:
-                    directions.append((cv, mean))
-            if directions:
-                cv, mean = min(directions)
-                timing[ip] = (mean, cv)
-
-    profiles = []
-    for ip in sorted(set(outbound) | set(inbound)):
-        out = outbound.get(ip, {})
-        inb = inbound.get(ip, {})
-        meta = metadata.get(ip, {})
-        interval_mean, interval_cv = timing.get(ip, (None, None))
-        profiles.append(
-            {
-                "ip_address": ip,
-                # Address scope (public/private/multicast/…) via stdlib ipaddress. Stored on
-                # the node so readers can tell a real conversation partner from protocol
-                # chatter; the finder keeps non-conversational types out of the rankings.
-                "endpoint_type": classify_endpoint(ip),
-                "org": meta.get("org"),
-                "hostname": meta.get("hostname"),
-                "location": meta.get("location"),
-                "bytes_out": out.get("bytes", 0),
-                "packets_out": out.get("packets", 0),
-                "out_peers": out.get("peers", 0),
-                "out_ports": out.get("ports", []),
-                "bytes_in": inb.get("bytes", 0),
-                "packets_in": inb.get("packets", 0),
-                "in_peers": inb.get("peers", 0),
-                "in_ports": inb.get("ports", []),
-                "protocols": sorted(set(out.get("protocols", [])) | set(inb.get("protocols", []))),
-                "interval_mean": interval_mean,
-                "interval_cv": interval_cv,
-            }
-        )
-    return profiles
+    drafts = EndpointProfiler(allow_legacy_negative_packet_sizes=True).profile(
+        _frame_profile_packets(packets),
+        _metadata_records(metadata),
+    )
+    return [_legacy_profile(draft) for draft in drafts]
 
 
 def build_endpoint_description(p):

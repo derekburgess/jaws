@@ -3,7 +3,7 @@
 | Plan field | Value |
 | --- | --- |
 | Status | Active |
-| Last reviewed | 2026-08-12 |
+| Last reviewed | 2026-08-20 |
 | Integration branch | `codex/readme-research-workbench` |
 | Starting documentation revision | `497f15a` |
 | Starting code revision | `0b68a8c` (the two later commits change only `README.md`) |
@@ -573,9 +573,9 @@ Extract evidence acquisition and representation building into deterministic serv
 
 #### Profile service
 
-- [ ] Extract packet-to-entity aggregation from `jaws_compute.build_endpoint_profiles` into a pure profiler.
+- [x] Extract packet-to-entity aggregation from `jaws_compute.build_endpoint_profiles` into a pure profiler (`EndpointProfiler`; [profiling contract](docs/services/profiling.md)).
 - [ ] Make entity definition and observation window inputs explicit.
-- [ ] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0.
+- [x] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0 (`tests/test_profile_service.py`; report-only benchmark parity).
 - [ ] Version numeric feature definitions, transformations, missing-value policy, and units.
 - [ ] Version the endpoint text-description template separately from embedding models.
 - [ ] Make timing direction and minimum-evidence requirements visible in representation metadata.
@@ -1243,11 +1243,31 @@ cooperative cancellation. Separate bounded live/PCAP adapters now own capture pr
 packet parsing policy, filters, runtime provenance, and portable PCAP content identity with
 explicitly non-portable local locators. Provider-neutral enrichment now owns deterministic
 address classification, explicit provider outcomes, cache semantics, bounded request
-pacing and retry/backoff, and the thin IPinfo adapter (18 of 37 checklist items complete).
-Extracting packet-to-entity aggregation into a pure profiler is the next active Milestone
-3 slice.
+pacing and retry/backoff, and the thin IPinfo adapter. A standard-library
+`EndpointProfiler` now owns deterministic packet-to-entity aggregation while the legacy
+pandas function is a compatibility projection (20 of 37 checklist items complete). Making
+entity definition and observation-window inputs explicit is the next active Milestone 3
+slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 pure endpoint profiler
+
+- Added typed pre-representation `EndpointProfileDraft` records and a standard-library
+  `EndpointProfiler` over immutable packet evidence and optional display metadata.
+- Preserved directional bytes, packets, peers, destination-port semantics, protocols,
+  address classification, the 20-port compatibility cap, and exclusion of the legacy
+  non-IP placeholder.
+- Centralized per-direction cadence with the six-packet evidence gate, within-capture
+  intervals, pooled multi-capture evidence, and selection of the more regular qualifying
+  direction. `MIN_TIMING_PACKETS` now belongs to the lightweight domain contract.
+- Retained `build_endpoint_profiles` as the pandas-facing compatibility adapter used by
+  `jaws-compute` and Benchmark 0; its explicit legacy-size switch preserves malformed
+  synthetic rows without weakening modern `PacketRecord` validation. Packet aggregation no
+  longer lives in the command module.
+- Passed 258 offline correctness tests and all 15 disposable-Neo4j tests with 282 total
+  tests collected; Ruff, strict types, architecture checks, and Benchmark 0 remain stable
+  at Recall@3 5/5 with the same three named benign false positives.
 
 ### 2026-08-20 — Milestone 3 bounded enrichment acquisition policy
 
