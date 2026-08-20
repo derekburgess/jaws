@@ -90,12 +90,14 @@ def render_clusters(
     clustered = label_array != -1
     plt.figure(figsize=(8, 7))
     plt.scatter(
-        coordinates[clustered, 0], coordinates[clustered, 1], c=label_array[clustered],
-        cmap="winter", marker="^", alpha=0.2,
+        coordinates[clustered, 0],
+        coordinates[clustered, 1],
+        c=label_array[clustered],
+        cmap="winter",
+        marker="^",
+        alpha=0.2,
     )
-    plt.scatter(
-        coordinates[~clustered, 0], coordinates[~clustered, 1], color="red", marker="o"
-    )
+    plt.scatter(coordinates[~clustered, 0], coordinates[~clustered, 1], color="red", marker="o")
     for index, row in enumerate(data.annotations):
         plt.annotate(str(row.get("ip_address", "")), tuple(coordinates[index]), fontsize=6)
     plt.tight_layout()

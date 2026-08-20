@@ -80,7 +80,10 @@ class NumericFeatureRegistry:
                 host_flow = HostFlowMetadata(feature.name, flow, _LOCAL[flow], _REMOTE[flow])
             elif feature.name in _HOST_DESTINATION:
                 host_flow = HostFlowMetadata(
-                    feature.name, "host", _HOST_DESTINATION[feature.name], _HOST_DESTINATION[feature.name]
+                    feature.name,
+                    "host",
+                    _HOST_DESTINATION[feature.name],
+                    _HOST_DESTINATION[feature.name],
                 )
             rows.append(
                 FeatureMetadata(
@@ -123,9 +126,13 @@ class NumericFeatureRegistry:
                         sum(numeric[numerator_count:]) + feature.denominator_offset
                     )
                 else:  # pragma: no cover - closed enum
-                    raise ValueError(f"unsupported numeric transformation: {feature.transformation}")
+                    raise ValueError(
+                        f"unsupported numeric transformation: {feature.transformation}"
+                    )
                 if not np.isfinite(value) or value < 0:
-                    raise ValueError(f"numeric feature {feature.name} must be finite and non-negative")
+                    raise ValueError(
+                        f"numeric feature {feature.name} must be finite and non-negative"
+                    )
                 column.append(value)
             if any(value is None for value in column):
                 present = [value for value in column if value is not None]

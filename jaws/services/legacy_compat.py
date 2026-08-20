@@ -135,7 +135,9 @@ def baselined_z_scores(
     z = robust_z_scores(raw)
     if not baselined.any():
         return z
-    columns = [index for index, name in enumerate(feature_names) if name not in BASELINE_EXEMPT_FEATURES]
+    columns = [
+        index for index, name in enumerate(feature_names) if name not in BASELINE_EXEMPT_FEATURES
+    ]
     if not columns:
         return z
     residual = transform_numeric_features(raw) - centers
@@ -164,7 +166,9 @@ def _representation(
 
 
 def score_endpoints(
-    data: Sequence[Mapping[str, Any]], clusters: Sequence[int], history: Mapping[str, Any] | None = None
+    data: Sequence[Mapping[str, Any]],
+    clusters: Sequence[int],
+    history: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     rows = tuple(data)
     raw = build_numeric_features(rows)
@@ -286,9 +290,14 @@ def score_host_outbound(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         for _ in rows
     )
     reference = ReferenceResult(
-        "peer", "1", entities, HOST_DESTINATION_NUMERIC_FEATURE_SET_V1.feature_names,
-        tuple(tuple(float(value) for value in row) for row in center), frames,
-        tuple(ReferenceEntity(entity, ReferenceEligibility.PEER) for entity in entities), entities,
+        "peer",
+        "1",
+        entities,
+        HOST_DESTINATION_NUMERIC_FEATURE_SET_V1.feature_names,
+        tuple(tuple(float(value) for value in row) for row in center),
+        frames,
+        tuple(ReferenceEntity(entity, ReferenceEligibility.PEER) for entity in entities),
+        entities,
     )
     result = LegacyBehavioralRanker(HOST_DESTINATION_FEATURE_REGISTRY_V1).rank(
         entities,
@@ -359,7 +368,9 @@ def build_feature_matrix(
     text = pca.fit_transform(vectors)
     if feature_weight <= 0:
         return cast(np.ndarray, text), pca
-    numeric = StandardScaler().fit_transform(transform_numeric_features(build_numeric_features(data)))
+    numeric = StandardScaler().fit_transform(
+        transform_numeric_features(build_numeric_features(data))
+    )
     return np.hstack((text, feature_weight * numeric)), pca
 
 

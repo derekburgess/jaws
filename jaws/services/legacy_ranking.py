@@ -128,9 +128,9 @@ class LegacyBehavioralRanker:
         peer_center, peer_scale = robust_center_scale(transformed)
         z = np.zeros_like(transformed)
         peer_usable = peer_scale > 1e-9
-        z[:, peer_usable] = (
-            transformed[:, peer_usable] - peer_center[peer_usable]
-        ) / peer_scale[peer_usable]
+        z[:, peer_usable] = (transformed[:, peer_usable] - peer_center[peer_usable]) / peer_scale[
+            peer_usable
+        ]
 
         historical_rows = np.any(frames == ComparisonFrame.OWN_HISTORY, axis=1)
         if historical_rows.any():
@@ -162,7 +162,9 @@ class LegacyBehavioralRanker:
         units = {row.name: row.unit.value for row in self.registry.metadata}
         depth = {row.entity_id: row.baseline_depth for row in reference.entities}
         findings: list[BehavioralRank] = []
-        order = sorted(range(len(entity_ids)), key=lambda index: (-scores[index], entity_ids[index].value))
+        order = sorted(
+            range(len(entity_ids)), key=lambda index: (-scores[index], entity_ids[index].value)
+        )
         for rank, index in enumerate(order, 1):
             contributions = tuple(
                 FeatureContribution(
@@ -317,17 +319,15 @@ class DBSCANLabeler:
                 reverse=True,
             )
         )
-        return ClusterDiagnostics(tuple(int(value) for value in labels), sizes, recommendation, min_samples)
+        return ClusterDiagnostics(
+            tuple(int(value) for value in labels), sizes, recommendation, min_samples
+        )
 
 
 def score_without_feature(finding: BehavioralRank, feature: str, *, top_k: int) -> float:
     """Explanation-fidelity hook: exact score after removing one retained contribution."""
     values = sorted(
-        (
-            row.weighted_deviation
-            for row in finding.contributions
-            if row.feature != feature
-        ),
+        (row.weighted_deviation for row in finding.contributions if row.feature != feature),
         reverse=True,
     )[:top_k]
     return sqrt(sum(value**2 for value in values))

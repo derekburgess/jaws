@@ -12,7 +12,9 @@ class PortSizePlotData:
     rows: tuple[tuple[int, int, int], ...]
 
     def __post_init__(self) -> None:
-        if any(size < 0 or source < 0 or destination < 0 for size, source, destination in self.rows):
+        if any(
+            size < 0 or source < 0 or destination < 0 for size, source, destination in self.rows
+        ):
             raise ValueError("port-size plot values cannot be negative")
 
 

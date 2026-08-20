@@ -108,7 +108,10 @@ def test_pooled_history_is_rejected_and_researcher_filters_are_enforced(pack):
     with pytest.raises(ValueError, match="pooled scope"):
         builder.build(observations, ReferenceSpec(kind=ReferenceKind.HYBRID))
     filtered = builder.build(
-        tuple(replace(row, capture_id="cap_a" if index == 0 else "cap_b") for index, row in enumerate(observations)),
+        tuple(
+            replace(row, capture_id="cap_a" if index == 0 else "cap_b")
+            for index, row in enumerate(observations)
+        ),
         ReferenceSpec(
             kind=ReferenceKind.RESEARCHER_DEFINED,
             parameters={"capture_ids": ("cap_b",)},
@@ -122,7 +125,9 @@ def test_registry_rejects_nonfinite_and_exposes_host_flow_metadata(pack):
     broken = dict(pack[0], bytes_out=float("inf"))
     with pytest.raises(ValueError, match="finite"):
         ENDPOINT_FEATURE_REGISTRY_V1.raw_matrix((broken,))
-    bytes_out = next(row for row in ENDPOINT_FEATURE_REGISTRY_V1.metadata if row.name == "bytes_out")
+    bytes_out = next(
+        row for row in ENDPOINT_FEATURE_REGISTRY_V1.metadata if row.name == "bytes_out"
+    )
     assert bytes_out.required_evidence == ("bytes_out",)
     assert bytes_out.host_flow is not None
     assert "downloaded" in bytes_out.host_flow.remote_interpretation
@@ -130,9 +135,27 @@ def test_registry_rejects_nonfinite_and_exposes_host_flow_metadata(pack):
 
 def test_host_destination_uses_same_service_and_declared_legacy_active_features():
     rows = (
-        {"ip_address": "8.8.8.8", "upload_bytes": 100, "upload_packets": 2, "download_bytes": 50, "download_packets": 1},
-        {"ip_address": "1.1.1.1", "upload_bytes": 110, "upload_packets": 2, "download_bytes": 60, "download_packets": 1},
-        {"ip_address": "9.9.9.9", "upload_bytes": 100000, "upload_packets": 200, "download_bytes": 1, "download_packets": 1},
+        {
+            "ip_address": "8.8.8.8",
+            "upload_bytes": 100,
+            "upload_packets": 2,
+            "download_bytes": 50,
+            "download_packets": 1,
+        },
+        {
+            "ip_address": "1.1.1.1",
+            "upload_bytes": 110,
+            "upload_packets": 2,
+            "download_bytes": 60,
+            "download_packets": 1,
+        },
+        {
+            "ip_address": "9.9.9.9",
+            "upload_bytes": 100000,
+            "upload_packets": 200,
+            "download_bytes": 1,
+            "download_packets": 1,
+        },
     )
     entities = _entities(rows)
     result = ComparisonService(HOST_DESTINATION_FEATURE_REGISTRY_V1).compare(
@@ -224,9 +247,7 @@ def test_explanations_use_retained_contributions_and_support_fidelity_ablation(p
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(snapshot)
     assert explanation.reasons
-    directional = next(
-        reason for reason in explanation.reasons if reason.host_relative is not None
-    )
+    directional = next(reason for reason in explanation.reasons if reason.host_relative is not None)
     local_directional = next(
         reason for reason in local.reasons if reason.feature == directional.feature
     )
