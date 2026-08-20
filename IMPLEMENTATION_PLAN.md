@@ -708,6 +708,8 @@ Decompose `jaws_finder.py` and MCP read queries into independently testable rese
 
 ## Milestone 5 — Experiment, run, provenance, and artifact system
 
+**Status:** Complete on `codex/readme-research-workbench` at `c1d9761` (2026-08-20).
+
 ### Outcome
 
 Make a complete ranking study reproducible from an immutable specification and portable result bundle.
@@ -716,56 +718,56 @@ Make a complete ranking study reproducible from an immutable specification and p
 
 #### Schemas and identity
 
-- [ ] Implement versioned schemas for `HypothesisSpec`, `ExperimentSpec`, `ExperimentRun`, `RankedFinding`, `EvaluationResult`, and `ObservationReport`.
-- [ ] Define canonical, secret-free serialization.
-- [ ] Derive and verify experiment content digests.
-- [ ] Generate unique run IDs without changing experiment identity.
-- [ ] Validate that referenced datasets, captures, representations, rankers, and evaluators exist and are compatible before execution.
-- [ ] Include an explicit experiment-schema version and component version for every pluggable strategy.
+- [x] Implement versioned schemas for `HypothesisSpec`, `ExperimentSpec`, `ExperimentRun`, `RankedFinding`, `EvaluationResult`, and `ObservationReport`.
+- [x] Define canonical, secret-free serialization.
+- [x] Derive and verify experiment content digests.
+- [x] Generate unique run IDs without changing experiment identity.
+- [x] Validate that referenced datasets, captures, representations, rankers, and evaluators exist and are compatible before execution.
+- [x] Include an explicit experiment-schema version and component version for every pluggable strategy.
 
 #### Run lifecycle
 
-- [ ] Implement planned, queued, running, completed, failed, cancelled, and superseded states.
-- [ ] Make state transitions atomic and auditable.
-- [ ] Store failure category, message, completed stages, and resumability without leaking secrets.
-- [ ] Add cooperative cancellation between expensive stages.
-- [ ] Define retry semantics: a retry creates a new run and points to the failed run.
-- [ ] Distinguish cached/reused artifacts from newly computed ones.
+- [x] Implement planned, queued, running, completed, failed, cancelled, and superseded states.
+- [x] Make state transitions atomic and auditable.
+- [x] Store failure category, message, completed stages, and resumability without leaking secrets.
+- [x] Add cooperative cancellation between expensive stages.
+- [x] Define retry semantics: a retry creates a new run and points to the failed run.
+- [x] Distinguish cached/reused artifacts from newly computed ones.
 
 #### Provenance
 
-- [ ] Record code commit, dirty-tree status, package version, schema versions, Python, OS, architecture, CPU/GPU, memory, container digests, and installed dependency set.
-- [ ] Record dataset/capture digests and label-source versions.
-- [ ] Record representation, reference, ranker, evaluator, renderer, model, prompt/template, and provider versions.
-- [ ] Record seed and deterministic-library settings.
-- [ ] Record runtime, peak memory, GPU memory, and external API usage/cost when available.
-- [ ] Redact tokens, passwords, credential contents, and unrelated environment values.
+- [x] Record code commit, dirty-tree status, package version, schema versions, Python, OS, architecture, CPU/GPU, memory, container digests, and installed dependency set.
+- [x] Record dataset/capture digests and label-source versions.
+- [x] Record representation, reference, ranker, evaluator, renderer, model, prompt/template, and provider versions.
+- [x] Record seed and deterministic-library settings.
+- [x] Record runtime, peak memory, GPU memory, and external API usage/cost when available.
+- [x] Redact tokens, passwords, credential contents, and unrelated environment values.
 
 #### Artifact store
 
-- [ ] Implement the canonical local filesystem bundle layout.
-- [ ] Write files atomically through a staging directory and finalize only after checksums succeed.
-- [ ] Verify bundles on load and report missing/mismatched artifacts.
-- [ ] Support read-only bundle inspection independent of Neo4j.
-- [ ] Index experiment/run summaries and artifact URIs in Neo4j through the repository protocol.
-- [ ] Add export/import for a bundle without raw PCAP redistribution.
-- [ ] Define garbage-collection behavior that never deletes evidence or runs still referenced by a comparison/report.
+- [x] Implement the canonical local filesystem bundle layout.
+- [x] Write files atomically through a staging directory and finalize only after checksums succeed.
+- [x] Verify bundles on load and report missing/mismatched artifacts.
+- [x] Support read-only bundle inspection independent of Neo4j.
+- [x] Index experiment/run summaries and artifact URIs in Neo4j through the repository protocol.
+- [x] Add export/import for a bundle without raw PCAP redistribution.
+- [x] Define garbage-collection behavior that never deletes evidence or runs still referenced by a comparison/report.
 
 #### OHEO services
 
-- [ ] Implement Orient: list datasets, captures, labels, representations, rankers, prior experiments, and benchmark summaries.
-- [ ] Implement Hypothesize: validate falsifiable claims, control/treatment, metrics, and regression budgets.
-- [ ] Implement Experiment: execute a bounded control/treatment matrix through the deterministic services.
-- [ ] Implement Observe: calculate metric deltas, rank movement, regressions, costs, and support/refutation status.
-- [ ] Keep human interpretation separate from deterministic observation fields.
-- [ ] Link follow-up hypotheses to the observation that motivated them.
+- [x] Implement Orient: list datasets, captures, labels, representations, rankers, prior experiments, and benchmark summaries.
+- [x] Implement Hypothesize: validate falsifiable claims, control/treatment, metrics, and regression budgets.
+- [x] Implement Experiment: execute a bounded control/treatment matrix through the deterministic services.
+- [x] Implement Observe: calculate metric deltas, rank movement, regressions, costs, and support/refutation status.
+- [x] Keep human interpretation separate from deterministic observation fields.
+- [x] Link follow-up hypotheses to the observation that motivated them.
 
 #### Research CLI
 
-- [ ] Add commands to validate a spec, run an experiment, show status, cancel a run, inspect a run, compare runs, verify a bundle, and list available components.
-- [ ] Support JSON input/output as the stable automation interface.
-- [ ] Provide human-readable summaries derived from the same domain results.
-- [ ] Keep individual operation commands available for exploratory use outside a formal experiment.
+- [x] Add commands to validate a spec, run an experiment, show status, cancel a run, inspect a run, compare runs, verify a bundle, and list available components.
+- [x] Support JSON input/output as the stable automation interface.
+- [x] Provide human-readable summaries derived from the same domain results.
+- [x] Keep individual operation commands available for exploratory use outside a formal experiment.
 
 ### Completion gate
 

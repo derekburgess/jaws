@@ -332,6 +332,20 @@ Import refuses populated or schema-incompatible targets. Evidence bundles may co
 packet payloads and enriched metadata; handle them as sensitive evidence and do not commit
 them to the repository.
 
+Run a complete reproducible control/treatment study without a live database using the
+sample research catalog and immutable specification:
+
+```bash
+jaws-research validate examples/research/control-treatment.json \
+  --catalog examples/research/catalog.json
+jaws-research run examples/research/control-treatment.json \
+  --catalog examples/research/catalog.json --root .jaws-research --json
+```
+
+The resulting run and observation bundles are checksummed, independently inspectable, and
+exclude raw PCAP redistribution. See [the Milestone 5 research system](docs/milestone-5-research-system.md)
+for lifecycle, provenance, bundle layout, replay, cancellation, and CLI details.
+
 ### 6. Run the MCP server
 
 For a spawn-based MCP client:
