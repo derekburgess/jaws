@@ -63,6 +63,21 @@ class ReferenceKind(StrEnum):
     RESEARCHER_DEFINED = "researcher_defined"
 
 
+class ReferenceEligibility(StrEnum):
+    """Why an entity is using a particular comparison frame."""
+
+    PEER = "peer"
+    HISTORICAL = "historical"
+    FIRST_SEEN = "first_seen"
+    INSUFFICIENT_HISTORY = "insufficient_history"
+    EXCLUDED = "excluded"
+
+
+class ComparisonFrame(StrEnum):
+    PEER = "peer"
+    OWN_HISTORY = "own_history"
+
+
 class ScoreDirection(StrEnum):
     HIGHER_IS_MORE_ANOMALOUS = "higher_is_more_anomalous"
     LOWER_IS_MORE_ANOMALOUS = "lower_is_more_anomalous"

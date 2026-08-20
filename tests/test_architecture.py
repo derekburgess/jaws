@@ -15,6 +15,10 @@ LAYERS = {
     "jaws.settings": {"jaws.domain", "jaws.settings"},
 }
 
+# Milestone 4's deterministic comparison services use the project's core numerical
+# dependencies. Integration/provider/plotting packages remain forbidden here.
+SERVICE_NUMERIC_DEPENDENCIES = {"kneed", "numpy", "sklearn"}
+
 CYPHER_MARKERS = (
     "MATCH (",
     "MERGE (",
@@ -71,7 +75,10 @@ def test_inner_packages_follow_documented_import_directions():
             for imported in _absolute_imports(path, package):
                 root = imported.split(".", 1)[0]
                 if root != "jaws":
-                    if root not in sys.stdlib_module_names:
+                    allowed_third_party = (
+                        package == "jaws.services" and root in SERVICE_NUMERIC_DEPENDENCIES
+                    )
+                    if root not in sys.stdlib_module_names and not allowed_third_party:
                         violations.append(
                             f"{path.relative_to(REPO_ROOT)} imports third-party module {imported}"
                         )

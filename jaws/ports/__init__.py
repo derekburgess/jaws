@@ -6,6 +6,7 @@ from .administration_fakes import InMemoryAdministrationRepository
 from .contracts import (
     ArtifactStore,
     CancellationSignal,
+    ComparisonRanker,
     EmbeddingProvider,
     EnrichmentProvider,
     Evaluator,
@@ -70,6 +71,7 @@ __all__ = [
     "AdministrationRepository",
     "ArtifactStore",
     "CancellationSignal",
+    "ComparisonRanker",
     "CaptureNotFoundError",
     "CaptureRepository",
     "CaptureStateConflictError",

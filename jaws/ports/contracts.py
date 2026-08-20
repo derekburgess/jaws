@@ -16,10 +16,14 @@ from jaws.domain import (
     EmbeddingBatch,
     EmbeddingInput,
     EmbeddingProviderSpec,
+    EntityId,
+    LegacyRankingResult,
     ObservationWindow,
     RankedFinding,
     RankerSpec,
+    ReferenceResult,
     ReferenceSpec,
+    RepresentationArtifacts,
 )
 
 EvidenceT = TypeVar("EvidenceT")
@@ -88,6 +92,20 @@ class Ranker(Protocol[CandidateT_contra]):
     def rank(
         self, candidates: Sequence[CandidateT_contra], spec: RankerSpec
     ) -> tuple[RankedFinding, ...]: ...
+
+
+class ComparisonRanker(Protocol):
+    """Rank aligned typed entities, representations, and a declared reference."""
+
+    def rank(
+        self,
+        entities: Sequence[EntityId],
+        representation: RepresentationArtifacts,
+        reference: ReferenceResult,
+        spec: RankerSpec,
+        *,
+        labels: Sequence[int] | None = None,
+    ) -> LegacyRankingResult: ...
 
 
 class ReferenceBuilder(Protocol[ObservationT_contra, ReferenceT_co]):

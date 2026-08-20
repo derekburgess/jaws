@@ -18,6 +18,7 @@ from jaws.config import (
     is_cloud_hosted,
 )
 from jaws.domain import (
+    CaptureId,
     EndpointPacketSample,
     EndpointPeerTraffic,
     EndpointProfile,
@@ -27,6 +28,7 @@ from jaws.domain import (
     legacy_success,
     utc_text,
 )
+from jaws.services import InspectionRequest, InspectionService
 from jaws.storage import Neo4jRepositories
 
 ROOT = Path(__file__).parent.parent  # /path/to/jaws/
@@ -534,15 +536,23 @@ def fetch_traffic(duration_minutes: int = 60, limit: int = 100) -> dict[str, Any
     ),
 )
 def inspect_endpoint(
-    ip_address: str, peer_limit: int = 50, packet_limit: int = 20, history_limit: int = 20
+    ip_address: str,
+    peer_limit: int = 50,
+    packet_limit: int = 20,
+    history_limit: int = 20,
+    capture_id: str | None = None,
 ) -> dict[str, Any]:
     try:
-        inspection = _repositories().inspection.inspect(
-            EntityId(f"ip:{ip_address}"),
-            peer_limit=peer_limit,
-            packet_limit=packet_limit,
-            history_limit=history_limit,
+        scoped = InspectionService(_repositories().inspection).inspect(
+            InspectionRequest(
+                EntityId(f"ip:{ip_address}"),
+                CaptureId(capture_id) if capture_id else None,
+                peer_limit,
+                packet_limit,
+                history_limit,
+            )
         )
+        inspection = scoped.inspection
     except Exception as e:
         return legacy_failure(f"could not inspect endpoint {ip_address!r} ({e})")
 
@@ -555,6 +565,16 @@ def inspect_endpoint(
         # True if the IP appears anywhere in the capture (raw packets) or as a profile.
         "found": inspection.found,
         "profile": profile,
+        "profile_scope": scoped.profile_scope,
+        "evidence": {
+            "capture_id": scoped.evidence.capture_id.value if scoped.evidence.capture_id else None,
+            "artifact_digest": (
+                str(scoped.evidence.artifact_digest) if scoped.evidence.artifact_digest else None
+            ),
+            "entity_id": scoped.evidence.entity_id.value if scoped.evidence.entity_id else None,
+            "selector": scoped.evidence.selector,
+        },
+        "port_heuristic_note": scoped.port_heuristic_note,
         "totals": {
             "packets": inspection.total_packets,
             "peers": inspection.total_peers,

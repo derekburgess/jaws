@@ -22,8 +22,10 @@ interfaces / adapters / infrastructure
 | `jaws.services` | `jaws.domain`, `jaws.ports`, `jaws.services` | Adapters, legacy commands, concrete providers/storage, interfaces |
 | `jaws.settings` | `jaws.domain` | Ports, services, adapters, concrete providers/storage, interfaces |
 
-All four layers may import the Python standard library. They may not import third-party
-packages. The architecture test parses imports rather than importing modules, so an
+All four layers may import the Python standard library. Domain, ports, and settings may
+not import third-party packages. Milestone 4 comparison services may import the core
+numeric stack (`numpy`, `scikit-learn`, and `kneed`), but no provider, storage, MCP/CLI,
+or plotting integration. The architecture test parses imports rather than importing modules, so an
 optional dependency cannot hide an invalid direction merely because it is unavailable in
 the test environment.
 
@@ -38,6 +40,9 @@ batches, and finalizes complete, partial, failed, or cancelled state without own
 capture privileges. Enrichment classifies addresses and coordinates bounded provider
 acquisition. Profiling converts typed packet evidence into deterministic pre-embedding
 entity drafts without pandas or NumPy ([profiling contract](services/profiling.md)). The
+comparison pipeline is the intentionally numerical exception: it builds versioned feature
+matrices, separate peer/history reference frames, continuous ranks, and optional model
+labels while retaining all inputs needed for explanations and rendering. The
 profile-representation service validates provider-neutral embedding batches
 and owns the single atomic profile-scope replacement; local/OpenAI model clients remain
 outer adapters. Numeric-only representations never import an embedding stack.

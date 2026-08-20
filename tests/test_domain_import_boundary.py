@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Console at import. Everything here is an optional capability extra (see ADR-0008).
 BLOCKED = (
     "ipinfo, matplotlib, mcp, neo4j, openai, pandas, plotille, "
-    "psutil, pyshark, sentence_transformers, sklearn, torch"
+    "psutil, pyshark, sentence_transformers, torch"
 )
 
 

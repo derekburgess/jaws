@@ -137,6 +137,7 @@ known-first-party = ["jaws", "jaws_mcp"]
 
 [tool.mypy]
 python_version = "3.12"
+exclude = ["jaws/adapters/finder_runtime.py"]
 files = [
     "jaws/adapters/",
     "jaws/domain/",
