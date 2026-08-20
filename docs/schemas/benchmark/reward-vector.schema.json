@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/benchmark/reward-vector-1.0.0.json",
+  "title": "JAWS benchmark reward vector 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "recall", "mean_reciprocal_rank", "ndcg", "benign_burden",
+    "benign_above_first_relevant", "target_ranks", "stability",
+    "false_positive_movement", "explanation_fidelity", "usage", "coverage",
+    "scalar_objective", "scalar_weights"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "recall": {"$ref": "#/$defs/metrics_at_k"},
+    "mean_reciprocal_rank": {"type": "number", "minimum": 0, "maximum": 1},
+    "ndcg": {"$ref": "#/$defs/metrics_at_k"},
+    "benign_burden": {"$ref": "#/$defs/metrics_at_k"},
+    "benign_above_first_relevant": {"type": "integer", "minimum": 0},
+    "target_ranks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity_id", "rank", "percentile"],
+        "properties": {
+          "entity_id": {"type": "string", "minLength": 1},
+          "rank": {"type": "integer", "minimum": 1},
+          "percentile": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "stability": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["top_k_overlap", "rank_correlation", "parameter_sensitivity"],
+          "properties": {
+            "top_k_overlap": {"type": "number", "minimum": 0, "maximum": 1},
+            "rank_correlation": {"type": "number", "minimum": -1, "maximum": 1},
+            "parameter_sensitivity": {"type": "number", "minimum": 0}
+          }
+        }
+      ]
+    },
+    "false_positive_movement": {"type": "object", "additionalProperties": {"type": "number"}},
+    "explanation_fidelity": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_seconds", "peak_memory_bytes", "peak_gpu_memory_bytes", "external_api_calls", "external_api_tokens", "estimated_cost"],
+      "properties": {
+        "runtime_seconds": {"type": ["number", "null"], "minimum": 0},
+        "peak_memory_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "peak_gpu_memory_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "external_api_calls": {"type": "integer", "minimum": 0},
+        "external_api_tokens": {"type": "integer", "minimum": 0},
+        "estimated_cost": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "completed", "missing", "skipped", "failed", "abstained"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "completed": {"type": "integer", "minimum": 0},
+        "missing": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "abstained": {"type": "integer", "minimum": 0}
+      }
+    },
+    "scalar_objective": {"type": ["number", "null"]},
+    "scalar_weights": {"type": "object", "additionalProperties": {"type": "number"}}
+  },
+  "$defs": {
+    "metrics_at_k": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["k", "value"],
+        "properties": {
+          "k": {"type": "integer", "minimum": 1},
+          "value": {"type": "number"}
+        }
+      }
+    }
+  }
+}

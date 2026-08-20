@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/benchmark/dataset-manifest-1.0.0.json",
+  "title": "JAWS benchmark dataset manifest 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "dataset_id", "manifest_version", "title", "source_url",
+    "source_location", "acquisition_date", "safety_review_date", "license_name",
+    "license_url", "redistribution", "checksum", "checksum_scope", "capture_host",
+    "label_source_version", "label_provenance", "contains_malware_binaries",
+    "known_limitations", "scenarios"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "manifest_version": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "source_url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+    "source_location": {"type": "string", "minLength": 1},
+    "acquisition_date": {"type": ["string", "null"], "format": "date"},
+    "safety_review_date": {"type": "string", "format": "date"},
+    "license_name": {"type": "string", "minLength": 1},
+    "license_url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+    "redistribution": {"enum": ["permitted", "metadata_only", "source_terms"]},
+    "checksum": {
+      "oneOf": [
+        {"const": "sha256:identity"},
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        {"type": "null"}
+      ]
+    },
+    "checksum_scope": {"type": "string", "minLength": 1},
+    "capture_host": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "ended_at": {"type": "string", "format": "date-time"},
+    "label_source_version": {"type": "string", "minLength": 1},
+    "label_provenance": {"type": "string", "minLength": 1},
+    "contains_malware_binaries": {"const": false},
+    "known_limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/scenario"}
+    }
+  },
+  "$defs": {
+    "labels": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "benign_count", "source_version"],
+          "properties": {
+            "target": {"type": "boolean"},
+            "benign_count": {"type": "integer", "minimum": 1},
+            "source_version": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["entity_id", "relevance", "family", "source_version"],
+            "properties": {
+              "entity_id": {"type": "string", "minLength": 1},
+              "relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+              "family": {"type": "string", "minLength": 1},
+              "source_version": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id", "family", "partition", "capture_ids", "evidence_digest",
+        "labels", "synthetic", "model_author", "expected_behavior",
+        "known_limitations", "available"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "scenario_id": {"type": "string", "minLength": 1},
+        "family": {"type": "string", "minLength": 1},
+        "partition": {"enum": ["development", "validation", "held_out"]},
+        "capture_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "evidence_digest": {
+          "oneOf": [
+            {"const": "sha256:identity"},
+            {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            {"type": "null"}
+          ]
+        },
+        "labels": {"$ref": "#/$defs/labels"},
+        "synthetic": {"type": "boolean"},
+        "model_author": {"type": ["string", "null"]},
+        "expected_behavior": {"type": "string", "minLength": 1},
+        "known_limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "available": {"type": "boolean"}
+      },
+      "allOf": [
+        {"if": {"properties": {"synthetic": {"const": true}}}, "then": {"properties": {"model_author": {"type": "string", "minLength": 1}}}},
+        {"if": {"properties": {"available": {"const": true}}}, "then": {"properties": {"evidence_digest": {"type": "string"}}}}
+      ]
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "ctu13-metadata",
+  "manifest_version": "1.0.0",
+  "title": "CTU-13 external evaluation metadata",
+  "source_url": "https://www.stratosphereips.org/datasets-ctu13",
+  "source_location": "External source; not acquired or redistributed by JAWS",
+  "acquisition_date": null,
+  "safety_review_date": "2026-08-20",
+  "license_name": "Creative Commons Attribution (CC BY), per source overview",
+  "license_url": "https://www.stratosphereips.org/datasets-overview",
+  "redistribution": "source_terms",
+  "checksum": null,
+  "checksum_scope": "unavailable until operator acquisition",
+  "capture_host": "CTU University network, 2011 (source description)",
+  "label_source_version": "ctu13-source-labels",
+  "label_provenance": "Source describes manually labeled botnet, C&C, normal, and background flows.",
+  "contains_malware_binaries": false,
+  "known_limitations": ["JAWS retains metadata only and must not acquire executable files included by the upstream archive."],
+  "scenarios": [{
+    "scenario_id": "ctu13-scenario-1",
+    "family": "real_botnet_c2",
+    "partition": "validation",
+    "capture_ids": ["external-ctu13-scenario-1"],
+    "evidence_digest": null,
+    "labels": {"target": true, "benign_count": 1, "source_version": "ctu13-source-labels"},
+    "synthetic": false,
+    "model_author": null,
+    "expected_behavior": "After separately governed acquisition, labeled botnet/C&C entities should receive attention.",
+    "known_limitations": ["Unavailable locally; upstream privacy constraints limit complete background PCAP access."],
+    "available": false
+  }]
+}

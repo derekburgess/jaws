@@ -308,6 +308,7 @@ class EvaluationResult(VersionedSpec):
     ranked_entity_ids: tuple[EntityId, ...] = ()
     findings_digest: CanonicalDigest | None = None
     coverage: MetricValues = field(default_factory=dict)
+    details: Metadata = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if (
@@ -320,6 +321,7 @@ class EvaluationResult(VersionedSpec):
             raise ValueError("ranked entity IDs must be unique")
         object.__setattr__(self, "metrics", _metrics(self.metrics))
         object.__setattr__(self, "coverage", _metrics(self.coverage))
+        object.__setattr__(self, "details", _mapping(self.details))
 
     @property
     def analytical_digest(self) -> CanonicalDigest:
@@ -332,6 +334,7 @@ class EvaluationResult(VersionedSpec):
                 "ranked_entity_ids": self.ranked_entity_ids,
                 "findings_digest": self.findings_digest,
                 "coverage": self.coverage,
+                "details": self.details,
             }
         )
 

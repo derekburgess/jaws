@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/benchmark/plugin-metadata-1.0.0.json",
+  "title": "JAWS benchmark plugin metadata 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "component_id", "version", "plugin_schema_version", "input_schema_version", "output_schema_version"],
+  "properties": {
+    "kind": {"enum": ["representation", "reference", "ranker", "evaluator", "renderer"]},
+    "component_id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "plugin_schema_version": {"const": "1.0.0"},
+    "input_schema_version": {"const": "1.0.0"},
+    "output_schema_version": {"const": "1.0.0"}
+  }
+}

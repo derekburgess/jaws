@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/benchmark/report-1.0.0.json",
+  "title": "JAWS benchmark report 1.0.0",
+  "type": "object",
+  "required": ["schema_version", "benchmark_id", "results", "aggregates", "paired_deltas", "coverage", "required_baselines", "environment", "artifact_checksums"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "benchmark_id": {"type": "string", "minLength": 1},
+    "results": {"type": "array", "minItems": 1},
+    "aggregates": {"type": "array"},
+    "paired_deltas": {"type": "array"},
+    "coverage": {
+      "type": "object",
+      "required": ["total", "completed", "missing", "skipped", "failed", "abstained"]
+    },
+    "required_baselines": {"type": "array", "minItems": 2, "uniqueItems": true},
+    "environment": {"type": "object"},
+    "artifact_checksums": {"type": "object"}
+  }
+}

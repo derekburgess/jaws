@@ -3,6 +3,7 @@
   "$id": "https://jaws.dev/schemas/research/evaluation-result-1.0.0.json",
   "properties": {
     "coverage": {"additionalProperties": {"type": "number"}, "type": "object"},
+    "details": {"type": "object"},
     "evaluator_id": {"minLength": 1, "type": "string"},
     "evaluator_version": {"minLength": 1, "type": "string"},
     "findings_digest": {"pattern": "^[0-9a-f]{64}$", "type": ["string", "null"]},

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "iscxtor2016-metadata",
+  "manifest_version": "1.0.0",
+  "title": "ISCX Tor/non-Tor external evaluation metadata",
+  "source_url": "https://www.unb.ca/cic/datasets/tor.html",
+  "source_location": "External source; not acquired or redistributed by JAWS",
+  "acquisition_date": null,
+  "safety_review_date": "2026-08-20",
+  "license_name": "Publicly available for researchers with source-paper citation",
+  "license_url": "https://www.unb.ca/cic/datasets/tor.html#license",
+  "redistribution": "source_terms",
+  "checksum": null,
+  "checksum_scope": "unavailable until operator acquisition",
+  "capture_host": "UNB workstation and gateway paired captures (source description)",
+  "label_source_version": "iscxtor2016-application-labels",
+  "label_provenance": "Source describes paired workstation/gateway capture and application labeling procedure.",
+  "contains_malware_binaries": false,
+  "known_limitations": ["Tor application classes are not malicious ground truth and should be used as behavioral counterexamples."],
+  "scenarios": [{
+    "scenario_id": "iscxtor2016-streaming",
+    "family": "real_streaming_counterexample",
+    "partition": "validation",
+    "capture_ids": ["external-iscxtor2016-streaming"],
+    "evidence_digest": null,
+    "labels": {"target": false, "benign_count": 2, "source_version": "iscxtor2016-application-labels"},
+    "synthetic": false,
+    "model_author": null,
+    "expected_behavior": "After governed acquisition, labeled streaming activity is a benign behavioral counterexample.",
+    "known_limitations": ["Unavailable locally; application label does not imply security relevance."],
+    "available": false
+  }]
+}

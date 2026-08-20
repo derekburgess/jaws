@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "mawi-metadata",
+  "manifest_version": "1.0.0",
+  "title": "MAWI external evaluation metadata",
+  "source_url": "https://mawi.wide.ad.jp/mawi/",
+  "source_location": "External source; not acquired or redistributed by JAWS",
+  "acquisition_date": null,
+  "safety_review_date": "2026-08-20",
+  "license_name": "Research use only under WIDE archive privacy guidelines",
+  "license_url": "https://mawi.wide.ad.jp/mawi/",
+  "redistribution": "metadata_only",
+  "checksum": null,
+  "checksum_scope": "unavailable until operator acquisition",
+  "capture_host": "WIDE transit sample point (source description)",
+  "label_source_version": "mawilab-final-2024",
+  "label_provenance": "MAWILab labels combine multiple independent anomaly detectors; operation ended December 2024.",
+  "contains_malware_binaries": false,
+  "known_limitations": ["Anomaly labels are detector consensus, not malicious ground truth; source privacy rules prohibit unrelated use."],
+  "scenarios": [{
+    "scenario_id": "mawi-samplepoint-f",
+    "family": "real_backbone_anomaly",
+    "partition": "held_out",
+    "capture_ids": ["external-mawi-samplepoint-f"],
+    "evidence_digest": null,
+    "labels": {"target": true, "benign_count": 1, "source_version": "mawilab-final-2024"},
+    "synthetic": false,
+    "model_author": null,
+    "expected_behavior": "After governed acquisition, source-labeled anomalies can be used for held-out comparison.",
+    "known_limitations": ["Unavailable locally and restricted to research use; IP addresses are anonymized."],
+    "available": false
+  }]
+}

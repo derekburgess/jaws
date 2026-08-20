@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "cicids2017-metadata",
+  "manifest_version": "1.0.0",
+  "title": "CIC-IDS2017 external evaluation metadata",
+  "source_url": "https://www.unb.ca/cic/datasets/ids-2017.html",
+  "source_location": "External source; not acquired or redistributed by JAWS",
+  "acquisition_date": null,
+  "safety_review_date": "2026-08-20",
+  "license_name": "Publicly available for researchers with source-paper citation",
+  "license_url": "https://www.unb.ca/cic/datasets/ids-2017.html#license",
+  "redistribution": "source_terms",
+  "checksum": null,
+  "checksum_scope": "unavailable until operator acquisition",
+  "capture_host": "CIC test network, July 3-7 2017 (source description)",
+  "label_source_version": "cicids2017-flow-labels",
+  "label_provenance": "Source labels flows by timestamp, addresses, ports, protocol, and attack schedule.",
+  "contains_malware_binaries": false,
+  "known_limitations": ["Generated test-network traffic is real captured traffic but not an uncontrolled production network."],
+  "scenarios": [{
+    "scenario_id": "cicids2017-friday-botnet",
+    "family": "real_botnet_c2",
+    "partition": "held_out",
+    "capture_ids": ["external-cicids2017-friday"],
+    "evidence_digest": null,
+    "labels": {"target": true, "benign_count": 1, "source_version": "cicids2017-flow-labels"},
+    "synthetic": false,
+    "model_author": null,
+    "expected_behavior": "After governed acquisition, source-labeled botnet victims should receive attention.",
+    "known_limitations": ["Unavailable locally; held-out labels are not exposed to routine tuning."],
+    "available": false
+  }]
+}

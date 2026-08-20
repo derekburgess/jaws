@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.dev/schemas/benchmark/policy-1.0.0.json",
+  "title": "JAWS benchmark policy 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "expected_failures", "accepted_regressions", "regression_budgets", "required_baselines", "tier_samples", "forbid_aggregate_recall_only_claims"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "expected_failures": {"type": "object"},
+    "accepted_regressions": {"type": "object"},
+    "regression_budgets": {"type": "object"},
+    "required_baselines": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "tier_samples": {"type": "object"},
+    "forbid_aggregate_recall_only_claims": {"const": true}
+  }
+}
