@@ -787,7 +787,7 @@ Make a complete ranking study reproducible from an immutable specification and p
 
 ## Milestone 6 — Benchmark v1 and ranker research platform
 
-**Status:** Complete on `codex/readme-research-workbench` (2026-08-20; completion commit recorded after validation).
+**Status:** Complete on `codex/readme-research-workbench` at `86e3725` (2026-08-20).
 
 ### Outcome
 
