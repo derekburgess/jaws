@@ -563,12 +563,12 @@ Extract evidence acquisition and representation building into deterministic serv
 
 #### Enrichment service
 
-- [ ] Define provider-neutral enrichment records for ASN, organization, hostname, location, and confidence/source.
-- [ ] Keep public/private/non-conversational classification deterministic and provider-independent.
-- [ ] Add provider result caching with acquisition timestamp and provider/version metadata.
-- [ ] Distinguish not-applicable, not-found, transient failure, permanent failure, and successfully enriched.
-- [ ] Support researcher annotations and ground-truth labels separately from third-party enrichment.
-- [ ] Avoid merging unrelated unknown values into one misleading organization identity.
+- [x] Define provider-neutral enrichment records for ASN, organization, hostname, location, and confidence/source (`EnrichmentObservation`; `EnrichmentRecord`; [enrichment contract](docs/services/enrichment.md)).
+- [x] Keep public/private/non-conversational classification deterministic and provider-independent (`classify_ip_address`).
+- [x] Add provider result caching with acquisition timestamp and provider/version metadata (`EnrichmentService`; `EnrichmentRepository`).
+- [x] Distinguish not-applicable, not-found, transient failure, permanent failure, and successfully enriched (`EnrichmentStatus`; [enrichment contract](docs/services/enrichment.md)).
+- [x] Support researcher annotations and ground-truth labels separately from third-party enrichment (`ResearcherAnnotation`; [ADR-0014](docs/adr/0014-enrichment-provenance-and-versioned-profile-sets.md)).
+- [x] Avoid merging unrelated unknown values into one misleading organization identity (`IpinfoEnrichmentProvider`).
 - [ ] Add rate-limit/retry policy with deterministic test doubles.
 
 #### Profile service
@@ -1241,10 +1241,30 @@ canonical. Milestone 3 is now in progress: the deterministic ingest core owns ex
 capture perspective, source timestamps/session identity, bounded writes, finalization, and
 cooperative cancellation. Separate bounded live/PCAP adapters now own capture privileges,
 packet parsing policy, filters, runtime provenance, and portable PCAP content identity with
-explicitly non-portable local locators (11 of 37 checklist items complete). Provider-neutral
-enrichment acquisition is the next active Milestone 3 slice.
+explicitly non-portable local locators. Provider-neutral enrichment now owns deterministic
+address classification, explicit provider outcomes, cache semantics, and the thin IPinfo
+adapter (17 of 37 checklist items complete). Bounded rate-limit and retry policy is the
+next active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 provider-neutral enrichment acquisition
+
+- Added provider-neutral `EnrichmentObservation` values and a deterministic
+  `EnrichmentService` that binds normalized IP identity, acquisition time, provider
+  provenance, and every explicit outcome before repository persistence.
+- Moved address-scope classification into the domain. Non-public addresses never reach a
+  remote provider and now receive cached `not_applicable` records rather than being
+  repeatedly skipped; only transient failures remain pending for later retry.
+- Added a lazy IPinfo adapter that reuses one handler, maps HTTP/connection outcomes into
+  retry semantics, and never invents shared `Unknown` metadata. Configuration and missing
+  dependencies remain interface errors rather than false IP observations.
+- Reduced `jaws-ipinfo` to connection, provider construction, progress presentation, and
+  its unchanged structured result projection. Added pure service, adapter, CLI, domain,
+  and disposable-Neo4j coverage.
+- Passed 239 offline correctness tests and all 15 disposable-Neo4j tests with 263 total
+  tests collected; Ruff, strict types, and the report-only synthetic benchmark remain
+  green at Recall@3 5/5 with the same three named benign false positives.
 
 ### 2026-08-19 — Milestone 3 PCAP source provenance
 

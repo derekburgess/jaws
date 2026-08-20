@@ -63,6 +63,8 @@ provider records, researcher annotations, and targeted legacy-`Unknown` cleanup.
 records distinguish successful, not-applicable, not-found, transient-failure, and
 permanent-failure outcomes. Only transient failures remain pending after a recorded
 attempt. Provider fields and researcher annotations are never merged into one record.
+The deterministic acquisition behavior, address classification, and IPinfo failure mapping
+are defined by the [enrichment service contract](../services/enrichment.md).
 
 `list_metadata` is a compatibility read projection for organization, hostname, location,
 and coordinates already attached to IP entities. It may include local-host or legacy

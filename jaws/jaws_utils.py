@@ -1,5 +1,4 @@
 import argparse
-import ipaddress
 import json
 import sys
 from contextlib import contextmanager
@@ -15,7 +14,12 @@ from jaws.config import (
     PACKET_MODELS,
     get_neo4j_driver,
 )
-from jaws.domain import legacy_failure, legacy_success
+from jaws.domain import (
+    NON_CONVERSATIONAL_CLASSIFICATIONS,
+    classify_ip_address,
+    legacy_failure,
+    legacy_success,
+)
 from jaws.optional_dependencies import require_module
 from jaws.storage import Neo4jDatabaseRuntime
 from jaws.storage.migrations import MigrationError
@@ -26,7 +30,7 @@ from jaws.storage.migrations import manager as migration_manager
 # only return bogons). Multicast/broadcast destinations never reply, so directional
 # ratios computed against them (out/in, upload/download) are structurally one-sided —
 # without this, SSDP/mDNS chatter tops both anomaly rankings looking "exfil-shaped".
-NON_CONVERSATIONAL_TYPES = {"multicast", "broadcast", "unspecified"}
+NON_CONVERSATIONAL_TYPES = NON_CONVERSATIONAL_CLASSIFICATIONS
 
 
 def classify_endpoint(ip_string):
@@ -38,25 +42,7 @@ def classify_endpoint(ip_string):
     rankings; 'public' is the only type worth an ipinfo lookup. Order matters below:
     loopback/link-local addresses are also is_private, so they are checked first.
     """
-    try:
-        ip = ipaddress.ip_address(ip_string)
-    except ValueError:
-        return "unknown"
-    if ip.is_multicast:
-        return "multicast"
-    if ip == ipaddress.IPv4Address("255.255.255.255"):
-        return "broadcast"
-    if ip.is_unspecified:
-        return "unspecified"
-    if ip.is_loopback:
-        return "loopback"
-    if ip.is_link_local:
-        return "link-local"
-    if ip.is_private:
-        return "private"
-    if ip.is_global:
-        return "public"
-    return "reserved"
+    return classify_ip_address(ip_string)
 
 
 # Minimum packets in a single-direction stream before its timing is meaningful.

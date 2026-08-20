@@ -22,16 +22,19 @@ from jaws.domain import (
     CaptureRecord,
     CaptureSourceKind,
     CaptureState,
+    EnrichmentObservation,
+    EnrichmentStatus,
     EntityId,
     ObservationScopeId,
 )
 from jaws.ports import (
     AdministrationConflictError,
     DuplicateCaptureError,
+    FakeEnrichmentProvider,
     FrozenClock,
     SequenceIdGenerator,
 )
-from jaws.services import AdministrationService, EvidenceTransferService
+from jaws.services import AdministrationService, EnrichmentService, EvidenceTransferService
 from jaws.storage import Neo4jDatabaseRuntime, Neo4jRepositories
 from jaws.storage.migrations import (
     MIGRATIONS,
@@ -306,6 +309,36 @@ def test_enrichment_and_profile_repositories_follow_shared_contract(
     repositories = Neo4jRepositories.connect(driver, database)
 
     assert_enrichment_and_profile_repository_contract(repositories)
+
+
+def test_enrichment_service_persists_provider_and_classifier_outcomes(
+    disposable_migration_database,
+):
+    driver, database = disposable_migration_database
+    manager(driver, database).migrate()
+    with driver.session(database=database) as session:
+        session.run(
+            "CREATE (:IP_ADDRESS {IP_ADDRESS: '8.8.8.8'}) "
+            "CREATE (:IP_ADDRESS {IP_ADDRESS: '10.0.0.1'})"
+        ).consume()
+    repository = Neo4jRepositories.connect(driver, database).enrichment
+    provider = FakeEnrichmentProvider(
+        {
+            EntityId("ip:8.8.8.8"): EnrichmentObservation(
+                status=EnrichmentStatus.SUCCEEDED,
+                provider_id="fixture",
+                provider_revision="1",
+                organization="Google LLC",
+            )
+        }
+    )
+
+    result = EnrichmentService(repository, provider, FrozenClock(OBSERVED_AT)).enrich_pending()
+
+    assert result.addresses_scanned == 1
+    assert result.addresses_skipped_non_public == 1
+    assert repository.get(EntityId("ip:8.8.8.8")).organization == "Google LLC"
+    assert repository.get(EntityId("ip:10.0.0.1")).status is EnrichmentStatus.NOT_APPLICABLE
 
 
 def test_inspection_repository_follows_shared_contract(disposable_migration_database):

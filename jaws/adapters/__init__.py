@@ -1,5 +1,11 @@
 """Outer runtime adapters for standard domain ports."""
 
+from .enrichment import (
+    IpinfoEnrichmentProvider,
+    ipinfo_location,
+    ipinfo_organization,
+    ipinfo_revision,
+)
 from .evidence_bundle import (
     EvidenceBundleError,
     evidence_bundle_document,
@@ -21,6 +27,7 @@ from .runtime import SystemClock, UuidAuditEventIdGenerator, UuidCaptureIdGenera
 
 __all__ = [
     "EvidenceBundleError",
+    "IpinfoEnrichmentProvider",
     "LivePacketSource",
     "PacketParseStats",
     "PcapPacketSource",
@@ -32,6 +39,9 @@ __all__ = [
     "capture_tool_versions",
     "file_sha256",
     "load_evidence_bundle",
+    "ipinfo_location",
+    "ipinfo_organization",
+    "ipinfo_revision",
     "parse_evidence_bundle",
     "write_evidence_bundle",
     "packet_summary",

@@ -18,7 +18,16 @@ from .captures import (
     ProfileIdentity,
     capture_scope_id,
 )
-from .enrichment import EnrichmentRecord, EntityMetadata, ResearcherAnnotation, normalized_ip
+from .enrichment import (
+    NON_CONVERSATIONAL_CLASSIFICATIONS,
+    AddressClassification,
+    EnrichmentObservation,
+    EnrichmentRecord,
+    EntityMetadata,
+    ResearcherAnnotation,
+    classify_ip_address,
+    normalized_ip,
+)
 from .enums import (
     CaptureSourceKind,
     CaptureState,
@@ -102,6 +111,7 @@ __all__ = [
     "AdministrationPlan",
     "AdministrationResourceCount",
     "AdministrationResult",
+    "AddressClassification",
     "AuditContext",
     "AuditEvent",
     "AuditEventId",
@@ -132,6 +142,7 @@ __all__ = [
     "EndpointPacketSample",
     "EndpointPeerTraffic",
     "EnrichmentRecord",
+    "EnrichmentObservation",
     "EntityMetadata",
     "EnrichmentStatus",
     "EVIDENCE_BUNDLE_FORMAT",
@@ -155,6 +166,7 @@ __all__ = [
     "IdGenerator",
     "Measurement",
     "MeasurementUnit",
+    "NON_CONVERSATIONAL_CLASSIFICATIONS",
     "ObservationWindow",
     "ObservationScope",
     "ObservationScopeId",
@@ -192,6 +204,7 @@ __all__ = [
     "VersionedSpec",
     "bytes_count",
     "capture_scope_id",
+    "classify_ip_address",
     "canonical_digest",
     "canonical_json",
     "deterministic_ranking",
