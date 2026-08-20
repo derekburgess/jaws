@@ -9,6 +9,7 @@ import pytest
 
 from jaws.domain import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
+    HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
     CaptureId,
     EntityDefinition,
     EntityId,
@@ -17,6 +18,7 @@ from jaws.domain import (
     ObservationWindow,
     PacketRecord,
     TimingDirection,
+    host_destination_entity_id,
 )
 from jaws.jaws_compute import (
     build_endpoint_profiles,
@@ -25,6 +27,7 @@ from jaws.jaws_compute import (
 )
 from jaws.services import (
     EndpointProfiler,
+    ProfileService,
     ProfilingWindowError,
     UnsupportedEntityDefinitionError,
     UnsupportedNumericFeatureSetError,
@@ -154,6 +157,45 @@ def test_profiler_is_order_independent_and_caps_sorted_ports():
     local = next(draft for draft in forward if draft.ip_address == "10.0.0.2")
     assert local.out_peers == 25
     assert local.out_ports == tuple(range(100, 120))
+
+
+def test_profile_result_and_digest_are_stable_for_identical_evidence_and_spec():
+    packets = (
+        _packet(2, "10.0.0.2", "8.8.8.8", protocol="UDP", destination_port=53),
+        _packet(1, "8.8.8.8", "10.0.0.2", destination_port=50000),
+        _packet(0, "10.0.0.2", "1.1.1.1", destination_port=443),
+    )
+    metadata = (
+        EntityMetadata(EntityId("ip:8.8.8.8"), "8.8.8.8", organization="Google"),
+        EntityMetadata(EntityId("ip:1.1.1.1"), "1.1.1.1", organization="Cloudflare"),
+    )
+    service = ProfileService()
+    window = _window(*packets)
+
+    forward = service.profile(
+        packets,
+        entity_definition=ENDPOINT_IP_V1,
+        observation_window=window,
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+        metadata=metadata,
+    )
+    reordered = service.profile(
+        tuple(reversed(packets)),
+        entity_definition=ENDPOINT_IP_V1,
+        observation_window=window,
+        numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+        metadata=tuple(reversed(metadata)),
+    )
+
+    assert forward == reordered
+    assert forward.digest == reordered.digest
+
+
+def test_duplicate_display_metadata_is_rejected_instead_of_becoming_order_dependent():
+    metadata = EntityMetadata(EntityId("ip:8.8.8.8"), "8.8.8.8", organization="Google")
+
+    with pytest.raises(ValueError, match="duplicate profile metadata"):
+        _profiles((_packet(0, "10.0.0.2", "8.8.8.8"),), metadata=(metadata, metadata))
 
 
 def test_timing_gate_and_capture_boundaries_preserve_beacon_cadence():
@@ -335,19 +377,74 @@ def test_profiler_rejects_packet_evidence_outside_declared_window(window, messag
         )
 
 
-@pytest.mark.parametrize(
-    "entity",
-    (
-        EntityDefinition(entity_type=EntityType.HOST_DESTINATION, version="1"),
-        EntityDefinition(entity_type=EntityType.ENDPOINT_IP, version="2"),
-    ),
-)
-def test_profiler_rejects_unsupported_entity_type_or_version(entity):
-    with pytest.raises(UnsupportedEntityDefinitionError, match="endpoint_ip.*version='1'"):
+def test_profiler_rejects_unsupported_entity_version():
+    entity = EntityDefinition(entity_type=EntityType.ENDPOINT_IP, version="2")
+    with pytest.raises(UnsupportedEntityDefinitionError, match="endpoint_ip.*host_destination"):
         EndpointProfiler().profile(
             (),
             entity_definition=entity,
             observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+            numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+        )
+
+
+def test_host_destination_profiles_are_first_class_and_host_relative():
+    host = EntityId("ip:10.0.0.2")
+    packets = (
+        _packet(0, "10.0.0.2", "8.8.8.8", size=100, protocol="TCP"),
+        _packet(1, "8.8.8.8", "10.0.0.2", size=200, protocol="TCP"),
+        _packet(2, "10.0.0.2", "8.8.8.8", size=50, protocol="UDP"),
+        _packet(3, "1.1.1.1", "10.0.0.2", size=999),
+        _packet(4, "192.0.2.1", "192.0.2.2", size=999),
+    )
+    metadata = (
+        EntityMetadata(
+            EntityId("ip:8.8.8.8"),
+            "8.8.8.8",
+            organization="Google",
+            hostname="dns.google",
+        ),
+    )
+
+    result = ProfileService().profile(
+        tuple(reversed(packets)),
+        entity_definition=EntityDefinition(
+            entity_type=EntityType.HOST_DESTINATION,
+            version="1",
+        ),
+        observation_window=ObservationWindow(capture_ids=(CAPTURE,), perspective=host),
+        numeric_feature_set=HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
+        metadata=metadata,
+    )
+
+    assert result.entity_definition.entity_type is EntityType.HOST_DESTINATION
+    assert len(result.profiles) == 1
+    destination = result.profiles[0]
+    assert destination.entity_id == host_destination_entity_id(host, "8.8.8.8")
+    assert destination.destination_ip == "8.8.8.8"
+    assert destination.organization == "Google"
+    assert destination.hostname == "dns.google"
+    assert (destination.upload_bytes, destination.upload_packets) == (150, 2)
+    assert (destination.download_bytes, destination.download_packets) == (200, 1)
+    assert destination.protocols == ("TCP", "UDP")
+
+
+def test_host_destination_profiles_require_perspective_and_matching_feature_contract():
+    entity = EntityDefinition(entity_type=EntityType.HOST_DESTINATION, version="1")
+    with pytest.raises(ProfilingWindowError, match="requires a host perspective"):
+        ProfileService().profile(
+            (),
+            entity_definition=entity,
+            observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+            numeric_feature_set=HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
+        )
+    with pytest.raises(UnsupportedNumericFeatureSetError, match="host_destination_numeric"):
+        ProfileService().profile(
+            (),
+            entity_definition=entity,
+            observation_window=ObservationWindow(
+                capture_ids=(CAPTURE,), perspective=EntityId("ip:10.0.0.2")
+            ),
             numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
         )
 

@@ -87,7 +87,14 @@ from .identifiers import (
 from .inspection import EndpointInspection, EndpointPacketSample, EndpointPeerTraffic
 from .measurements import Measurement, bytes_count, interval_seconds, packet_count, ratio
 from .packets import PacketObservation, PacketRecord
-from .profiles import MIN_TIMING_PACKETS, EndpointProfile, EndpointProfileDraft, ProfileScopeSummary
+from .profiles import (
+    MIN_TIMING_PACKETS,
+    EndpointProfile,
+    EndpointProfileDraft,
+    HostDestinationProfileDraft,
+    ProfileScopeSummary,
+    host_destination_entity_id,
+)
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
@@ -104,6 +111,7 @@ from .serialization import canonical_digest, canonical_json, primitive
 from .specifications import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
     ENDPOINT_TEXT_TEMPLATE_V1,
+    HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
     EntityDefinition,
     EvidencePointer,
     ExperimentSpec,
@@ -150,11 +158,13 @@ __all__ = [
     "DomainError",
     "ENDPOINT_NUMERIC_FEATURE_SET_V1",
     "ENDPOINT_TEXT_TEMPLATE_V1",
+    "HOST_DESTINATION_NUMERIC_FEATURE_SET_V1",
     "EntityDefinition",
     "EntityId",
     "EntityType",
     "EndpointProfile",
     "EndpointProfileDraft",
+    "HostDestinationProfileDraft",
     "EndpointInspection",
     "EndpointPacketSample",
     "EndpointPeerTraffic",
@@ -240,6 +250,7 @@ __all__ = [
     "deterministic_ranking",
     "experiment_run_metadata",
     "interval_seconds",
+    "host_destination_entity_id",
     "legacy_failure",
     "legacy_success",
     "normalize_utc",

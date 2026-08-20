@@ -7,6 +7,7 @@ import pytest
 
 from jaws.domain import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
+    HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
     MeasurementUnit,
     MissingValuePolicy,
     NumericAnalysisTransformation,
@@ -119,6 +120,26 @@ def test_endpoint_numeric_feature_set_versions_exact_order_semantics_and_units()
         minimum_packets_per_direction=6,
         interval_scope=TimingIntervalScope.WITHIN_CAPTURE,
     )
+
+
+def test_host_destination_numeric_feature_set_is_versioned_without_embedding_or_timing():
+    feature_set = HOST_DESTINATION_NUMERIC_FEATURE_SET_V1
+
+    assert feature_set.feature_set_id == "host_destination_numeric"
+    assert feature_set.version == "1"
+    assert feature_set.feature_names == (
+        "upload_bytes",
+        "upload_packets",
+        "download_bytes",
+        "download_packets",
+        "upload_download_ratio",
+    )
+    assert feature_set.timing_evidence is None
+    ratio = feature_set.features[-1]
+    assert ratio.transformation is NumericFeatureTransformation.SAFE_RATIO
+    assert ratio.numerator_fields == ("upload_bytes",)
+    assert ratio.denominator_fields == ("download_bytes",)
+    assert ratio.denominator_offset == 1.0
 
 
 def test_declared_transformations_preserve_legacy_matrix_and_missing_value_behavior():

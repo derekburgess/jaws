@@ -305,6 +305,51 @@ ENDPOINT_NUMERIC_FEATURE_SET_V1 = NumericFeatureSet(
 )
 
 
+HOST_DESTINATION_NUMERIC_FEATURE_SET_V1 = NumericFeatureSet(
+    feature_set_id="host_destination_numeric",
+    version="1",
+    features=(
+        NumericFeatureDefinition(
+            "upload_bytes",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.BYTES,
+            NumericFeatureTransformation.IDENTITY,
+            ("upload_bytes",),
+        ),
+        NumericFeatureDefinition(
+            "upload_packets",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PACKETS,
+            NumericFeatureTransformation.IDENTITY,
+            ("upload_packets",),
+        ),
+        NumericFeatureDefinition(
+            "download_bytes",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.BYTES,
+            NumericFeatureTransformation.IDENTITY,
+            ("download_bytes",),
+        ),
+        NumericFeatureDefinition(
+            "download_packets",
+            NumericFeatureFamily.BASE,
+            MeasurementUnit.PACKETS,
+            NumericFeatureTransformation.IDENTITY,
+            ("download_packets",),
+        ),
+        NumericFeatureDefinition(
+            "upload_download_ratio",
+            NumericFeatureFamily.SHAPE,
+            MeasurementUnit.RATIO,
+            NumericFeatureTransformation.SAFE_RATIO,
+            ("upload_bytes",),
+            ("download_bytes",),
+            1.0,
+        ),
+    ),
+)
+
+
 @dataclass(frozen=True, slots=True)
 class TextTemplateSpec(VersionedSpec):
     """Versioned text layout independent of provider and model identity."""

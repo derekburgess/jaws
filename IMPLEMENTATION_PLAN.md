@@ -579,8 +579,8 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Version numeric feature definitions, transformations, missing-value policy, and units (`NumericFeatureSet`; `ENDPOINT_NUMERIC_FEATURE_SET_V1`; [profiling contract](docs/services/profiling.md)).
 - [x] Version the endpoint text-description template separately from embedding models (`TextTemplateSpec`; `ENDPOINT_TEXT_TEMPLATE_V1`; `EndpointTextRenderer`; [profiling contract](docs/services/profiling.md)).
 - [x] Make timing direction and minimum-evidence requirements visible in representation metadata (`TimingEvidenceRequirement`; per-draft `TimingDirection`; [profiling contract](docs/services/profiling.md)).
-- [ ] Ensure profile generation is deterministic for identical evidence and spec.
-- [ ] Support endpoint-IP and host-destination profiles as first-class entity definitions rather than unrelated code paths.
+- [x] Ensure profile generation is deterministic for identical evidence and spec (`ProfilingResult.digest`; permutation and duplicate-metadata tests; [profiling contract](docs/services/profiling.md)).
+- [x] Support endpoint-IP and host-destination profiles as first-class entity definitions rather than unrelated code paths (`ProfileService`; `HostDestinationProfileDraft`; `HOST_DESTINATION_NUMERIC_FEATURE_SET_V1`).
 
 #### Embedding providers
 
@@ -1253,11 +1253,23 @@ missing-value behavior, and analysis transforms. Endpoint description rendering 
 an exact versioned template whose identity is persisted independently from embedding
 model identity. Timing representations now carry a versioned evidence policy for eligible
 directions, lower-variation selection, the per-direction packet gate, and within-capture
-interval boundaries; qualifying typed drafts retain their selected direction (24 of 37
-checklist items complete). Proving deterministic generation for identical evidence and
-specifications is the next active Milestone 3 slice.
+interval boundaries; qualifying typed drafts retain their selected direction. The
+entity-neutral profile service now produces canonical deterministic results for both
+endpoint-IP and host-relative destination definitions (26 of 37 checklist items complete).
+Typed local and remote embedding providers are the next active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 deterministic multi-entity profiling
+
+- Added canonical `ProfilingResult.digest` identity, order-independent evidence/metadata
+  coverage, and rejection of duplicate display metadata that could otherwise make results
+  depend on input order.
+- Generalized the pure profiler as `ProfileService` while retaining `EndpointProfiler` as
+  a compatibility name.
+- Added first-class host-destination drafts and a versioned numeric contract with explicit
+  capture-host perspective, host-relative upload/download evidence, stable scoped entity
+  identity, and parity with the legacy outbound-only destination population.
 
 ### 2026-08-20 — Milestone 3 timing representation metadata
 

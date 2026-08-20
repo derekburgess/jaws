@@ -10,17 +10,22 @@ from typing import Protocol
 
 from jaws.domain import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
+    HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
     MIN_TIMING_PACKETS,
+    CanonicalDigest,
     CaptureId,
     EndpointProfileDraft,
     EntityDefinition,
     EntityId,
     EntityMetadata,
     EntityType,
+    HostDestinationProfileDraft,
     NumericFeatureSet,
     ObservationWindow,
     TimingDirection,
+    canonical_digest,
     classify_ip_address,
+    host_destination_entity_id,
 )
 
 MAX_PROFILE_PORTS = 20
@@ -92,15 +97,18 @@ def interval_timing_seconds(
     return mean, sqrt(variance) / mean
 
 
+ProfileDraft = EndpointProfileDraft | HostDestinationProfileDraft
+
+
 @dataclass(frozen=True, slots=True)
-class EndpointProfilingResult:
+class ProfilingResult:
     """Profile drafts bound to the exact entity and evidence-selection declarations."""
 
     entity_definition: EntityDefinition
     observation_window: ObservationWindow
     numeric_feature_set: NumericFeatureSet
     source_packet_count: int
-    profiles: tuple[EndpointProfileDraft, ...]
+    profiles: tuple[ProfileDraft, ...]
 
     def __post_init__(self) -> None:
         if self.source_packet_count < 0:
@@ -108,6 +116,15 @@ class EndpointProfilingResult:
         identities = tuple(profile.entity_id for profile in self.profiles)
         if len(set(identities)) != len(identities):
             raise ValueError("profiling result entity identities must be unique")
+
+    @property
+    def digest(self) -> CanonicalDigest:
+        """Canonical identity proving stable output for the same evidence and declarations."""
+
+        return canonical_digest(self)
+
+
+EndpointProfilingResult = ProfilingResult
 
 
 @dataclass(slots=True)
@@ -142,9 +159,24 @@ class _DirectionAggregate:
         return interval_timing_seconds(groups, minimum_packets=minimum_packets)
 
 
+@dataclass(slots=True)
+class _HostDestinationAggregate:
+    upload_bytes: int = 0
+    upload_packets: int = 0
+    download_bytes: int = 0
+    download_packets: int = 0
+    protocols: set[str] = field(default_factory=set)
+
+    def add(self, packet: ProfilePacketEvidence, *, outbound: bool) -> None:
+        direction = "upload" if outbound else "download"
+        setattr(self, f"{direction}_bytes", getattr(self, f"{direction}_bytes") + packet.size_bytes)
+        setattr(self, f"{direction}_packets", getattr(self, f"{direction}_packets") + 1)
+        self.protocols.add(packet.protocol)
+
+
 @dataclass(frozen=True, slots=True)
-class EndpointProfiler:
-    """Aggregate immutable packet evidence into deterministic endpoint profile drafts."""
+class ProfileService:
+    """Aggregate immutable packet evidence under a supported entity definition."""
 
     minimum_timing_packets: int = MIN_TIMING_PACKETS
     maximum_ports: int = MAX_PROFILE_PORTS
@@ -166,30 +198,37 @@ class EndpointProfiler:
         observation_window: ObservationWindow,
         numeric_feature_set: NumericFeatureSet,
         metadata: Sequence[EntityMetadata] = (),
-    ) -> EndpointProfilingResult:
-        """Validate declared semantics and return one address-sorted draft per IP."""
+    ) -> ProfilingResult:
+        """Validate declarations and return stable entity-sorted profile drafts."""
 
-        if (
-            entity_definition.entity_type is not EntityType.ENDPOINT_IP
-            or entity_definition.version != "1"
-        ):
+        if entity_definition.version != "1" or entity_definition.entity_type not in {
+            EntityType.ENDPOINT_IP,
+            EntityType.HOST_DESTINATION,
+        }:
             raise UnsupportedEntityDefinitionError(
-                "endpoint profiler supports only entity_type='endpoint_ip', version='1'"
-            )
-        if numeric_feature_set != ENDPOINT_NUMERIC_FEATURE_SET_V1:
-            raise UnsupportedNumericFeatureSetError(
-                "endpoint profiler supports only feature_set_id='endpoint_profile_numeric', "
+                "profile service supports entity_type='endpoint_ip' or 'host_destination', "
                 "version='1'"
             )
-        timing_evidence = numeric_feature_set.timing_evidence
-        if timing_evidence is None:
+        expected_features = (
+            ENDPOINT_NUMERIC_FEATURE_SET_V1
+            if entity_definition.entity_type is EntityType.ENDPOINT_IP
+            else HOST_DESTINATION_NUMERIC_FEATURE_SET_V1
+        )
+        if numeric_feature_set != expected_features:
             raise UnsupportedNumericFeatureSetError(
-                "endpoint profiler requires declared timing evidence metadata"
+                f"profile service requires feature_set_id='{expected_features.feature_set_id}', "
+                f"version='{expected_features.version}' for {entity_definition.entity_type.value}"
             )
-        if self.minimum_timing_packets != timing_evidence.minimum_packets_per_direction:
-            raise UnsupportedNumericFeatureSetError(
-                "endpoint profiler timing packet gate must match feature-set metadata"
-            )
+        if entity_definition.entity_type is EntityType.ENDPOINT_IP:
+            timing_evidence = numeric_feature_set.timing_evidence
+            if timing_evidence is None:
+                raise UnsupportedNumericFeatureSetError(
+                    "endpoint profiles require declared timing evidence metadata"
+                )
+            if self.minimum_timing_packets != timing_evidence.minimum_packets_per_direction:
+                raise UnsupportedNumericFeatureSetError(
+                    "endpoint profile timing packet gate must match feature-set metadata"
+                )
         capture_ids = frozenset(observation_window.capture_ids)
         for packet in packets:
             if packet.capture_id not in capture_ids:
@@ -225,7 +264,26 @@ class EndpointProfiler:
                 port=packet.destination_port,
             )
 
-        metadata_by_address = {record.ip_address: record for record in metadata}
+        metadata_by_address: dict[str, EntityMetadata] = {}
+        for record in metadata:
+            if record.ip_address in metadata_by_address:
+                raise ValueError(f"duplicate profile metadata for address: {record.ip_address}")
+            metadata_by_address[record.ip_address] = record
+
+        if entity_definition.entity_type is EntityType.HOST_DESTINATION:
+            profiles = self._host_destination_profiles(
+                packets,
+                observation_window=observation_window,
+                metadata_by_address=metadata_by_address,
+            )
+            return ProfilingResult(
+                entity_definition=entity_definition,
+                observation_window=observation_window,
+                numeric_feature_set=numeric_feature_set,
+                source_packet_count=len(packets),
+                profiles=profiles,
+            )
+
         drafts: list[EndpointProfileDraft] = []
         for address in sorted(set(outbound) | set(inbound)):
             sent = outbound.get(address, _DirectionAggregate())
@@ -269,10 +327,63 @@ class EndpointProfiler:
                     timing_direction=timing_direction,
                 )
             )
-        return EndpointProfilingResult(
+        return ProfilingResult(
             entity_definition=entity_definition,
             observation_window=observation_window,
             numeric_feature_set=numeric_feature_set,
             source_packet_count=len(packets),
             profiles=tuple(drafts),
         )
+
+    def _host_destination_profiles(
+        self,
+        packets: Sequence[ProfilePacketEvidence],
+        *,
+        observation_window: ObservationWindow,
+        metadata_by_address: dict[str, EntityMetadata],
+    ) -> tuple[HostDestinationProfileDraft, ...]:
+        perspective = observation_window.perspective
+        if perspective is None:
+            raise ProfilingWindowError("host-destination profiling requires a host perspective")
+        if not perspective.value.startswith("ip:"):
+            raise ProfilingWindowError("host-destination perspective must be an IP entity")
+        host_address = perspective.value.removeprefix("ip:")
+        by_destination: dict[str, _HostDestinationAggregate] = {}
+        for packet in packets:
+            outbound = packet.source_ip == host_address
+            inbound = packet.destination_ip == host_address
+            if not outbound and not inbound:
+                continue
+            destination = packet.destination_ip if outbound else packet.source_ip
+            if destination in {host_address, "0.0.0.0"}:
+                continue
+            aggregate = by_destination.setdefault(destination, _HostDestinationAggregate())
+            aggregate.add(packet, outbound=outbound)
+
+        drafts: list[HostDestinationProfileDraft] = []
+        for destination in sorted(by_destination):
+            aggregate = by_destination[destination]
+            if aggregate.upload_packets == 0:
+                continue
+            display = metadata_by_address.get(destination)
+            drafts.append(
+                HostDestinationProfileDraft(
+                    entity_id=host_destination_entity_id(perspective, destination),
+                    perspective=perspective,
+                    destination_ip=destination,
+                    address_classification=classify_ip_address(destination),
+                    organization=display.organization if display else None,
+                    hostname=display.hostname if display else None,
+                    location=display.location if display else None,
+                    upload_bytes=aggregate.upload_bytes,
+                    upload_packets=aggregate.upload_packets,
+                    download_bytes=aggregate.download_bytes,
+                    download_packets=aggregate.download_packets,
+                    protocols=tuple(sorted(aggregate.protocols)),
+                )
+            )
+        return tuple(drafts)
+
+
+# Compatibility name retained while CLI callers migrate to the entity-neutral service.
+EndpointProfiler = ProfileService

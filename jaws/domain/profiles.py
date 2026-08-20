@@ -93,6 +93,54 @@ class EndpointProfileDraft:
         object.__setattr__(self, "protocols", _strings(self.protocols, "protocols"))
 
 
+def host_destination_entity_id(perspective: EntityId, destination_ip: str) -> EntityId:
+    """Return the scoped identity for one capture-host to remote-destination entity."""
+
+    if not perspective.value.startswith("ip:"):
+        raise ValueError("host-destination perspective must be an IP entity")
+    host = normalized_ip(perspective.value.removeprefix("ip:"))
+    destination = normalized_ip(destination_ip)
+    if host == destination:
+        raise ValueError("host-destination peer must differ from its perspective")
+    return EntityId(f"host-destination:ip:{host}->ip:{destination}")
+
+
+@dataclass(frozen=True, slots=True)
+class HostDestinationProfileDraft:
+    """Host-relative traffic evidence for one explicitly scoped remote destination."""
+
+    entity_id: EntityId
+    perspective: EntityId
+    destination_ip: str
+    address_classification: AddressClassification
+    organization: str | None = None
+    hostname: str | None = None
+    location: str | None = None
+    upload_bytes: int = 0
+    upload_packets: int = 0
+    download_bytes: int = 0
+    download_packets: int = 0
+    protocols: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        destination = normalized_ip(self.destination_ip)
+        if self.entity_id != host_destination_entity_id(self.perspective, destination):
+            raise ValueError("host-destination entity_id must match perspective and destination")
+        for field_name in (
+            "upload_bytes",
+            "upload_packets",
+            "download_bytes",
+            "download_packets",
+        ):
+            object.__setattr__(self, field_name, _count(getattr(self, field_name), field_name))
+        if self.upload_packets == 0:
+            raise ValueError("host-destination profiles require outbound host evidence")
+        object.__setattr__(self, "destination_ip", destination)
+        for field_name in ("organization", "hostname", "location"):
+            object.__setattr__(self, field_name, _optional_text(getattr(self, field_name)))
+        object.__setattr__(self, "protocols", _strings(self.protocols, "protocols"))
+
+
 @dataclass(frozen=True, slots=True)
 class EndpointProfile:
     """One endpoint representation in one explicit observation scope."""

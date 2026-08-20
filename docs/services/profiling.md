@@ -7,9 +7,10 @@ an `EntityDefinition`, an `ObservationWindow`, a `NumericFeatureSet`, immutable
 and address-sorted `EndpointProfileDraft` values. It imports no pandas, NumPy, Neo4j,
 embedding provider, configuration, CLI, or reporting dependency.
 
-The draft is deliberately pre-representation and pre-embedding. It binds normalized IP
-identity, deterministic address classification, directional packet features, display
-metadata, and cadence. Observation scope, entity-definition version, representation
+Drafts are deliberately pre-embedding. Endpoint-IP drafts bind normalized IP identity,
+deterministic address classification, directional packet features, display metadata, and
+cadence. Host-destination drafts bind the declared capture-host perspective to one remote
+peer and retain host-relative upload/download evidence. Observation scope, representation
 version, model revision, computation time, embedding, and persistence are later service
 responsibilities and are not invented by aggregation.
 
@@ -132,6 +133,25 @@ insufficient evidence record no direction and no timing values. This provenance 
 the typed profiling result. The frozen legacy dictionary projection intentionally omits it
 so existing CLI and Benchmark 0 consumers retain their exact input shape.
 
+## Determinism and entity definitions
+
+`ProfileService` supports endpoint-IP version 1 with `endpoint_profile_numeric` version 1
+and host-destination version 1 with `host_destination_numeric` version 1. The older
+`EndpointProfiler` name remains an alias for callers migrating to the entity-neutral API.
+Unsupported entity/feature combinations fail before aggregation.
+
+Endpoint and host-destination drafts are sorted by stable identity. Packet ordering,
+metadata ordering, sets of peers/ports/protocols, and within-capture timestamp ordering do
+not affect the result. Duplicate display metadata for one address is rejected rather than
+resolved by input order. `ProfilingResult.digest` is the canonical digest of the entity
+definition, observation window, numeric feature declaration, source count, and ordered
+drafts, so identical evidence and declarations produce the same retained identity.
+
+Host-destination profiling requires `ObservationWindow.perspective` to name an IP entity.
+Only peers the host sent traffic to become profiles, matching the legacy host-outbound
+surface; reverse packets contribute download evidence, unrelated traffic is ignored, and
+the scoped entity identity includes both host perspective and destination IP.
+
 ## Legacy compatibility
 
 `jaws_compute.build_endpoint_profiles` remains the pandas-facing compatibility function
@@ -147,5 +167,5 @@ into the complete declared capture set, and a legacy graph with no capture recor
 explicit `legacy-unscoped` compatibility identity. Direct legacy callers may omit the new
 arguments only at this outer adapter; the pure service has no implicit entity or scope.
 
-The next profile-service slice proves deterministic generation for identical evidence and
-specifications.
+The next Milestone 3 slice extracts typed local and remote embedding providers behind the
+common representation service boundary.
