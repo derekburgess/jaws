@@ -617,6 +617,10 @@ Extract evidence acquisition and representation building into deterministic serv
 
 ## Milestone 4 — Comparison, ranking, explanation, and inspection services
 
+**Status:** Complete on `codex/readme-research-workbench` at `fbf055b` (2026-08-20).
+Exact Benchmark 0 parity and validation evidence are recorded in
+[`docs/milestone-4-parity.md`](docs/milestone-4-parity.md).
+
 ### Outcome
 
 Decompose `jaws_finder.py` and MCP read queries into independently testable research components while preserving Benchmark 0 behavior in a named legacy ranker.
@@ -625,66 +629,66 @@ Decompose `jaws_finder.py` and MCP read queries into independently testable rese
 
 #### Reference strategies
 
-- [ ] Define a `ReferenceBuilder` protocol that returns the comparison population and eligibility metadata.
-- [ ] Implement peer-relative reference behavior.
-- [ ] Implement own-history reference behavior with minimum-session rules.
-- [ ] Implement the current hybrid per-feature behavior where cadence remains peer-relative.
-- [ ] Preserve separate scaling frames for peer and historical residuals.
-- [ ] Represent first-seen and insufficient-history states explicitly.
-- [ ] Make pooled-scope exclusion an enforced rule rather than a comment convention.
-- [ ] Add a researcher-defined reference strategy using declared capture/entity filters.
+- [x] Define a `ReferenceBuilder` protocol that returns the comparison population and eligibility metadata.
+- [x] Implement peer-relative reference behavior.
+- [x] Implement own-history reference behavior with minimum-session rules.
+- [x] Implement the current hybrid per-feature behavior where cadence remains peer-relative.
+- [x] Preserve separate scaling frames for peer and historical residuals.
+- [x] Represent first-seen and insufficient-history states explicitly.
+- [x] Make pooled-scope exclusion an enforced rule rather than a comment convention.
+- [x] Add a researcher-defined reference strategy using declared capture/entity filters.
 
 #### Representations and feature registry
 
-- [ ] Extract base counts, derived ratios, timing, and missing-value behavior into versioned feature families.
-- [ ] Expose feature name, unit, direction, transformation, required evidence, and interpretation metadata.
-- [ ] Preserve host-relative flow mappings as typed metadata.
-- [ ] Make scale floor, saturation, low-direction weights, caps, and reason threshold explicit ranker parameters/versioned defaults.
-- [ ] Detect non-finite values and representation mismatches before ranking.
+- [x] Extract base counts, derived ratios, timing, and missing-value behavior into versioned feature families.
+- [x] Expose feature name, unit, direction, transformation, required evidence, and interpretation metadata.
+- [x] Preserve host-relative flow mappings as typed metadata.
+- [x] Make scale floor, saturation, low-direction weights, caps, and reason threshold explicit ranker parameters/versioned defaults.
+- [x] Detect non-finite values and representation mismatches before ranking.
 
 #### Ranker interface and current behavior
 
-- [ ] Define a ranker contract that consumes entities, representations, a reference result, and a ranker spec.
-- [ ] Return continuous scores, deterministic ranks, optional model labels, and structured contributions separately.
-- [ ] Implement `legacy_2_0` behavior matching current robust scoring plus PCA/DBSCAN labeling.
-- [ ] Separate DBSCAN clustering/labeling from the continuous behavioral ranking contract.
-- [ ] Extract epsilon recommendation into a declared, testable strategy.
-- [ ] Record PCA components, whitening, explained variance, feature weights, epsilon source, and cluster diagnostics.
-- [ ] Require deterministic tie-breaking by stable entity identity.
-- [ ] Make random seeds explicit for every stochastic ranker or transformation.
+- [x] Define a ranker contract that consumes entities, representations, a reference result, and a ranker spec.
+- [x] Return continuous scores, deterministic ranks, optional model labels, and structured contributions separately.
+- [x] Implement `legacy_2_0` behavior matching current robust scoring plus PCA/DBSCAN labeling.
+- [x] Separate DBSCAN clustering/labeling from the continuous behavioral ranking contract.
+- [x] Extract epsilon recommendation into a declared, testable strategy.
+- [x] Record PCA components, whitening, explained variance, feature weights, epsilon source, and cluster diagnostics.
+- [x] Require deterministic tie-breaking by stable entity identity.
+- [x] Make random seeds explicit for every stochastic ranker or transformation.
 
 #### Explanation service
 
-- [ ] Generate reason codes from retained score contributions rather than recomputing features independently.
-- [ ] Preserve raw value, unit, direction, standardized deviation, comparison frame, baseline, and baseline depth.
-- [ ] Preserve host-relative direction text for local and remote perspectives.
-- [ ] Preserve cloud-hosted/provider caveats without treating infrastructure ownership as reputation.
-- [ ] Define explanation schema versions and snapshots.
-- [ ] Add explanation-fidelity hooks that can ablate a cited feature and measure the score/rank effect.
+- [x] Generate reason codes from retained score contributions rather than recomputing features independently.
+- [x] Preserve raw value, unit, direction, standardized deviation, comparison frame, baseline, and baseline depth.
+- [x] Preserve host-relative direction text for local and remote perspectives.
+- [x] Preserve cloud-hosted/provider caveats without treating infrastructure ownership as reputation.
+- [x] Define explanation schema versions and snapshots.
+- [x] Add explanation-fidelity hooks that can ablate a cited feature and measure the score/rank effect.
 
 #### Host-outbound and inspection
 
-- [ ] Represent host-destination as an entity/perspective usable by the same service pipeline.
-- [ ] Port upload bytes, upload packets, download values, and upload/download ratio into declared features.
-- [ ] Preserve exclusion of multicast/broadcast/unspecified peers from conversational ranking.
-- [ ] Extract endpoint/profile/history/peer/packet retrieval from `jaws_mcp.server` into an inspection service.
-- [ ] Scope inspection explicitly: latest profile vs a requested session, while retaining all-session totals/history when requested.
-- [ ] Return evidence pointers from findings so inspection does not rely on an unscoped IP string alone.
-- [ ] Preserve service-port vs ephemeral-port interpretation and document its heuristic limitations.
+- [x] Represent host-destination as an entity/perspective usable by the same service pipeline.
+- [x] Port upload bytes, upload packets, download values, and upload/download ratio into declared features.
+- [x] Preserve exclusion of multicast/broadcast/unspecified peers from conversational ranking.
+- [x] Extract endpoint/profile/history/peer/packet retrieval from `jaws_mcp.server` into an inspection service.
+- [x] Scope inspection explicitly: latest profile vs a requested session, while retaining all-session totals/history when requested.
+- [x] Return evidence pointers from findings so inspection does not rely on an unscoped IP string alone.
+- [x] Preserve service-port vs ephemeral-port interpretation and document its heuristic limitations.
 
 #### Visualization adapter
 
-- [ ] Move port-size, k-distance, PCA/DBSCAN, and comparison rendering out of ranking code.
-- [ ] Render only from retained result artifacts.
-- [ ] Make headless execution the default behavior for services.
-- [ ] Record plot input digest and renderer version in artifact metadata.
+- [x] Move port-size, k-distance, PCA/DBSCAN, and comparison rendering out of ranking code.
+- [x] Render only from retained result artifacts.
+- [x] Make headless execution the default behavior for services.
+- [x] Record plot input digest and renderer version in artifact metadata.
 
 #### CLI compatibility adapter
 
-- [ ] Reimplement `jaws-finder` as a thin service adapter.
-- [ ] Preserve `--components`, `--whiten`, `--eps`, `--feature-weight`, `--include-local`, `--session`, `--no-baseline`, and `--ablate` compatibility until migration is documented.
-- [ ] Preserve full ranking output even when zero DBSCAN outliers are labeled.
-- [ ] Preserve result fields or provide an explicit versioned response migration.
+- [x] Reimplement `jaws-finder` as a thin service adapter.
+- [x] Preserve `--components`, `--whiten`, `--eps`, `--feature-weight`, `--include-local`, `--session`, `--no-baseline`, and `--ablate` compatibility until migration is documented.
+- [x] Preserve full ranking output even when zero DBSCAN outliers are labeled.
+- [x] Preserve result fields or provide an explicit versioned response migration.
 
 ### Completion gate
 
