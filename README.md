@@ -86,6 +86,21 @@ pytest -m recall -s
 
 Set `JAWS_PCAP_DIR` to include the supported real-capture scenarios; otherwise those scenarios are skipped.
 
+Benchmark v1 runs every registered ranker through the reproducible experiment service and
+emits JSON, Markdown, HTML, and checksummed run bundles from one retained result:
+
+```bash
+jaws-benchmark --tier smoke --output-dir benchmark-v1-smoke
+jaws-benchmark --tier full --output-dir benchmark-v1-full
+```
+
+The smoke profile is visible in CI; the full profile is scheduled/manual while policy
+thresholds stabilize. See the [Benchmark v1 catalog](benchmarks/v1/README.md),
+[governance policy](docs/benchmark-governance.md), and committed
+[reference report](benchmarks/v1/reference/benchmark-v1.md). External dataset records are
+metadata-only until separately reviewed and acquired; no malware binaries or external
+packet captures are committed.
+
 The versioned [benchmark artifact contract](benchmarks/README.md) defines how JAWS
 retains complete rankings, evidence identity, execution and quality outcomes,
 environment provenance, known failures, generated reports, and checksums. The committed

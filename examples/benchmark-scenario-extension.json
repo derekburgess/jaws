@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "scenario_id": "example-volume-change",
+  "family": "example_extension",
+  "partition": "development",
+  "capture_ids": ["example-bounded-capture"],
+  "evidence_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "labels": [
+    {"entity_id": "example-target", "relevance": 3, "family": "example_extension", "source_version": "example-labels-1"},
+    {"entity_id": "example-normal", "relevance": 0, "family": "example_benign", "source_version": "example-labels-1"}
+  ],
+  "synthetic": true,
+  "model_author": "Example extension author",
+  "expected_behavior": "The bounded target has a declared outbound-volume change.",
+  "known_limitations": ["Documentation fixture only; not evidence of field quality."],
+  "available": true
+}

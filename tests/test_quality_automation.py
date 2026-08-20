@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 INTEGRATION_PATH = REPO_ROOT / ".github" / "workflows" / "integration.yml"
+BENCHMARK_PATH = REPO_ROOT / ".github" / "workflows" / "benchmark.yml"
 EXPECTED_SCENARIOS = {
     "behavioral_change",
     "bulk_download",
@@ -107,6 +108,7 @@ def test_ci_workflow_covers_every_change_and_required_signals():
     assert "python -m mypy" in commands
     assert 'python -m pytest -m "not neo4j and not recall"' in commands
     assert "python scripts/benchmark_smoke.py" in commands
+    assert "python -m jaws.benchmark_cli --tier smoke" in commands
     assert "pytest -m recall" not in commands
 
     correctness_checkout = next(
@@ -133,6 +135,15 @@ def test_integration_workflow_is_optional_and_resource_specific():
     )
     assert "python -m pytest -m neo4j" in commands
     assert "tshark --version" in commands
+
+
+def test_full_benchmark_is_scheduled_and_manual_but_report_only():
+    workflow = _workflow(BENCHMARK_PATH)
+    assert set(workflow["on"]) == {"workflow_dispatch", "schedule"}
+    assert set(workflow["jobs"]) == {"full-quality"}
+    commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["full-quality"]["steps"])
+    assert "python -m jaws.benchmark_cli --tier full" in commands
+    assert "pytest" not in commands
 
 
 def test_dependency_caches_include_the_reviewed_resolution_and_models_are_uncached():

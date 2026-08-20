@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "expected_failures": {
+    "external_unavailable": "External metadata records remain missing until a separately reviewed operator acquisition supplies traffic evidence and checksums.",
+    "embedding_unavailable": "Embedding-only rankers abstain when a declared representation has no embedding vectors."
+  },
+  "accepted_regressions": {},
+  "regression_budgets": {
+    "anomaly": {
+      "recall_at_3_min_delta": -0.05,
+      "mean_reciprocal_rank_min_delta": -0.05,
+      "coverage_completed_min_delta": 0.0
+    },
+    "benign": {
+      "benign_burden_at_3_max_delta": 0.25,
+      "coverage_completed_min_delta": 0.0
+    },
+    "all": {
+      "runtime_seconds_max_ratio": 2.0,
+      "failure_count_max_delta": 0
+    }
+  },
+  "required_baselines": ["seeded_random", "total_bytes"],
+  "tier_samples": {
+    "smoke": {"seeds": [7, 11], "windows": ["full"], "partitions": ["development"]},
+    "full": {"seeds": [7, 11, 19, 23, 29], "windows": ["full", "first_half", "second_half"], "partitions": ["development", "validation"]},
+    "held_out": {"seeds": [7, 11, 19, 23, 29], "windows": ["full", "first_half", "second_half"], "partitions": ["held_out"]}
+  },
+  "forbid_aggregate_recall_only_claims": true
+}

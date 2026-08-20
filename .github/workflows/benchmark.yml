@@ -1,0 +1,53 @@
+name: Benchmark v1 quality
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-v1-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  full-quality:
+    name: Full report-only quality matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            constraints/py312-direct.txt
+            pyproject.toml
+            requirements-dev.txt
+      - name: Install constrained development profile
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run full Benchmark v1 matrix
+        run: python -m jaws.benchmark_cli --tier full --output-dir benchmark-v1-full
+      - name: Publish summary
+        if: always()
+        run: |
+          if test -f benchmark-v1-full/benchmark-v1.md; then
+            cat benchmark-v1-full/benchmark-v1.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload reports and verifiable run bundles
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-v1-full-${{ github.sha }}
+          path: benchmark-v1-full/
+          if-no-files-found: error
+          retention-days: 90

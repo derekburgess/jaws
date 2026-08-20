@@ -787,6 +787,8 @@ Make a complete ranking study reproducible from an immutable specification and p
 
 ## Milestone 6 — Benchmark v1 and ranker research platform
 
+**Status:** Complete on `codex/readme-research-workbench` (2026-08-20; completion commit recorded after validation).
+
 ### Outcome
 
 Provide comparable, reproducible evidence about which representations, references, and rankers most successfully allocate investigator attention.
@@ -795,72 +797,72 @@ Provide comparable, reproducible evidence about which representations, reference
 
 #### Dataset and scenario governance
 
-- [ ] Version dataset manifests independently from code.
-- [ ] Record source URL/location, acquisition date, license/redistribution terms, checksum, capture host, time bounds, labels, label provenance, and known limitations.
-- [ ] Separate development, validation, and held-out scenario sets.
-- [ ] Prevent routine tuning reports from exposing held-out labels where practical.
-- [ ] Preserve synthetic scenarios as controlled tests while labeling them as model-authored traffic.
-- [ ] Expand benign counterexamples: updates, backups, streaming, DNS, NTP/keepalive, monitoring, CDN bursts, scans from approved tools, and infrastructure churn.
-- [ ] Expand anomaly scenarios: periodic and jittered beaconing, burst/slow exfiltration, fan-out/scan changes, first-seen infrastructure, protocol/port shifts, and behavioral change against history.
-- [ ] Add varied real captures from documented primary sources, subject to licensing and safe-handling review.
-- [ ] Keep malware binaries out of scope; acquire only the traffic evidence and labels required for the study.
+- [x] Version dataset manifests independently from code.
+- [x] Record source URL/location, acquisition date, license/redistribution terms, checksum, capture host, time bounds, labels, label provenance, and known limitations.
+- [x] Separate development, validation, and held-out scenario sets.
+- [x] Prevent routine tuning reports from exposing held-out labels where practical.
+- [x] Preserve synthetic scenarios as controlled tests while labeling them as model-authored traffic.
+- [x] Expand benign counterexamples: updates, backups, streaming, DNS, NTP/keepalive, monitoring, CDN bursts, scans from approved tools, and infrastructure churn.
+- [x] Expand anomaly scenarios: periodic and jittered beaconing, burst/slow exfiltration, fan-out/scan changes, first-seen infrastructure, protocol/port shifts, and behavioral change against history.
+- [x] Add varied real captures from documented primary sources, subject to licensing and safe-handling review.
+- [x] Keep malware binaries out of scope; acquire only the traffic evidence and labels required for the study.
 
 #### Baseline rankers
 
-- [ ] Seeded random ranking as a floor.
-- [ ] Total bytes and directional bytes sorts.
-- [ ] First-seen ranking.
-- [ ] Upload/download ratio ranking.
-- [ ] Peer-relative robust deviation.
-- [ ] Own-history change score.
-- [ ] Numeric-only current score.
-- [ ] Embedding-only PCA/DBSCAN behavior.
-- [ ] Current blended `legacy_2_0` behavior.
-- [ ] Isolation Forest over the same declared numeric representation.
-- [ ] Require each ranker to document score direction, supported entity/reference types, deterministic behavior, and explanation capability.
+- [x] Seeded random ranking as a floor.
+- [x] Total bytes and directional bytes sorts.
+- [x] First-seen ranking.
+- [x] Upload/download ratio ranking.
+- [x] Peer-relative robust deviation.
+- [x] Own-history change score.
+- [x] Numeric-only current score.
+- [x] Embedding-only PCA/DBSCAN behavior.
+- [x] Current blended `legacy_2_0` behavior.
+- [x] Isolation Forest over the same declared numeric representation.
+- [x] Require each ranker to document score direction, supported entity/reference types, deterministic behavior, and explanation capability.
 
 #### Reward vector
 
-- [ ] Recall@1, @3, @5, and @10 where labels permit.
-- [ ] Mean reciprocal rank.
-- [ ] nDCG@k for graded relevance.
-- [ ] Benign burden: benign observations above the first relevant finding and in top-k.
-- [ ] Rank percentile for each labeled target.
-- [ ] Top-k overlap and rank correlation across seeds/windows.
-- [ ] Sensitivity to parameter perturbations.
-- [ ] False-positive movement by benign scenario family.
-- [ ] Explanation fidelity via feature/reason ablation.
-- [ ] Runtime, peak memory, GPU memory, external API calls/tokens, and estimated cost.
-- [ ] Failure/abstention coverage, including unavailable representations and insufficient populations.
-- [ ] Preserve components individually; any scalar objective must declare its weights and cannot replace the vector in retained artifacts.
+- [x] Recall@1, @3, @5, and @10 where labels permit.
+- [x] Mean reciprocal rank.
+- [x] nDCG@k for graded relevance.
+- [x] Benign burden: benign observations above the first relevant finding and in top-k.
+- [x] Rank percentile for each labeled target.
+- [x] Top-k overlap and rank correlation across seeds/windows.
+- [x] Sensitivity to parameter perturbations.
+- [x] False-positive movement by benign scenario family.
+- [x] Explanation fidelity via feature/reason ablation.
+- [x] Runtime, peak memory, GPU memory, external API calls/tokens, and estimated cost.
+- [x] Failure/abstention coverage, including unavailable representations and insufficient populations.
+- [x] Preserve components individually; any scalar objective must declare its weights and cannot replace the vector in retained artifacts.
 
 #### Runner and comparisons
 
-- [ ] Execute matrices across datasets, entity definitions, representations, references, rankers, parameters, seeds, and windows from an `ExperimentSpec`.
-- [ ] Reuse compatible cached profiles/embeddings by content digest.
-- [ ] Prevent cache reuse when template, feature, model, normalization, or source evidence changes.
-- [ ] Produce per-scenario rankings before aggregates.
-- [ ] Compare control/treatment with paired deltas and uncertainty where repeated samples permit.
-- [ ] Generate JSON, Markdown, and optional HTML reports from the same retained metrics.
-- [ ] Report missing/skipped/failed scenarios separately from successful runs.
-- [ ] Link every aggregate number to the contributing scenario/run IDs.
+- [x] Execute matrices across datasets, entity definitions, representations, references, rankers, parameters, seeds, and windows from an `ExperimentSpec`.
+- [x] Reuse compatible cached profiles/embeddings by content digest.
+- [x] Prevent cache reuse when template, feature, model, normalization, or source evidence changes.
+- [x] Produce per-scenario rankings before aggregates.
+- [x] Compare control/treatment with paired deltas and uncertainty where repeated samples permit.
+- [x] Generate JSON, Markdown, and optional HTML reports from the same retained metrics.
+- [x] Report missing/skipped/failed scenarios separately from successful runs.
+- [x] Link every aggregate number to the contributing scenario/run IDs.
 
 #### Benchmark policy
 
-- [ ] Declare expected failures separately from accepted regressions.
-- [ ] Define regression budgets per scenario family and metric before evaluating a proposed change.
-- [ ] Require simple baselines in every comparative report.
-- [ ] Prohibit claims based only on aggregate recall when benign burden or scenario coverage worsens.
-- [ ] Define the procedure for promoting a held-out set, retiring a compromised set, and adding a replacement.
-- [ ] Define how many seeds/windows are required for each benchmark tier.
-- [ ] Keep the fast correctness suite blocking, the smoke benchmark visible, and the full quality benchmark scheduled/manual until policy thresholds are stable.
+- [x] Declare expected failures separately from accepted regressions.
+- [x] Define regression budgets per scenario family and metric before evaluating a proposed change.
+- [x] Require simple baselines in every comparative report.
+- [x] Prohibit claims based only on aggregate recall when benign burden or scenario coverage worsens.
+- [x] Define the procedure for promoting a held-out set, retiring a compromised set, and adding a replacement.
+- [x] Define how many seeds/windows are required for each benchmark tier.
+- [x] Keep the fast correctness suite blocking, the smoke benchmark visible, and the full quality benchmark scheduled/manual until policy thresholds are stable.
 
 #### Extensibility
 
-- [ ] Add registries for representations, references, rankers, evaluators, and renderers.
-- [ ] Validate plugin metadata and schema compatibility before a run.
-- [ ] Provide a minimal example ranker and scenario extension.
-- [ ] Ensure third-party rankers receive bounded typed data, not database credentials or unrestricted shell access.
+- [x] Add registries for representations, references, rankers, evaluators, and renderers.
+- [x] Validate plugin metadata and schema compatibility before a run.
+- [x] Provide a minimal example ranker and scenario extension.
+- [x] Ensure third-party rankers receive bounded typed data, not database credentials or unrestricted shell access.
 
 ### Completion gate
 
@@ -877,6 +879,14 @@ Provide comparable, reproducible evidence about which representations, reference
 - Baseline ranker suite and registries.
 - Benchmark runner, reward metrics, comparison reports, and CI/scheduled profiles.
 - Benchmark v1 reference artifact.
+
+### Completion evidence
+
+- The governed smoke reference ran all 12 rankers through the Milestone 5 experiment/evaluation path over two scenarios and two seeds: 48/48 completed cells with no missing, skipped, failed, or abstained results.
+- The full scheduled profile completed 2,340/2,340 cells over 13 development/validation scenarios, five seeds, and three windows; all 2,340 emitted experiment bundles passed checksum verification.
+- JSON, Markdown, and HTML reference renderings retain complete rankings, full reward vectors, environment fields, run IDs, and artifact checksums under `benchmarks/v1/reference/`.
+- The catalog records controlled synthetic evidence plus reviewed metadata-only candidates from CTU-13, CIC-IDS2017, MAWI, and ISCX Tor/non-Tor; no external capture or malware binary is committed.
+- Focused schema, ranker, cache, lifecycle, rendering, CLI, workflow, and extension tests pass alongside strict lint and type checks.
 
 ## Milestone 7 — Reproducible runtime and container profiles
 

@@ -100,6 +100,7 @@ jaws-retention = "jaws.retention_cli:main"
 jaws-evidence = "jaws.evidence_cli:main"
 jaws-admin = "jaws.administration_cli:main"
 jaws-research = "jaws.research_cli:main"
+jaws-benchmark = "jaws.benchmark_cli:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]

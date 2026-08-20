@@ -4,6 +4,11 @@ JAWS benchmark bundles are versioned laboratory records. They preserve the evide
 configuration, complete rankings, deterministic evaluation, environment, logs, and
 integrity information needed to compare detector behavior across revisions.
 
+`v1/` is the current governed ranker-research catalog and reference report. It uses the
+Milestone 5 experiment-bundle format per scenario/ranker cell, while this document's
+bundle contract below describes the frozen pre-refactor Benchmark 0 artifact. See
+[`v1/README.md`](v1/README.md) for the current runner, dataset policy, and source records.
+
 The committed `baseline-0/` directory is the **canonical Benchmark 0 bundle**. It is
 the observational freeze of detector revision
 `0b68a8c1ed615c96355989702126de623c78a714`, collected by committed collector revision

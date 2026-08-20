@@ -1,0 +1,1072 @@
+<!doctype html><html><head><meta charset="utf-8"><title>benchmark-5867e63903ff2cbb6804fb1eebb80ef30de06b46c57efb1e9a61c2d0f32f24aa</title></head><body><pre># JAWS benchmark-5867e63903ff2cbb6804fb1eebb80ef30de06b46c57efb1e9a61c2d0f32f24aa
+
+Completed scenario/ranker cells: 48/48
+Coverage: completed=48, missing=0, skipped=0, failed=0, abstained=0
+Required simple baselines: seeded_random, total_bytes
+
+## Scenario results
+
+| Dataset | Scenario | Ranker | Seed/window | Status | Recall@3 | Burden@3 | Ranking/message | Run |
+| --- | --- | --- | --- | --- | ---: | ---: | --- | --- |
+| jaws-synthetic-v1 | software_updates | bytes_in | 7/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-95886ea1-b905-4455-8c7e-8e645ff2a628 |
+| jaws-synthetic-v1 | software_updates | bytes_in | 11/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-729f3a79-6ee6-4c3e-acd9-902d514b2989 |
+| jaws-synthetic-v1 | software_updates | bytes_out | 7/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14 |
+| jaws-synthetic-v1 | software_updates | bytes_out | 11/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec |
+| jaws-synthetic-v1 | software_updates | embedding_pca_dbscan | 7/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-aada3355-a922-415f-800f-e301c5bca37c |
+| jaws-synthetic-v1 | software_updates | embedding_pca_dbscan | 11/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac |
+| jaws-synthetic-v1 | software_updates | first_seen | 7/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005 |
+| jaws-synthetic-v1 | software_updates | first_seen | 11/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-a83f5f14-a79a-4bd1-96ab-edcd84379d16 |
+| jaws-synthetic-v1 | software_updates | isolation_forest | 7/full | completed | — | 3 | benign-4, benign-1, benign-3, benign-2 | run-07aee180-f11f-43ca-ad41-1bd0650cf056 |
+| jaws-synthetic-v1 | software_updates | isolation_forest | 11/full | completed | — | 3 | benign-4, benign-1, benign-3, benign-2 | run-ec312579-d0c0-4964-8f6c-ea99cc972efe |
+| jaws-synthetic-v1 | software_updates | legacy_2_0 | 7/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-91841f13-55cb-4603-a47b-1453836780fe |
+| jaws-synthetic-v1 | software_updates | legacy_2_0 | 11/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-800ff7cd-241c-40f6-90ee-76f3d26db225 |
+| jaws-synthetic-v1 | software_updates | numeric_current | 7/full | completed | — | 3 | benign-4, benign-1, benign-2, benign-3 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c |
+| jaws-synthetic-v1 | software_updates | numeric_current | 11/full | completed | — | 3 | benign-4, benign-1, benign-2, benign-3 | run-5ff27626-fc57-462e-a23f-994c6754d864 |
+| jaws-synthetic-v1 | software_updates | own_history_change | 7/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2 |
+| jaws-synthetic-v1 | software_updates | own_history_change | 11/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-5abc3a82-8766-4c0a-ba87-458fa5eda297 |
+| jaws-synthetic-v1 | software_updates | peer_robust_deviation | 7/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3 |
+| jaws-synthetic-v1 | software_updates | peer_robust_deviation | 11/full | completed | — | 3 | benign-1, benign-4, benign-2, benign-3 | run-f535cc17-9877-4ec9-9904-2aa442d0ea3a |
+| jaws-synthetic-v1 | software_updates | seeded_random | 7/full | completed | — | 3 | benign-3, benign-1, benign-2, benign-4 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce |
+| jaws-synthetic-v1 | software_updates | seeded_random | 11/full | completed | — | 3 | benign-3, benign-2, benign-4, benign-1 | run-ca3f9926-1df9-452d-84ce-2f5ac6a40530 |
+| jaws-synthetic-v1 | software_updates | total_bytes | 7/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-53173fbb-1749-41d5-ba88-c506f65c1c72 |
+| jaws-synthetic-v1 | software_updates | total_bytes | 11/full | completed | — | 3 | benign-1, benign-2, benign-3, benign-4 | run-04004762-1852-4d76-a892-3dcf97d87894 |
+| jaws-synthetic-v1 | software_updates | upload_download_ratio | 7/full | completed | — | 3 | benign-2, benign-3, benign-4, benign-1 | run-5a860872-945b-40d7-ac40-299bc8308fe4 |
+| jaws-synthetic-v1 | software_updates | upload_download_ratio | 11/full | completed | — | 3 | benign-2, benign-3, benign-4, benign-1 | run-06405148-68d9-4d1f-8445-5f86cfbb1145 |
+| jaws-synthetic-v1 | periodic_beacon | bytes_in | 7/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf |
+| jaws-synthetic-v1 | periodic_beacon | bytes_in | 11/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| jaws-synthetic-v1 | periodic_beacon | bytes_out | 7/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23 |
+| jaws-synthetic-v1 | periodic_beacon | bytes_out | 11/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| jaws-synthetic-v1 | periodic_beacon | embedding_pca_dbscan | 7/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83 |
+| jaws-synthetic-v1 | periodic_beacon | embedding_pca_dbscan | 11/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-911d32bc-3164-425c-b49a-95137cc95418 |
+| jaws-synthetic-v1 | periodic_beacon | first_seen | 7/full | completed | 0 | 3 | benign-1, benign-2, benign-3, benign-4, target | run-9b81149f-0e15-455b-bdda-732b2a182797 |
+| jaws-synthetic-v1 | periodic_beacon | first_seen | 11/full | completed | 0 | 3 | benign-1, benign-2, benign-3, benign-4, target | run-cf034273-40de-4717-bb92-20231344160b |
+| jaws-synthetic-v1 | periodic_beacon | isolation_forest | 7/full | completed | 1 | 2 | target, benign-4, benign-3, benign-1, benign-2 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11 |
+| jaws-synthetic-v1 | periodic_beacon | isolation_forest | 11/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| jaws-synthetic-v1 | periodic_beacon | legacy_2_0 | 7/full | completed | 1 | 2 | target, benign-1, benign-4, benign-2, benign-3 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237 |
+| jaws-synthetic-v1 | periodic_beacon | legacy_2_0 | 11/full | completed | 1 | 2 | target, benign-1, benign-4, benign-2, benign-3 | run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| jaws-synthetic-v1 | periodic_beacon | numeric_current | 7/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c |
+| jaws-synthetic-v1 | periodic_beacon | numeric_current | 11/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| jaws-synthetic-v1 | periodic_beacon | own_history_change | 7/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee |
+| jaws-synthetic-v1 | periodic_beacon | own_history_change | 11/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| jaws-synthetic-v1 | periodic_beacon | peer_robust_deviation | 7/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-c66d32d6-5307-4532-9c20-a82854c73d71 |
+| jaws-synthetic-v1 | periodic_beacon | peer_robust_deviation | 11/full | completed | 1 | 2 | target, benign-4, benign-1, benign-3, benign-2 | run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| jaws-synthetic-v1 | periodic_beacon | seeded_random | 7/full | completed | 1 | 2 | benign-3, target, benign-1, benign-2, benign-4 | run-46933aab-2fca-4cd0-807e-823a3119601f |
+| jaws-synthetic-v1 | periodic_beacon | seeded_random | 11/full | completed | 1 | 2 | benign-3, benign-2, target, benign-4, benign-1 | run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| jaws-synthetic-v1 | periodic_beacon | total_bytes | 7/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd |
+| jaws-synthetic-v1 | periodic_beacon | total_bytes | 11/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| jaws-synthetic-v1 | periodic_beacon | upload_download_ratio | 7/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6 |
+| jaws-synthetic-v1 | periodic_beacon | upload_download_ratio | 11/full | completed | 1 | 2 | target, benign-1, benign-2, benign-3, benign-4 | run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+
+## Aggregate metrics
+
+| Metric | Value | Contributing runs |
+| --- | ---: | --- |
+| bytes_in.benign_above_first_relevant | 2 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.benign_burden_at_1 | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.benign_burden_at_10 | 4 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.benign_burden_at_3 | 2.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.benign_burden_at_5 | 4 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.coverage_completed | 1 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.coverage_failed | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.estimated_cost | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.explanation_fidelity | 1 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.external_api_calls | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.external_api_tokens | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.false_positive_movement.periodic_beacon | 0 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.false_positive_movement.software_updates | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989 |
+| bytes_in.mean_reciprocal_rank | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.ndcg_at_1 | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.ndcg_at_10 | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.ndcg_at_3 | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.ndcg_at_5 | 0.5 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.parameter_sensitivity | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.peak_gpu_memory_bytes | 0 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.peak_memory_bytes | 1.79739e+08 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.recall_at_1 | 1 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.recall_at_10 | 1 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.recall_at_3 | 1 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.recall_at_5 | 1 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.runtime_seconds | 0.00102818 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.stability_rank_correlation | 1 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.stability_top_k_overlap | 1 | run-95886ea1-b905-4455-8c7e-8e645ff2a628, run-729f3a79-6ee6-4c3e-acd9-902d514b2989, run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_in.target_percentile.target | 1 | run-c26a8863-f5a3-4d64-9eb9-09b868b4febf, run-9564e74e-56f6-47a3-9ea4-71e35dde0340 |
+| bytes_out.benign_above_first_relevant | 2 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.benign_burden_at_1 | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.benign_burden_at_10 | 4 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.benign_burden_at_3 | 2.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.benign_burden_at_5 | 4 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.coverage_completed | 1 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.coverage_failed | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.estimated_cost | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.explanation_fidelity | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.external_api_calls | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.external_api_tokens | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.false_positive_movement.periodic_beacon | 0 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.false_positive_movement.software_updates | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec |
+| bytes_out.mean_reciprocal_rank | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.ndcg_at_1 | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.ndcg_at_10 | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.ndcg_at_3 | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.ndcg_at_5 | 0.5 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.parameter_sensitivity | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.peak_gpu_memory_bytes | 0 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.peak_memory_bytes | 1.80197e+08 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.recall_at_1 | 1 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.recall_at_10 | 1 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.recall_at_3 | 1 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.recall_at_5 | 1 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.runtime_seconds | 0.000995177 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.stability_rank_correlation | 1 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.stability_top_k_overlap | 1 | run-55eafc78-dde9-4f1c-8dbe-190487bfca14, run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec, run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| bytes_out.target_percentile.target | 1 | run-1d8d36b0-74c5-4159-b2cf-8da32214df23, run-095a6533-cda8-493d-a08b-7864ba6b6ee9 |
+| embedding_pca_dbscan.benign_above_first_relevant | 2 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.benign_burden_at_1 | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.benign_burden_at_10 | 4 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.benign_burden_at_3 | 2.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.benign_burden_at_5 | 4 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.coverage_completed | 1 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.coverage_failed | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.estimated_cost | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.explanation_fidelity | 1 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.external_api_calls | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.external_api_tokens | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.false_positive_movement.periodic_beacon | 0 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.false_positive_movement.software_updates | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac |
+| embedding_pca_dbscan.mean_reciprocal_rank | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.ndcg_at_1 | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.ndcg_at_10 | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.ndcg_at_3 | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.ndcg_at_5 | 0.5 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.parameter_sensitivity | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.peak_gpu_memory_bytes | 0 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.peak_memory_bytes | 1.81594e+08 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.recall_at_1 | 1 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.recall_at_10 | 1 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.recall_at_3 | 1 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.recall_at_5 | 1 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.runtime_seconds | 0.0083312 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.stability_rank_correlation | 1 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.stability_top_k_overlap | 1 | run-aada3355-a922-415f-800f-e301c5bca37c, run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac, run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| embedding_pca_dbscan.target_percentile.target | 1 | run-3d4d007f-99c3-447c-bd8c-c1100e514b83, run-911d32bc-3164-425c-b49a-95137cc95418 |
+| first_seen.benign_above_first_relevant | 4 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.benign_burden_at_1 | 1 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.benign_burden_at_10 | 4 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.benign_burden_at_3 | 3 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.benign_burden_at_5 | 4 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.coverage_completed | 1 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.coverage_failed | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.estimated_cost | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.explanation_fidelity | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.external_api_calls | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.external_api_tokens | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.false_positive_movement.periodic_beacon | 1 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.false_positive_movement.software_updates | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16 |
+| first_seen.mean_reciprocal_rank | 0.1 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.ndcg_at_1 | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.ndcg_at_10 | 0.193426 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.ndcg_at_3 | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.ndcg_at_5 | 0.193426 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.parameter_sensitivity | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.peak_gpu_memory_bytes | 0 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.peak_memory_bytes | 1.81856e+08 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.recall_at_1 | 0 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.recall_at_10 | 1 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.recall_at_3 | 0 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.recall_at_5 | 1 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.runtime_seconds | 0.000973264 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.stability_rank_correlation | 1 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.stability_top_k_overlap | 1 | run-1b60fca3-64bf-4ab6-9b40-35ee051aa005, run-a83f5f14-a79a-4bd1-96ab-edcd84379d16, run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| first_seen.target_percentile.target | 0 | run-9b81149f-0e15-455b-bdda-732b2a182797, run-cf034273-40de-4717-bb92-20231344160b |
+| isolation_forest.benign_above_first_relevant | 2 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.benign_burden_at_1 | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.benign_burden_at_10 | 4 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.benign_burden_at_3 | 2.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.benign_burden_at_5 | 4 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.coverage_completed | 1 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.coverage_failed | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.estimated_cost | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.explanation_fidelity | 0.8875 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.external_api_calls | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.external_api_tokens | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.false_positive_movement.periodic_beacon | 0 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.false_positive_movement.software_updates | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe |
+| isolation_forest.mean_reciprocal_rank | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.ndcg_at_1 | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.ndcg_at_10 | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.ndcg_at_3 | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.ndcg_at_5 | 0.5 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.parameter_sensitivity | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.peak_gpu_memory_bytes | 0 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.peak_memory_bytes | 1.82206e+08 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.recall_at_1 | 1 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.recall_at_10 | 1 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.recall_at_3 | 1 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.recall_at_5 | 1 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.runtime_seconds | 0.115675 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.stability_rank_correlation | 0.95 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.stability_top_k_overlap | 1 | run-07aee180-f11f-43ca-ad41-1bd0650cf056, run-ec312579-d0c0-4964-8f6c-ea99cc972efe, run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| isolation_forest.target_percentile.target | 1 | run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11, run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573 |
+| legacy_2_0.benign_above_first_relevant | 2 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.benign_burden_at_1 | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.benign_burden_at_10 | 4 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.benign_burden_at_3 | 2.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.benign_burden_at_5 | 4 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.coverage_completed | 1 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.coverage_failed | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.estimated_cost | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.explanation_fidelity | 0.9 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.external_api_calls | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.external_api_tokens | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.false_positive_movement.periodic_beacon | 0 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.false_positive_movement.software_updates | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225 |
+| legacy_2_0.mean_reciprocal_rank | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.ndcg_at_1 | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.ndcg_at_10 | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.ndcg_at_3 | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.ndcg_at_5 | 0.5 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.parameter_sensitivity | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.peak_gpu_memory_bytes | 0 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.peak_memory_bytes | 1.82518e+08 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.recall_at_1 | 1 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.recall_at_10 | 1 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.recall_at_3 | 1 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.recall_at_5 | 1 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.runtime_seconds | 0.00238608 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.stability_rank_correlation | 1 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.stability_top_k_overlap | 1 | run-91841f13-55cb-4603-a47b-1453836780fe, run-800ff7cd-241c-40f6-90ee-76f3d26db225, run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| legacy_2_0.target_percentile.target | 1 | run-af54a992-fe81-49ef-ae3b-dd53c1df3237, run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc |
+| numeric_current.benign_above_first_relevant | 2 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.benign_burden_at_1 | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.benign_burden_at_10 | 4 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.benign_burden_at_3 | 2.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.benign_burden_at_5 | 4 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.coverage_completed | 1 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.coverage_failed | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.estimated_cost | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.explanation_fidelity | 1 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.external_api_calls | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.external_api_tokens | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.false_positive_movement.periodic_beacon | 0 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.false_positive_movement.software_updates | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864 |
+| numeric_current.mean_reciprocal_rank | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.ndcg_at_1 | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.ndcg_at_10 | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.ndcg_at_3 | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.ndcg_at_5 | 0.5 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.parameter_sensitivity | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.peak_gpu_memory_bytes | 0 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.peak_memory_bytes | 1.82714e+08 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.recall_at_1 | 1 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.recall_at_10 | 1 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.recall_at_3 | 1 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.recall_at_5 | 1 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.runtime_seconds | 0.00195227 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.stability_rank_correlation | 1 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.stability_top_k_overlap | 1 | run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c, run-5ff27626-fc57-462e-a23f-994c6754d864, run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| numeric_current.target_percentile.target | 1 | run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c, run-4eb88f4e-2094-4ae5-8dc7-22698e01a616 |
+| own_history_change.benign_above_first_relevant | 2 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.benign_burden_at_1 | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.benign_burden_at_10 | 4 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.benign_burden_at_3 | 2.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.benign_burden_at_5 | 4 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.coverage_completed | 1 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.coverage_failed | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.estimated_cost | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.explanation_fidelity | 1 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.external_api_calls | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.external_api_tokens | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.false_positive_movement.periodic_beacon | 0 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.false_positive_movement.software_updates | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297 |
+| own_history_change.mean_reciprocal_rank | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.ndcg_at_1 | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.ndcg_at_10 | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.ndcg_at_3 | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.ndcg_at_5 | 0.5 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.parameter_sensitivity | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.peak_gpu_memory_bytes | 0 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.peak_memory_bytes | 1.82845e+08 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.recall_at_1 | 1 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.recall_at_10 | 1 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.recall_at_3 | 1 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.recall_at_5 | 1 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.runtime_seconds | 0.00105274 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.stability_rank_correlation | 1 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.stability_top_k_overlap | 1 | run-7f30630a-68a8-48a7-aaa5-b1757486eae2, run-5abc3a82-8766-4c0a-ba87-458fa5eda297, run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| own_history_change.target_percentile.target | 1 | run-1ae46519-3ed1-4429-bdc8-3e78ca231dee, run-ec1365cd-d700-4b69-9196-9b3f63b31728 |
+| peer_robust_deviation.benign_above_first_relevant | 2 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.benign_burden_at_1 | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.benign_burden_at_10 | 4 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.benign_burden_at_3 | 2.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.benign_burden_at_5 | 4 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.coverage_completed | 1 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.coverage_failed | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.estimated_cost | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.explanation_fidelity | 0.225 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.external_api_calls | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.external_api_tokens | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.false_positive_movement.periodic_beacon | 0 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.false_positive_movement.software_updates | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a |
+| peer_robust_deviation.mean_reciprocal_rank | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.ndcg_at_1 | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.ndcg_at_10 | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.ndcg_at_3 | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.ndcg_at_5 | 0.5 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.parameter_sensitivity | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.peak_gpu_memory_bytes | 0 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.peak_memory_bytes | 1.82845e+08 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.recall_at_1 | 1 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.recall_at_10 | 1 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.recall_at_3 | 1 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.recall_at_5 | 1 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.runtime_seconds | 0.00131685 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.stability_rank_correlation | 1 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.stability_top_k_overlap | 1 | run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3, run-f535cc17-9877-4ec9-9904-2aa442d0ea3a, run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| peer_robust_deviation.target_percentile.target | 1 | run-c66d32d6-5307-4532-9c20-a82854c73d71, run-743c0261-c179-4337-ab43-7fcc55fac4b4 |
+| seeded_random.benign_above_first_relevant | 2.75 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.benign_burden_at_1 | 1 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.benign_burden_at_10 | 4 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.benign_burden_at_3 | 2.5 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.benign_burden_at_5 | 4 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.coverage_completed | 1 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.coverage_failed | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.estimated_cost | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.external_api_calls | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.external_api_tokens | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.false_positive_movement.periodic_beacon | 0 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.false_positive_movement.software_updates | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530 |
+| seeded_random.mean_reciprocal_rank | 0.208333 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.ndcg_at_1 | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.ndcg_at_10 | 0.282732 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.ndcg_at_3 | 0.282732 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.ndcg_at_5 | 0.282732 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.parameter_sensitivity | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.peak_gpu_memory_bytes | 0 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.peak_memory_bytes | 1.82977e+08 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.recall_at_1 | 0 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.recall_at_10 | 1 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.recall_at_3 | 1 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.recall_at_5 | 1 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.runtime_seconds | 0.000958025 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.stability_rank_correlation | 0.45 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.stability_top_k_overlap | 1 | run-f9834fa3-469c-4218-a519-0cf87ccec0ce, run-ca3f9926-1df9-452d-84ce-2f5ac6a40530, run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| seeded_random.target_percentile.target | 0.625 | run-46933aab-2fca-4cd0-807e-823a3119601f, run-1811341e-2c3e-493c-8c31-d139fb641876 |
+| total_bytes.benign_above_first_relevant | 2 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.benign_burden_at_1 | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.benign_burden_at_10 | 4 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.benign_burden_at_3 | 2.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.benign_burden_at_5 | 4 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.coverage_completed | 1 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.coverage_failed | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.estimated_cost | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.explanation_fidelity | 1 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.external_api_calls | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.external_api_tokens | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.false_positive_movement.periodic_beacon | 0 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.false_positive_movement.software_updates | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894 |
+| total_bytes.mean_reciprocal_rank | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.ndcg_at_1 | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.ndcg_at_10 | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.ndcg_at_3 | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.ndcg_at_5 | 0.5 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.parameter_sensitivity | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.peak_gpu_memory_bytes | 0 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.peak_memory_bytes | 1.83009e+08 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.recall_at_1 | 1 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.recall_at_10 | 1 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.recall_at_3 | 1 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.recall_at_5 | 1 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.runtime_seconds | 0.000984891 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.stability_rank_correlation | 1 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.stability_top_k_overlap | 1 | run-53173fbb-1749-41d5-ba88-c506f65c1c72, run-04004762-1852-4d76-a892-3dcf97d87894, run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| total_bytes.target_percentile.target | 1 | run-481b19de-27a7-471e-a3b9-486b6bbec7bd, run-d18f76cf-4ffa-42aa-9b37-d978f8591deb |
+| upload_download_ratio.benign_above_first_relevant | 2 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.benign_burden_at_1 | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.benign_burden_at_10 | 4 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.benign_burden_at_3 | 2.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.benign_burden_at_5 | 4 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.coverage_completed | 1 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.coverage_failed | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.estimated_cost | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.explanation_fidelity | 1 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.external_api_calls | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.external_api_tokens | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.false_positive_movement.periodic_beacon | 0 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.false_positive_movement.software_updates | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145 |
+| upload_download_ratio.mean_reciprocal_rank | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.ndcg_at_1 | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.ndcg_at_10 | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.ndcg_at_3 | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.ndcg_at_5 | 0.5 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.parameter_sensitivity | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.peak_gpu_memory_bytes | 0 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.peak_memory_bytes | 1.83108e+08 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.recall_at_1 | 1 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.recall_at_10 | 1 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.recall_at_3 | 1 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.recall_at_5 | 1 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.runtime_seconds | 0.00100503 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.stability_rank_correlation | 1 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.stability_top_k_overlap | 1 | run-5a860872-945b-40d7-ac40-299bc8308fe4, run-06405148-68d9-4d1f-8445-5f86cfbb1145, run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+| upload_download_ratio.target_percentile.target | 1 | run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6, run-98b41964-3951-4c74-a2a7-a85c8596d067 |
+
+## Paired deltas
+
+| Control | Treatment | Metric | Mean | 95% interval | Pairs |
+| --- | --- | --- | ---: | ---: | ---: |
+| seeded_random | bytes_in | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | bytes_in | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | bytes_in | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | bytes_in | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | bytes_in | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | bytes_in | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | bytes_in | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_in | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_in | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_in | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | peak_memory_bytes | -3.23789e+06 | [-5.9155e+06, -560274] | 4 |
+| seeded_random | bytes_in | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | bytes_in | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_in | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_in | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_in | runtime_seconds | 7.01583e-05 | [4.02472e-05, 0.000100069] | 4 |
+| seeded_random | bytes_in | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | bytes_in | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | bytes_in | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | bytes_out | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | bytes_out | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | bytes_out | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | bytes_out | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | bytes_out | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | bytes_out | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | bytes_out | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_out | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_out | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | bytes_out | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | peak_memory_bytes | -2.77914e+06 | [-4.96119e+06, -597080] | 4 |
+| seeded_random | bytes_out | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | bytes_out | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_out | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_out | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | bytes_out | runtime_seconds | 3.71528e-05 | [-1.14772e-05, 8.57828e-05] | 4 |
+| seeded_random | bytes_out | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | bytes_out | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | bytes_out | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | embedding_pca_dbscan | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | embedding_pca_dbscan | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | embedding_pca_dbscan | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | embedding_pca_dbscan | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | embedding_pca_dbscan | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | embedding_pca_dbscan | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | embedding_pca_dbscan | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | embedding_pca_dbscan | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | embedding_pca_dbscan | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | embedding_pca_dbscan | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | peak_memory_bytes | -1.3824e+06 | [-2.25224e+06, -512560] | 4 |
+| seeded_random | embedding_pca_dbscan | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | embedding_pca_dbscan | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | embedding_pca_dbscan | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | embedding_pca_dbscan | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | embedding_pca_dbscan | runtime_seconds | 0.00737317 | [-0.00161286, 0.0163592] | 4 |
+| seeded_random | embedding_pca_dbscan | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | embedding_pca_dbscan | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | embedding_pca_dbscan | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | first_seen | benign_above_first_relevant | 1.25 | [-0.22, 2.72] | 4 |
+| seeded_random | first_seen | benign_burden_at_1 | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | benign_burden_at_3 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | first_seen | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | false_positive_movement.periodic_beacon | 1 | [1, 1] | 2 |
+| seeded_random | first_seen | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | first_seen | mean_reciprocal_rank | -0.108333 | [-0.247885, 0.0312187] | 4 |
+| seeded_random | first_seen | ndcg_at_1 | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | ndcg_at_10 | -0.089306 | [-0.203135, 0.0245225] | 4 |
+| seeded_random | first_seen | ndcg_at_3 | -0.282732 | [-0.606934, 0.0414693] | 4 |
+| seeded_random | first_seen | ndcg_at_5 | -0.089306 | [-0.203135, 0.0245225] | 4 |
+| seeded_random | first_seen | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | peak_memory_bytes | -1.12026e+06 | [-1.87065e+06, -369859] | 4 |
+| seeded_random | first_seen | recall_at_1 | 0 | [0, 0] | 2 |
+| seeded_random | first_seen | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | first_seen | recall_at_3 | -1 | [-1, -1] | 2 |
+| seeded_random | first_seen | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | first_seen | runtime_seconds | 1.52396e-05 | [-5.45361e-05, 8.50153e-05] | 4 |
+| seeded_random | first_seen | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | first_seen | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | first_seen | target_percentile.target | -0.625 | [-0.87, -0.38] | 2 |
+| seeded_random | isolation_forest | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | isolation_forest | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | isolation_forest | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | isolation_forest | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | isolation_forest | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | isolation_forest | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | isolation_forest | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | isolation_forest | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | isolation_forest | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | isolation_forest | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | peak_memory_bytes | -770048 | [-1.28418e+06, -255911] | 4 |
+| seeded_random | isolation_forest | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | isolation_forest | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | isolation_forest | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | isolation_forest | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | isolation_forest | runtime_seconds | 0.114717 | [0.113856, 0.115578] | 4 |
+| seeded_random | isolation_forest | stability_rank_correlation | 0.5 | [0.386839, 0.613161] | 4 |
+| seeded_random | isolation_forest | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | isolation_forest | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | legacy_2_0 | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | legacy_2_0 | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | legacy_2_0 | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | legacy_2_0 | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | legacy_2_0 | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | legacy_2_0 | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | legacy_2_0 | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | legacy_2_0 | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | legacy_2_0 | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | legacy_2_0 | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | peak_memory_bytes | -458752 | [-704716, -212788] | 4 |
+| seeded_random | legacy_2_0 | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | legacy_2_0 | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | legacy_2_0 | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | legacy_2_0 | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | legacy_2_0 | runtime_seconds | 0.00142806 | [0.00114358, 0.00171254] | 4 |
+| seeded_random | legacy_2_0 | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | legacy_2_0 | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | legacy_2_0 | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | numeric_current | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | numeric_current | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | numeric_current | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | numeric_current | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | numeric_current | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | numeric_current | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | numeric_current | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | numeric_current | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | numeric_current | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | numeric_current | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | peak_memory_bytes | -262144 | [-262144, -262144] | 4 |
+| seeded_random | numeric_current | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | numeric_current | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | numeric_current | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | numeric_current | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | numeric_current | runtime_seconds | 0.000994248 | [0.0009064, 0.0010821] | 4 |
+| seeded_random | numeric_current | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | numeric_current | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | numeric_current | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | own_history_change | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | own_history_change | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | own_history_change | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | own_history_change | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | own_history_change | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | own_history_change | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | own_history_change | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | own_history_change | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | own_history_change | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | own_history_change | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | peak_memory_bytes | -131072 | [-131072, -131072] | 4 |
+| seeded_random | own_history_change | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | own_history_change | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | own_history_change | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | own_history_change | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | own_history_change | runtime_seconds | 9.47133e-05 | [6.00525e-05, 0.000129374] | 4 |
+| seeded_random | own_history_change | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | own_history_change | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | own_history_change | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | peer_robust_deviation | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | peer_robust_deviation | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | peer_robust_deviation | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | peer_robust_deviation | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | peer_robust_deviation | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | peer_robust_deviation | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | peer_robust_deviation | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | peer_robust_deviation | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | peer_robust_deviation | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | peer_robust_deviation | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | peak_memory_bytes | -131072 | [-131072, -131072] | 4 |
+| seeded_random | peer_robust_deviation | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | peer_robust_deviation | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | peer_robust_deviation | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | peer_robust_deviation | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | peer_robust_deviation | runtime_seconds | 0.00035883 | [0.000311555, 0.000406105] | 4 |
+| seeded_random | peer_robust_deviation | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | peer_robust_deviation | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | peer_robust_deviation | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | total_bytes | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | total_bytes | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | total_bytes | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | total_bytes | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | total_bytes | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | total_bytes | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | total_bytes | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | total_bytes | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | total_bytes | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | total_bytes | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | peak_memory_bytes | 32768 | [-31457.3, 96993.3] | 4 |
+| seeded_random | total_bytes | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | total_bytes | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | total_bytes | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | total_bytes | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | total_bytes | runtime_seconds | 2.68668e-05 | [-1.35503e-05, 6.72839e-05] | 4 |
+| seeded_random | total_bytes | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | total_bytes | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | total_bytes | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+| seeded_random | upload_download_ratio | benign_above_first_relevant | -0.75 | [-1.68828, 0.188279] | 4 |
+| seeded_random | upload_download_ratio | benign_burden_at_1 | -0.5 | [-1.0658, 0.0658033] | 4 |
+| seeded_random | upload_download_ratio | benign_burden_at_10 | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | benign_burden_at_3 | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | benign_burden_at_5 | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | coverage_completed | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | coverage_failed | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | estimated_cost | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | external_api_calls | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | external_api_tokens | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | false_positive_movement.periodic_beacon | 0 | [0, 0] | 2 |
+| seeded_random | upload_download_ratio | false_positive_movement.software_updates | 0 | [0, 0] | 2 |
+| seeded_random | upload_download_ratio | mean_reciprocal_rank | 0.291667 | [-0.0450536, 0.628387] | 4 |
+| seeded_random | upload_download_ratio | ndcg_at_1 | 0.5 | [-0.0658033, 1.0658] | 4 |
+| seeded_random | upload_download_ratio | ndcg_at_10 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | upload_download_ratio | ndcg_at_3 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | upload_download_ratio | ndcg_at_5 | 0.217268 | [-0.0341122, 0.468647] | 4 |
+| seeded_random | upload_download_ratio | parameter_sensitivity | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | peak_gpu_memory_bytes | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | peak_memory_bytes | 131072 | [131072, 131072] | 4 |
+| seeded_random | upload_download_ratio | recall_at_1 | 1 | [1, 1] | 2 |
+| seeded_random | upload_download_ratio | recall_at_10 | 0 | [0, 0] | 2 |
+| seeded_random | upload_download_ratio | recall_at_3 | 0 | [0, 0] | 2 |
+| seeded_random | upload_download_ratio | recall_at_5 | 0 | [0, 0] | 2 |
+| seeded_random | upload_download_ratio | runtime_seconds | 4.70005e-05 | [2.51668e-06, 9.14843e-05] | 4 |
+| seeded_random | upload_download_ratio | stability_rank_correlation | 0.55 | [0.49342, 0.60658] | 4 |
+| seeded_random | upload_download_ratio | stability_top_k_overlap | 0 | [0, 0] | 4 |
+| seeded_random | upload_download_ratio | target_percentile.target | 0.375 | [0.13, 0.62] | 2 |
+
+## Environment
+
+```json
+{&quot;dataset_manifest_version&quot;:&quot;1.0.0&quot;,&quot;held_out_labels_enabled&quot;:false,&quot;platform&quot;:&quot;Linux-7.0.0-28-generic-x86_64-with-glibc2.39&quot;,&quot;policy_digest&quot;:&quot;1b081d66e8bfc8fab8136bf6c4df2ce20ce89f081051e33b3a31ff02ae40e6ab&quot;,&quot;python&quot;:&quot;3.12.4&quot;,&quot;tier&quot;:&quot;smoke&quot;}
+```
+
+## Full reward vectors
+
+### run-95886ea1-b905-4455-8c7e-8e645ff2a628
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:176238592,&quot;runtime_seconds&quot;:0.0009612920694053173}}
+```
+
+### run-729f3a79-6ee6-4c3e-acd9-902d514b2989
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:177549312,&quot;runtime_seconds&quot;:0.000930913956835866}}
+```
+
+### run-55eafc78-dde9-4f1c-8dbe-190487bfca14
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:177680384,&quot;runtime_seconds&quot;:0.0009497078135609627}}
+```
+
+### run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:177811456,&quot;runtime_seconds&quot;:0.0009243360254913568}}
+```
+
+### run-aada3355-a922-415f-800f-e301c5bca37c
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:180015104,&quot;runtime_seconds&quot;:0.02197520202025771}}
+```
+
+### run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:180670464,&quot;runtime_seconds&quot;:0.0036390831228345633}}
+```
+
+### run-1b60fca3-64bf-4ab6-9b40-35ee051aa005
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:180670464,&quot;runtime_seconds&quot;:0.0008944040164351463}}
+```
+
+### run-a83f5f14-a79a-4bd1-96ab-edcd84379d16
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:180670464,&quot;runtime_seconds&quot;:0.0009104108903557062}}
+```
+
+### run-07aee180-f11f-43ca-ad41-1bd0650cf056
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:181108736,&quot;runtime_seconds&quot;:0.11672029201872647}}
+```
+
+### run-ec312579-d0c0-4964-8f6c-ea99cc972efe
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.75,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:181370880,&quot;runtime_seconds&quot;:0.11581544205546379}}
+```
+
+### run-91841f13-55cb-4603-a47b-1453836780fe
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:181665792,&quot;runtime_seconds&quot;:0.0021018630359321833}}
+```
+
+### run-800ff7cd-241c-40f6-90ee-76f3d26db225
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:181927936,&quot;runtime_seconds&quot;:0.002086447086185217}}
+```
+
+### run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182190080,&quot;runtime_seconds&quot;:0.0019390101078897715}}
+```
+
+### run-5ff27626-fc57-462e-a23f-994c6754d864
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182190080,&quot;runtime_seconds&quot;:0.0018016661051660776}}
+```
+
+### run-7f30630a-68a8-48a7-aaa5-b1757486eae2
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182321152,&quot;runtime_seconds&quot;:0.000985054997727275}}
+```
+
+### run-5abc3a82-8766-4c0a-ba87-458fa5eda297
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182321152,&quot;runtime_seconds&quot;:0.0009720430243760347}}
+```
+
+### run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.25,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182321152,&quot;runtime_seconds&quot;:0.0012695170007646084}}
+```
+
+### run-f535cc17-9877-4ec9-9904-2aa442d0ea3a
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.25,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182321152,&quot;runtime_seconds&quot;:0.0012380529660731554}}
+```
+
+### run-f9834fa3-469c-4218-a519-0cf87ccec0ce
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:null,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.4,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182452224,&quot;runtime_seconds&quot;:0.0008481128606945276}}
+```
+
+### run-ca3f9926-1df9-452d-84ce-2f5ac6a40530
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:null,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.4,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182452224,&quot;runtime_seconds&quot;:0.0008890840690582991}}
+```
+
+### run-53173fbb-1749-41d5-ba88-c506f65c1c72
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182452224,&quot;runtime_seconds&quot;:0.0009244130924344063}}
+```
+
+### run-04004762-1852-4d76-a892-3dcf97d87894
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0009107619989663363}}
+```
+
+### run-5a860872-945b-40d7-ac40-299bc8308fe4
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0009401889983564615}}
+```
+
+### run-06405148-68d9-4d1f-8445-5f86cfbb1145
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;software_updates&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.0},{&quot;k&quot;:10,&quot;value&quot;:0.0}],&quot;recall&quot;:[],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0009043519385159016}}
+```
+
+### run-c26a8863-f5a3-4d64-9eb9-09b868b4febf
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0011386140249669552}}
+```
+
+### run-9564e74e-56f6-47a3-9ea4-71e35dde0340
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0010819118469953537}}
+```
+
+### run-1d8d36b0-74c5-4159-b2cf-8da32214df23
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182583296,&quot;runtime_seconds&quot;:0.0010605249553918839}}
+```
+
+### run-095a6533-cda8-493d-a08b-7864ba6b6ee9
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182714368,&quot;runtime_seconds&quot;:0.001046141143888235}}
+```
+
+### run-3d4d007f-99c3-447c-bd8c-c1100e514b83
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182714368,&quot;runtime_seconds&quot;:0.003940364113077521}}
+```
+
+### run-911d32bc-3164-425c-b49a-95137cc95418
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182976512,&quot;runtime_seconds&quot;:0.003770133014768362}}
+```
+
+### run-9b81149f-0e15-455b-bdda-732b2a182797
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:1.0},&quot;mean_reciprocal_rank&quot;:0.2,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.38685280723454163},{&quot;k&quot;:10,&quot;value&quot;:0.38685280723454163}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:0.0,&quot;rank&quot;:5}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:182976512,&quot;runtime_seconds&quot;:0.000994351226836443}}
+```
+
+### run-cf034273-40de-4717-bb92-20231344160b
+
+```json
+{&quot;benign_above_first_relevant&quot;:4,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:3.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:1.0},&quot;mean_reciprocal_rank&quot;:0.2,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:0.38685280723454163},{&quot;k&quot;:10,&quot;value&quot;:0.38685280723454163}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:0.0,&quot;rank&quot;:5}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183107584,&quot;runtime_seconds&quot;:0.0010938909836113453}}
+```
+
+### run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.8,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.9,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183107584,&quot;runtime_seconds&quot;:0.11515753995627165}}
+```
+
+### run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.9,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183238656,&quot;runtime_seconds&quot;:0.11500490712933242}}
+```
+
+### run-af54a992-fe81-49ef-ae3b-dd53c1df3237
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.8,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183238656,&quot;runtime_seconds&quot;:0.0025016700383275747}}
+```
+
+### run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.8,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183238656,&quot;runtime_seconds&quot;:0.00285435002297163}}
+```
+
+### run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183238656,&quot;runtime_seconds&quot;:0.0020034669432789087}}
+```
+
+### run-4eb88f4e-2094-4ae5-8dc7-22698e01a616
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183238656,&quot;runtime_seconds&quot;:0.002064949134364724}}
+```
+
+### run-1ae46519-3ed1-4429-bdc8-3e78ca231dee
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183369728,&quot;runtime_seconds&quot;:0.0011332249268889427}}
+```
+
+### run-ec1365cd-d700-4b69-9196-9b3f63b31728
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183369728,&quot;runtime_seconds&quot;:0.001120629021897912}}
+```
+
+### run-c66d32d6-5307-4532-9c20-a82854c73d71
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.2,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183369728,&quot;runtime_seconds&quot;:0.0013842659536749125}}
+```
+
+### run-743c0261-c179-4337-ab43-7fcc55fac4b4
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:0.2,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183369728,&quot;runtime_seconds&quot;:0.0013755830004811287}}
+```
+
+### run-46933aab-2fca-4cd0-807e-823a3119601f
+
+```json
+{&quot;benign_above_first_relevant&quot;:1,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:null,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.5,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.6309297535714575},{&quot;k&quot;:5,&quot;value&quot;:0.6309297535714575},{&quot;k&quot;:10,&quot;value&quot;:0.6309297535714575}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.5,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:0.75,&quot;rank&quot;:2}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183500800,&quot;runtime_seconds&quot;:0.0010798920411616564}}
+```
+
+### run-1811341e-2c3e-493c-8c31-d139fb641876
+
+```json
+{&quot;benign_above_first_relevant&quot;:2,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:null,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:0.3333333333333333,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:0.5},{&quot;k&quot;:5,&quot;value&quot;:0.5},{&quot;k&quot;:10,&quot;value&quot;:0.5}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:0.5,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:0.5,&quot;rank&quot;:3}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183500800,&quot;runtime_seconds&quot;:0.0010150098241865635}}
+```
+
+### run-481b19de-27a7-471e-a3b9-486b6bbec7bd
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183500800,&quot;runtime_seconds&quot;:0.0010558848734945059}}
+```
+
+### run-d18f76cf-4ffa-42aa-9b37-d978f8591deb
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183500800,&quot;runtime_seconds&quot;:0.0010485060047358274}}
+```
+
+### run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183631872,&quot;runtime_seconds&quot;:0.0010811479296535254}}
+```
+
+### run-98b41964-3951-4c74-a2a7-a85c8596d067
+
+```json
+{&quot;benign_above_first_relevant&quot;:0,&quot;benign_burden&quot;:[{&quot;k&quot;:1,&quot;value&quot;:0.0},{&quot;k&quot;:3,&quot;value&quot;:2.0},{&quot;k&quot;:5,&quot;value&quot;:4.0},{&quot;k&quot;:10,&quot;value&quot;:4.0}],&quot;coverage&quot;:{&quot;abstained&quot;:0,&quot;completed&quot;:1,&quot;failed&quot;:0,&quot;missing&quot;:0,&quot;skipped&quot;:0,&quot;total&quot;:1},&quot;explanation_fidelity&quot;:1.0,&quot;false_positive_movement&quot;:{&quot;periodic_beacon&quot;:0.0},&quot;mean_reciprocal_rank&quot;:1.0,&quot;ndcg&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;recall&quot;:[{&quot;k&quot;:1,&quot;value&quot;:1.0},{&quot;k&quot;:3,&quot;value&quot;:1.0},{&quot;k&quot;:5,&quot;value&quot;:1.0},{&quot;k&quot;:10,&quot;value&quot;:1.0}],&quot;scalar_objective&quot;:null,&quot;scalar_weights&quot;:{},&quot;schema_version&quot;:&quot;1.0.0&quot;,&quot;stability&quot;:{&quot;parameter_sensitivity&quot;:0.0,&quot;rank_correlation&quot;:1.0,&quot;top_k_overlap&quot;:1.0},&quot;target_ranks&quot;:[{&quot;entity_id&quot;:&quot;target&quot;,&quot;percentile&quot;:1.0,&quot;rank&quot;:1}],&quot;usage&quot;:{&quot;estimated_cost&quot;:null,&quot;external_api_calls&quot;:0,&quot;external_api_tokens&quot;:0,&quot;peak_gpu_memory_bytes&quot;:null,&quot;peak_memory_bytes&quot;:183631872,&quot;runtime_seconds&quot;:0.001094411825761199}}
+```
+
+
+## Artifact checksums
+
+- `run-95886ea1-b905-4455-8c7e-8e645ff2a628`: `5076e96157939f50e7050655249e8400fdadd8ddb2cec48a259b58934985d508`
+- `run-729f3a79-6ee6-4c3e-acd9-902d514b2989`: `360bbc4f51d3dadeeb6f4be1b189e131daa1b956504595e87f9caccd63bc18b8`
+- `run-55eafc78-dde9-4f1c-8dbe-190487bfca14`: `251e7fbed541b282cdb7b92b8c63d04519b4b624ed238d51943983c292dc526f`
+- `run-a4b5f7c7-8a6f-4efa-b2af-9124c7c58dec`: `e53ceb99dc2040040ceb07306708181b4c5b0a3273a1325693b9f8bb5f3117a7`
+- `run-aada3355-a922-415f-800f-e301c5bca37c`: `61c24e8eba3d81f0b0fc8a9b54b8748329c4d5af7a6bb70e73434f1f0b5cd6b0`
+- `run-ba5cb42f-ac5e-4950-b1ee-ec12e681b0ac`: `458711979801d92accf6e0a0d984347bd36ef3a40988c9d7a04de777aece3b3f`
+- `run-1b60fca3-64bf-4ab6-9b40-35ee051aa005`: `4b16f456cacc3f78bd13160a38b90acd115edd45cf0a77c7256cfd44321327d2`
+- `run-a83f5f14-a79a-4bd1-96ab-edcd84379d16`: `06e25e65bae32b92236d3674437c72bfbe20bf28f588ed5d5a6a78d5db1637da`
+- `run-07aee180-f11f-43ca-ad41-1bd0650cf056`: `1fb4039898679b78f483950131c7c4243abd887cce8b3e5c8add6309c217d120`
+- `run-ec312579-d0c0-4964-8f6c-ea99cc972efe`: `2ecc829c849fbd55bd55d8b0ca1a66e42b8c6546f7ec9d80565f0f5fe7bbdd2a`
+- `run-91841f13-55cb-4603-a47b-1453836780fe`: `38255d781c6831e246f238e24cbb0cb73c28a216a6fd24ccd666163f34c7720d`
+- `run-800ff7cd-241c-40f6-90ee-76f3d26db225`: `0c69844402166f44609a58c44d1bd2a733ae507066c6c3e25e20c8668ac24762`
+- `run-45c1a7dc-f469-4b33-a7cc-f6008dc1cf0c`: `91990c351993725fb0c59e3927993c1631ca399cd968a9bf01c17b4d98bd7fea`
+- `run-5ff27626-fc57-462e-a23f-994c6754d864`: `b03a84395d6e2c7dc79e18346b2feb523dc0853e850b8c30e081df0666d36c02`
+- `run-7f30630a-68a8-48a7-aaa5-b1757486eae2`: `7120b9e6af163f0ff619f2795f70be5c0d818df441accdcad6c3a4fdaca6ff99`
+- `run-5abc3a82-8766-4c0a-ba87-458fa5eda297`: `1a0f7c5d7859ee296a2e93d2a51dc6174344c9540a50832853c132891d17d4d8`
+- `run-8e244be6-383a-40ac-b7d9-61c1e1c1e6d3`: `c02303b394c50a9c62d15e4e8e3ed25d0ca876ee2ca6dcde07cca7a43e70aa6a`
+- `run-f535cc17-9877-4ec9-9904-2aa442d0ea3a`: `978194f49b8c0ca089fede7ecd15fc103b5453c1a12c11d13fa9dcbce0f7b881`
+- `run-f9834fa3-469c-4218-a519-0cf87ccec0ce`: `05894442b50df10d848f6c7700604bcc174a814500438e53fc45d6675e195c31`
+- `run-ca3f9926-1df9-452d-84ce-2f5ac6a40530`: `f516b82a43801475514a079c3c0f4a0e51fdb3d6d1bf12058b98ba4f412c3624`
+- `run-53173fbb-1749-41d5-ba88-c506f65c1c72`: `72318fa77ad4c4c583d3179b780ddfd3fb02696a1a72cf95145dd6019e23b1f7`
+- `run-04004762-1852-4d76-a892-3dcf97d87894`: `f9626c3d6420955876ede6ae743374c0d9f85ef7efd6f9bb623ca26c34177d8d`
+- `run-5a860872-945b-40d7-ac40-299bc8308fe4`: `3d4a1c51dc17ac29fb5671843666816b0979999a277d513502e98e1781d95b96`
+- `run-06405148-68d9-4d1f-8445-5f86cfbb1145`: `ff8c5d375b64a6fe976f759bd2304dd4bf94b809092d3eab9b224ecfef5586f1`
+- `run-c26a8863-f5a3-4d64-9eb9-09b868b4febf`: `9cae40a61f264a39e71d3e7f322d3bb09a6e2a6264a572025f4fe7f6a891d397`
+- `run-9564e74e-56f6-47a3-9ea4-71e35dde0340`: `4485a14ed9fbb82fc3aa473a7df7e531ff702482c8ac4c40c5c33af2798a7308`
+- `run-1d8d36b0-74c5-4159-b2cf-8da32214df23`: `a7a173473160b8163f2f97f6a1eda02502b945f28e63559d6a3688b277233e17`
+- `run-095a6533-cda8-493d-a08b-7864ba6b6ee9`: `0008742bd358a3728ebea0d93e7391fc2ba4045044508681a9dc076961fbb23b`
+- `run-3d4d007f-99c3-447c-bd8c-c1100e514b83`: `ed27a8d3b3341f37b8e30fbe5cb3046fe8a890974f5990de63756beb9c3710b2`
+- `run-911d32bc-3164-425c-b49a-95137cc95418`: `b142f4e508e2bc29c09fb0e8ded1d698d3a01f1e936c643a94cdfb34f8573690`
+- `run-9b81149f-0e15-455b-bdda-732b2a182797`: `d9101f3cff58ff1dd0be80c25c9b04fd63231d5d400eb0ee1b69c78d8fd0fc6e`
+- `run-cf034273-40de-4717-bb92-20231344160b`: `ceae15d34f4bd53a80244b1d1416570c448d0b8da2bb6945c73f94bd5f675d3c`
+- `run-cc440c20-4ca5-4f6a-91c5-f2b211cd3b11`: `33d2b563298aa8db8b3382406e38cc3a92ca9e9cef5a076588910dcd3e5072d0`
+- `run-fb1925f3-f0f9-4b8d-b2bd-b025d4122573`: `3576d142cfb117028bc04d5e13b1eba36acb73c5155c6c9236c68c336602d00c`
+- `run-af54a992-fe81-49ef-ae3b-dd53c1df3237`: `8b02b568fcbe8d1e29c2bbd9badc87c5d5a4bfe66bc25bffe04ceac1d3fb6e8e`
+- `run-9e462d5d-c6d4-47bd-bb83-acd1e83d13cc`: `a6ff86f86bb351b6ec3b2e53b68d741d5a81561c5aefbcab62be28838a3b91a3`
+- `run-48c0fcf3-6924-410e-84a6-cc1490fd9b8c`: `ea1ac1411b95911b1b40348fde3388441a25cdd18e4e801adb6519bcb67f2156`
+- `run-4eb88f4e-2094-4ae5-8dc7-22698e01a616`: `7e07ab9a08b3added2c67361d6d83821350052fe3d49e05eb4b2686b753d3061`
+- `run-1ae46519-3ed1-4429-bdc8-3e78ca231dee`: `1a4fd41b899dfedab8bea53589ffaea4f108de1160c3ec3a16041e6c78e342a4`
+- `run-ec1365cd-d700-4b69-9196-9b3f63b31728`: `9d0e41c954db2e5a358d481170bf930dd7edaee57af2e7b39b041facaf78deb7`
+- `run-c66d32d6-5307-4532-9c20-a82854c73d71`: `b9d6792fb9c6128388c4cb30317c372a30931947effff58f4f728db681aeac42`
+- `run-743c0261-c179-4337-ab43-7fcc55fac4b4`: `78145e13c168b8928cab17057a08a23d6b02cba0b708fd8ad61c8c3c10f2551d`
+- `run-46933aab-2fca-4cd0-807e-823a3119601f`: `f30870b9f1eec2e5b95565788f163d9ec910feb8d3574daf42815cd2e51cfa83`
+- `run-1811341e-2c3e-493c-8c31-d139fb641876`: `a7f83af2c760e8198fe578096b58df72ae2b1c3ceca1c4f18e795b6a3d38de45`
+- `run-481b19de-27a7-471e-a3b9-486b6bbec7bd`: `2955512c2e41fb124c9213704c63139aa77bf52fe0da54f1b0c09e379f84edc6`
+- `run-d18f76cf-4ffa-42aa-9b37-d978f8591deb`: `50639b9c700264e11912e25011c4f5ed5eab6d7aba5c0aa96c373786596df77c`
+- `run-1cc9c429-7389-44c9-b1bf-430fabcc4ea6`: `2b363b5d4e643337cb78fa024346ab8a85ce1e9913ba5f6320cda94cf5fdcd30`
+- `run-98b41964-3951-4c74-a2a7-a85c8596d067`: `5e65468f0ce7df4f743e6792a28ecb13884e30a812a42351f874e7d7b7f530a7`
+</pre></body></html>
