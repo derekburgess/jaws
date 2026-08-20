@@ -1,15 +1,34 @@
 # Endpoint profiling service contract
 
-`EndpointProfiler` is the deterministic packet-to-entity aggregation boundary. It accepts
-immutable `PacketRecord` evidence plus optional `EntityMetadata` display projections and
-returns address-sorted `EndpointProfileDraft` values. It imports no pandas, NumPy, Neo4j,
-embedding provider, configuration, CLI, or reporting dependency.
+`EndpointProfiler` is the deterministic packet-to-entity aggregation boundary. It requires
+an `EntityDefinition`, an `ObservationWindow`, immutable `PacketRecord` evidence, and
+optional `EntityMetadata` display projections. It returns an `EndpointProfilingResult`
+containing those exact declarations, the source packet count, and address-sorted
+`EndpointProfileDraft` values. It imports no pandas, NumPy, Neo4j, embedding provider,
+configuration, CLI, or reporting dependency.
 
 The draft is deliberately pre-representation and pre-embedding. It binds normalized IP
 identity, deterministic address classification, directional packet features, display
 metadata, and cadence. Observation scope, entity-definition version, representation
 version, model revision, computation time, embedding, and persistence are later service
 responsibilities and are not invented by aggregation.
+
+## Entity and observation declarations
+
+The current profiler accepts only `endpoint_ip` entity semantics at version `1`.
+Host-destination, flow, service, subnet, or unknown entity versions fail with
+`UnsupportedEntityDefinitionError`; they are never silently treated as endpoint IPs.
+
+Every packet capture ID must be declared by the observation window. Optional start and end
+bounds are inclusive, and evidence outside either bound fails with `ProfilingWindowError`.
+A declared capture may legitimately contribute zero packets, so an empty packet sequence
+returns a successful empty result rather than erasing the window declaration. Multiple
+capture IDs form an explicit pooled input while cadence continues to respect each packet's
+capture boundary. Perspective and filter declarations remain attached to the result;
+evidence-selection adapters own evaluation of their external filter syntax.
+
+Observation windows reject duplicate capture IDs and empty filter declarations. Entity
+definition versions are normalized and cannot be blank.
 
 ## Directional aggregation invariants
 
@@ -56,5 +75,10 @@ frozen synthetic Benchmark 0 rows to retain their historical signed individual s
 normal profiler calls still reject negative sizes, and those rows are never promoted into
 modern `PacketRecord` evidence. Packet aggregation no longer lives in the command module.
 
-The next profile-service slice makes the entity definition and observation window explicit
-inputs rather than assuming the already-selected packet collection represents endpoint IPs.
+`jaws-compute` translates a concrete `--session` into a one-capture window, `--session all`
+into the complete declared capture set, and a legacy graph with no capture records into the
+explicit `legacy-unscoped` compatibility identity. Direct legacy callers may omit the new
+arguments only at this outer adapter; the pure service has no implicit entity or scope.
+
+The next profile-service slice versions numeric feature definitions, transformations,
+missing-value policy, and units.

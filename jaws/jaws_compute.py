@@ -19,8 +19,10 @@ from jaws.domain import (
     CaptureId,
     EndpointProfile,
     EndpointProfileDraft,
+    EntityDefinition,
     EntityId,
     EntityMetadata,
+    EntityType,
     ObservationScopeId,
     ObservationWindow,
     ProfileIdentity,
@@ -135,6 +137,11 @@ def endpoint_timing(ts_groups):
 
 
 _MISSING_PROTOCOL = "jaws-legacy-missing-protocol"
+_LEGACY_UNSCOPED_CAPTURE_ID = CaptureId("legacy-unscoped")
+_ENDPOINT_ENTITY_DEFINITION = EntityDefinition(
+    entity_type=EntityType.ENDPOINT_IP,
+    version="1",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,7 +167,7 @@ def _frame_profile_packets(packets):
     for _, row in packets.iterrows():
         raw_capture_id = row.get("capture_id")
         capture_id = (
-            "legacy-unscoped"
+            _LEGACY_UNSCOPED_CAPTURE_ID.value
             if raw_capture_id is None or pd.isna(raw_capture_id) or not str(raw_capture_id).strip()
             else str(raw_capture_id)
         )
@@ -228,18 +235,65 @@ def _legacy_profile(draft: EndpointProfileDraft):
     }
 
 
-def build_endpoint_profiles(packets, metadata):
+def profile_observation_window(capture_id, session_ids, packets):
+    """Translate legacy session selection into an explicit evidence declaration."""
+
+    captures: tuple[CaptureId, ...]
+    if capture_id is not None:
+        captures = (CaptureId(capture_id),)
+    elif session_ids:
+        captures = tuple(CaptureId(value) for value in session_ids)
+    else:
+        values = (
+            ()
+            if "capture_id" not in packets.columns
+            else tuple(
+                sorted(
+                    {
+                        str(value).strip()
+                        for value in packets["capture_id"]
+                        if not pd.isna(value) and str(value).strip()
+                    }
+                )
+            )
+        )
+        captures = (
+            tuple(CaptureId(value) for value in values)
+            if values
+            else (_LEGACY_UNSCOPED_CAPTURE_ID,)
+        )
+    return ObservationWindow(capture_ids=captures)
+
+
+def build_endpoint_profiles(
+    packets,
+    metadata,
+    *,
+    entity_definition=None,
+    observation_window=None,
+):
     """Aggregate every packet into one profile per IP address, split by direction.
 
     Each IP becomes a single data point describing its outbound traffic (as the
     source) and inbound traffic (as the destination), so outbound anomalies are
     first-class. The local host is included intentionally.
     """
-    drafts = EndpointProfiler(allow_legacy_negative_packet_sizes=True).profile(
-        _frame_profile_packets(packets),
-        _metadata_records(metadata),
+    evidence = _frame_profile_packets(packets)
+    window = observation_window or ObservationWindow(
+        capture_ids=tuple(
+            sorted(
+                {packet.capture_id for packet in evidence} or {_LEGACY_UNSCOPED_CAPTURE_ID},
+                key=lambda value: value.value,
+            )
+        )
     )
-    return [_legacy_profile(draft) for draft in drafts]
+    result = EndpointProfiler(allow_legacy_negative_packet_sizes=True).profile(
+        evidence,
+        entity_definition=entity_definition or _ENDPOINT_ENTITY_DEFINITION,
+        observation_window=window,
+        metadata=_metadata_records(metadata),
+    )
+    return [_legacy_profile(draft) for draft in result.profiles]
 
 
 def build_endpoint_description(p):
@@ -453,7 +507,12 @@ def main():
 
     packets = fetch_packets(driver, args.database, capture_id, repositories.packets)
     metadata = fetch_ip_metadata(driver, args.database, repositories.enrichment)
-    profiles = build_endpoint_profiles(packets, metadata)
+    profiles = build_endpoint_profiles(
+        packets,
+        metadata,
+        entity_definition=_ENDPOINT_ENTITY_DEFINITION,
+        observation_window=profile_observation_window(capture_id, session_ids, packets),
+    )
 
     model_name = PACKET_MODELS[args.model] if args.api == "transformers" else OPENAI_EMBEDDING_MODEL
     embedding_strings = []

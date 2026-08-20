@@ -7,12 +7,30 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from jaws.domain import CaptureId, EntityId, EntityMetadata, PacketRecord
-from jaws.jaws_compute import build_endpoint_profiles, endpoint_timing
-from jaws.services import EndpointProfiler, interval_timing_seconds
+from jaws.domain import (
+    CaptureId,
+    EntityDefinition,
+    EntityId,
+    EntityMetadata,
+    EntityType,
+    ObservationWindow,
+    PacketRecord,
+)
+from jaws.jaws_compute import (
+    build_endpoint_profiles,
+    endpoint_timing,
+    profile_observation_window,
+)
+from jaws.services import (
+    EndpointProfiler,
+    ProfilingWindowError,
+    UnsupportedEntityDefinitionError,
+    interval_timing_seconds,
+)
 
 NOW = datetime(2026, 8, 20, 12, tzinfo=UTC)
 CAPTURE = CaptureId("cap_profile_service")
+ENDPOINT_IP_V1 = EntityDefinition(entity_type=EntityType.ENDPOINT_IP, version="1")
 
 
 def _packet(
@@ -36,6 +54,30 @@ def _packet(
         source_port=source_port,
         destination_port=destination_port,
     )
+
+
+def _window(*packets, capture_ids=None, started_at=None, ended_at=None):
+    captures = (
+        tuple(capture_ids)
+        if capture_ids is not None
+        else tuple(sorted({packet.capture_id for packet in packets} or {CAPTURE}))
+    )
+    return ObservationWindow(
+        capture_ids=captures,
+        started_at=started_at,
+        ended_at=ended_at,
+    )
+
+
+def _profiles(packets, metadata=(), *, profiler=None, window=None, entity=ENDPOINT_IP_V1):
+    service = profiler or EndpointProfiler()
+    result = service.profile(
+        packets,
+        entity_definition=entity,
+        observation_window=window or _window(*packets),
+        metadata=metadata,
+    )
+    return result.profiles
 
 
 def test_profiler_preserves_directional_counts_peers_ports_protocols_and_metadata():
@@ -69,7 +111,7 @@ def test_profiler_preserves_directional_counts_peers_ports_protocols_and_metadat
         _packet(3, "0.0.0.0", "10.0.0.2", size=999),
     )
 
-    drafts = EndpointProfiler().profile(packets, metadata)
+    drafts = _profiles(packets, metadata)
     by_address = {draft.ip_address: draft for draft in drafts}
     local = by_address["10.0.0.2"]
 
@@ -101,8 +143,8 @@ def test_profiler_is_order_independent_and_caps_sorted_ports():
     )
     profiler = EndpointProfiler()
 
-    forward = profiler.profile(packets)
-    reversed_result = profiler.profile(tuple(reversed(packets)))
+    forward = _profiles(packets, profiler=profiler)
+    reversed_result = _profiles(tuple(reversed(packets)), profiler=profiler)
 
     assert forward == reversed_result
     local = next(draft for draft in forward if draft.ip_address == "10.0.0.2")
@@ -128,9 +170,7 @@ def test_timing_gate_and_capture_boundaries_preserve_beacon_cadence():
         for offset in (base, base + 10.0, base + 20.0, base + 30.0)
     )
 
-    local = next(
-        draft for draft in EndpointProfiler().profile(packets) if draft.ip_address == "10.0.0.2"
-    )
+    local = next(draft for draft in _profiles(packets) if draft.ip_address == "10.0.0.2")
 
     assert local.interval_mean == pytest.approx(10.0)
     assert local.interval_cv == pytest.approx(0.0)
@@ -142,18 +182,14 @@ def test_more_regular_qualifying_direction_supplies_endpoint_timing():
         _packet(seconds, "1.1.1.1", "10.0.0.2") for seconds in (100, 101, 104, 110, 120, 135)
     )
 
-    local = next(
-        draft
-        for draft in EndpointProfiler().profile(outbound + inbound)
-        if draft.ip_address == "10.0.0.2"
-    )
+    local = next(draft for draft in _profiles(outbound + inbound) if draft.ip_address == "10.0.0.2")
 
     assert local.interval_mean == pytest.approx(10.0)
     assert local.interval_cv == pytest.approx(0.0)
 
 
 def test_profile_draft_rejects_identity_drift_and_profiler_bounds():
-    draft = EndpointProfiler().profile((_packet(0, "10.0.0.2", "8.8.8.8"),))[0]
+    draft = _profiles((_packet(0, "10.0.0.2", "8.8.8.8"),))[0]
 
     with pytest.raises(ValueError, match="entity_id must match"):
         replace(draft, entity_id=EntityId("ip:1.1.1.1"))
@@ -177,12 +213,123 @@ def test_negative_packet_size_is_confined_to_explicit_legacy_compatibility():
     )
 
     with pytest.raises(ValueError, match="size cannot be negative"):
-        EndpointProfiler().profile((malformed, valid))
+        _profiles((malformed, valid))
 
-    drafts = EndpointProfiler(allow_legacy_negative_packet_sizes=True).profile((malformed, valid))
+    drafts = _profiles(
+        (malformed, valid),
+        profiler=EndpointProfiler(allow_legacy_negative_packet_sizes=True),
+    )
 
     local = next(draft for draft in drafts if draft.ip_address == "10.0.0.2")
     assert local.bytes_out == 1
+
+
+def test_profile_result_retains_exact_entity_and_single_capture_window():
+    packet = _packet(5, "10.0.0.2", "8.8.8.8")
+    window = _window(
+        packet,
+        started_at=NOW,
+        ended_at=NOW + timedelta(seconds=10),
+    )
+
+    result = EndpointProfiler().profile(
+        (packet,),
+        entity_definition=ENDPOINT_IP_V1,
+        observation_window=window,
+    )
+
+    assert result.entity_definition is ENDPOINT_IP_V1
+    assert result.observation_window is window
+    assert result.source_packet_count == 1
+    assert len(result.profiles) == 2
+
+
+def test_pooled_window_accepts_declared_capture_set_and_empty_window_is_valid():
+    second_capture = CaptureId("cap_profile_second")
+    packets = (
+        _packet(0, "10.0.0.2", "8.8.8.8"),
+        _packet(1, "10.0.0.2", "1.1.1.1", capture_id=second_capture),
+    )
+    window = _window(*packets, capture_ids=(CAPTURE, second_capture))
+
+    pooled = EndpointProfiler().profile(
+        packets,
+        entity_definition=ENDPOINT_IP_V1,
+        observation_window=window,
+    )
+    empty = EndpointProfiler().profile(
+        (),
+        entity_definition=ENDPOINT_IP_V1,
+        observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+    )
+
+    assert pooled.observation_window.capture_ids == (CAPTURE, second_capture)
+    assert pooled.source_packet_count == 2
+    assert empty.source_packet_count == 0
+    assert empty.profiles == ()
+
+
+@pytest.mark.parametrize(
+    ("window", "message"),
+    (
+        (
+            ObservationWindow(capture_ids=(CaptureId("cap_other"),)),
+            "outside the observation window",
+        ),
+        (
+            ObservationWindow(capture_ids=(CAPTURE,), started_at=NOW + timedelta(seconds=1)),
+            "precedes the observation window",
+        ),
+        (
+            ObservationWindow(capture_ids=(CAPTURE,), ended_at=NOW - timedelta(seconds=1)),
+            "follows the observation window",
+        ),
+    ),
+)
+def test_profiler_rejects_packet_evidence_outside_declared_window(window, message):
+    with pytest.raises(ProfilingWindowError, match=message):
+        EndpointProfiler().profile(
+            (_packet(0, "10.0.0.2", "8.8.8.8"),),
+            entity_definition=ENDPOINT_IP_V1,
+            observation_window=window,
+        )
+
+
+@pytest.mark.parametrize(
+    "entity",
+    (
+        EntityDefinition(entity_type=EntityType.HOST_DESTINATION, version="1"),
+        EntityDefinition(entity_type=EntityType.ENDPOINT_IP, version="2"),
+    ),
+)
+def test_profiler_rejects_unsupported_entity_type_or_version(entity):
+    with pytest.raises(UnsupportedEntityDefinitionError, match="endpoint_ip.*version='1'"):
+        EndpointProfiler().profile(
+            (),
+            entity_definition=entity,
+            observation_window=ObservationWindow(capture_ids=(CAPTURE,)),
+        )
+
+
+def test_legacy_session_adapter_declares_single_pooled_and_unscoped_windows():
+    frame = pd.DataFrame({"capture_id": ["cap_first", "cap_second"]})
+
+    single = profile_observation_window("cap_second", ["cap_first", "cap_second"], frame)
+    pooled = profile_observation_window(None, ["cap_first", "cap_second"], frame)
+    unscoped = profile_observation_window(None, [], pd.DataFrame())
+
+    assert single.capture_ids == (CaptureId("cap_second"),)
+    assert pooled.capture_ids == (CaptureId("cap_first"), CaptureId("cap_second"))
+    assert unscoped.capture_ids == (CaptureId("legacy-unscoped"),)
+
+
+def test_entity_and_window_declarations_reject_ambiguous_identity():
+    with pytest.raises(ValueError, match="version cannot be empty"):
+        EntityDefinition(entity_type=EntityType.ENDPOINT_IP, version=" ")
+    with pytest.raises(ValueError, match="capture IDs must be unique"):
+        ObservationWindow(capture_ids=(CAPTURE, CAPTURE))
+    with pytest.raises(ValueError, match="filters cannot be empty"):
+        ObservationWindow(capture_ids=(CAPTURE,), filters=("tcp", " "))
 
 
 def test_legacy_dataframe_adapter_preserves_profile_shape():

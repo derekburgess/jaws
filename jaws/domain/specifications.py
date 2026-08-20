@@ -55,18 +55,30 @@ class ObservationWindow(VersionedSpec):
     def __post_init__(self) -> None:
         if not self.capture_ids:
             raise ValueError("observation window requires at least one capture")
+        if len(set(self.capture_ids)) != len(self.capture_ids):
+            raise ValueError("observation window capture IDs must be unique")
         if self.started_at is not None:
             object.__setattr__(self, "started_at", normalize_utc(self.started_at))
         if self.ended_at is not None:
             object.__setattr__(self, "ended_at", normalize_utc(self.ended_at))
         if self.started_at and self.ended_at and self.ended_at < self.started_at:
             raise ValueError("observation window ends before it starts")
+        filters = tuple(value.strip() for value in self.filters)
+        if any(not value for value in filters):
+            raise ValueError("observation window filters cannot be empty")
+        object.__setattr__(self, "filters", filters)
 
 
 @dataclass(frozen=True, slots=True)
 class EntityDefinition(VersionedSpec):
     entity_type: EntityType = EntityType.ENDPOINT_IP
     version: str = "1"
+
+    def __post_init__(self) -> None:
+        version = self.version.strip()
+        if not version:
+            raise ValueError("entity definition version cannot be empty")
+        object.__setattr__(self, "version", version)
 
 
 @dataclass(frozen=True, slots=True)

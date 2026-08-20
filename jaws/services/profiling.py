@@ -12,12 +12,23 @@ from jaws.domain import (
     MIN_TIMING_PACKETS,
     CaptureId,
     EndpointProfileDraft,
+    EntityDefinition,
     EntityId,
     EntityMetadata,
+    EntityType,
+    ObservationWindow,
     classify_ip_address,
 )
 
 MAX_PROFILE_PORTS = 20
+
+
+class UnsupportedEntityDefinitionError(ValueError):
+    """The profiler does not implement the declared entity semantics."""
+
+
+class ProfilingWindowError(ValueError):
+    """Supplied packet evidence falls outside its declared observation window."""
 
 
 class ProfilePacketEvidence(Protocol):
@@ -74,6 +85,23 @@ def interval_timing_seconds(
     return mean, sqrt(variance) / mean
 
 
+@dataclass(frozen=True, slots=True)
+class EndpointProfilingResult:
+    """Profile drafts bound to the exact entity and evidence-selection declarations."""
+
+    entity_definition: EntityDefinition
+    observation_window: ObservationWindow
+    source_packet_count: int
+    profiles: tuple[EndpointProfileDraft, ...]
+
+    def __post_init__(self) -> None:
+        if self.source_packet_count < 0:
+            raise ValueError("profiling source packet count cannot be negative")
+        identities = tuple(profile.entity_id for profile in self.profiles)
+        if len(set(identities)) != len(identities):
+            raise ValueError("profiling result entity identities must be unique")
+
+
 @dataclass(slots=True)
 class _DirectionAggregate:
     bytes: int = 0
@@ -125,9 +153,36 @@ class EndpointProfiler:
     def profile(
         self,
         packets: Sequence[ProfilePacketEvidence],
+        *,
+        entity_definition: EntityDefinition,
+        observation_window: ObservationWindow,
         metadata: Sequence[EntityMetadata] = (),
-    ) -> tuple[EndpointProfileDraft, ...]:
-        """Return one address-sorted draft per IP, excluding legacy non-IP placeholders."""
+    ) -> EndpointProfilingResult:
+        """Validate declared semantics and return one address-sorted draft per IP."""
+
+        if (
+            entity_definition.entity_type is not EntityType.ENDPOINT_IP
+            or entity_definition.version != "1"
+        ):
+            raise UnsupportedEntityDefinitionError(
+                "endpoint profiler supports only entity_type='endpoint_ip', version='1'"
+            )
+        capture_ids = frozenset(observation_window.capture_ids)
+        for packet in packets:
+            if packet.capture_id not in capture_ids:
+                raise ProfilingWindowError(
+                    f"packet capture {packet.capture_id} is outside the observation window"
+                )
+            if (
+                observation_window.started_at is not None
+                and packet.observed_at < observation_window.started_at
+            ):
+                raise ProfilingWindowError("packet timestamp precedes the observation window")
+            if (
+                observation_window.ended_at is not None
+                and packet.observed_at > observation_window.ended_at
+            ):
+                raise ProfilingWindowError("packet timestamp follows the observation window")
 
         outbound: dict[str, _DirectionAggregate] = {}
         inbound: dict[str, _DirectionAggregate] = {}
@@ -184,4 +239,9 @@ class EndpointProfiler:
                     interval_cv=interval_cv,
                 )
             )
-        return tuple(drafts)
+        return EndpointProfilingResult(
+            entity_definition=entity_definition,
+            observation_window=observation_window,
+            source_packet_count=len(packets),
+            profiles=tuple(drafts),
+        )

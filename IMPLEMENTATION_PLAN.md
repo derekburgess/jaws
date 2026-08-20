@@ -574,7 +574,7 @@ Extract evidence acquisition and representation building into deterministic serv
 #### Profile service
 
 - [x] Extract packet-to-entity aggregation from `jaws_compute.build_endpoint_profiles` into a pure profiler (`EndpointProfiler`; [profiling contract](docs/services/profiling.md)).
-- [ ] Make entity definition and observation window inputs explicit.
+- [x] Make entity definition and observation window inputs explicit (`EndpointProfilingResult`; `ProfilingWindowError`; [profiling contract](docs/services/profiling.md)).
 - [x] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0 (`tests/test_profile_service.py`; report-only benchmark parity).
 - [ ] Version numeric feature definitions, transformations, missing-value policy, and units.
 - [ ] Version the endpoint text-description template separately from embedding models.
@@ -1245,11 +1245,31 @@ explicitly non-portable local locators. Provider-neutral enrichment now owns det
 address classification, explicit provider outcomes, cache semantics, bounded request
 pacing and retry/backoff, and the thin IPinfo adapter. A standard-library
 `EndpointProfiler` now owns deterministic packet-to-entity aggregation while the legacy
-pandas function is a compatibility projection (20 of 37 checklist items complete). Making
-entity definition and observation-window inputs explicit is the next active Milestone 3
-slice.
+pandas function is a compatibility projection. Profiling now requires and retains explicit
+entity-definition and observation-window declarations, rejecting unsupported semantics or
+out-of-window evidence before aggregation (21 of 37 checklist items complete). Versioning
+numeric feature definitions, transformations, missing-value policy, and units is the next
+active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 explicit profiling semantics and scope
+
+- Made `EntityDefinition` and `ObservationWindow` mandatory pure-profiler inputs and added
+  `EndpointProfilingResult` so every draft remains bound to the exact declarations that
+  produced it.
+- Restricted the current implementation to endpoint-IP version 1 with an explicit
+  unsupported-definition error. Packet capture ownership and inclusive time bounds are
+  validated before aggregation; empty declared windows and multi-capture pooled windows
+  remain valid.
+- Normalized entity versions and observation filters, rejected duplicate capture IDs, and
+  kept perspective/filter declarations intact without interpreting adapter-owned filter
+  syntax inside the profiler.
+- Translated current CLI session behavior into concrete, pooled, or explicit legacy-unscoped
+  windows while preserving the legacy function signature for Benchmark 0 callers.
+- Passed strict types, Ruff format/lint, 267 offline tests, and all 15 disposable-Neo4j
+  tests on 5.26.28. Report-only Recall@3 remains 5/5 with the same three named benign
+  false positives.
 
 ### 2026-08-20 — Milestone 3 pure endpoint profiler
 

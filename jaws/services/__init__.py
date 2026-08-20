@@ -10,7 +10,14 @@ from .enrichment import (
 )
 from .evidence import EvidenceTransferService
 from .ingest import IngestService
-from .profiling import EndpointProfiler, ProfilePacketEvidence, interval_timing_seconds
+from .profiling import (
+    EndpointProfiler,
+    EndpointProfilingResult,
+    ProfilePacketEvidence,
+    ProfilingWindowError,
+    UnsupportedEntityDefinitionError,
+    interval_timing_seconds,
+)
 from .retention import RetentionService, UnsupportedRetentionPolicyError
 
 __all__ = [
@@ -22,10 +29,13 @@ __all__ = [
     "EnrichmentAcquisitionPolicy",
     "EnrichmentService",
     "EndpointProfiler",
+    "EndpointProfilingResult",
     "ProfilePacketEvidence",
+    "ProfilingWindowError",
     "IngestService",
     "RetentionService",
     "UnsupportedRetentionPolicyError",
+    "UnsupportedEntityDefinitionError",
     "cleanup_legacy_unknown",
     "interval_timing_seconds",
 ]
