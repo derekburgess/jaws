@@ -8,6 +8,7 @@ from types import MappingProxyType
 from typing import Mapping
 
 from .captures import CaptureRecord
+from .embeddings import ProfileEmbeddingProvenance
 from .enrichment import EnrichmentRecord, ResearcherAnnotation, normalized_ip
 from .enums import ObservationScopeKind, OutlierStatus, ProfileStatus
 from .identifiers import CanonicalDigest, CaptureId, EntityId, ObservationScopeId
@@ -145,6 +146,7 @@ class ArchivedProfile:
     interval_mean: float | None = None
     interval_cv: float | None = None
     embedding: tuple[float, ...] = ()
+    embedding_provenance: ProfileEmbeddingProvenance | None = None
     outlier: OutlierStatus = OutlierStatus.NOT_SCORED
     status: ProfileStatus = ProfileStatus.CURRENT
 
@@ -180,6 +182,11 @@ class ArchivedProfile:
         object.__setattr__(self, "in_ports", tuple(sorted(set(self.in_ports))))
         object.__setattr__(self, "protocols", tuple(sorted(set(self.protocols))))
         object.__setattr__(self, "embedding", tuple(self.embedding))
+        if self.embedding_provenance is not None:
+            if not self.embedding:
+                raise ValueError("archived embedding provenance requires an embedding")
+            if self.embedding_provenance.provider.dimensions != len(self.embedding):
+                raise ValueError("archived embedding dimensions must match vector")
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,6 +6,7 @@ import pytest
 
 from jaws.domain import (
     CaptureId,
+    EmbeddingInput,
     EntityId,
     EvidencePointer,
     FindingId,
@@ -83,9 +84,16 @@ def test_enrichment_fake_returns_scripted_values_and_records_requests():
 
 def test_embedding_fake_preserves_input_order_and_records_batches():
     provider = FakeEmbeddingProvider({"first": (1.0, 0.0), "second": (0.0, 1.0)})
+    inputs = (EmbeddingInput("profile-second", "second"), EmbeddingInput("profile-first", "first"))
 
-    assert provider.embed(["second", "first"]) == ((0.0, 1.0), (1.0, 0.0))
-    assert provider.requests == [("second", "first")]
+    result = provider.embed(inputs)
+
+    assert tuple(vector.values for vector in result.vectors) == ((0.0, 1.0), (1.0, 0.0))
+    assert tuple(vector.input_text_digest for vector in result.vectors) == tuple(
+        item.text_digest for item in inputs
+    )
+    assert result.provider == provider.spec
+    assert provider.requests == [inputs]
 
 
 def test_ranker_fake_returns_complete_findings_and_records_spec():

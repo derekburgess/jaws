@@ -16,6 +16,8 @@ from jaws.domain import (
     CaptureSourceKind,
     CaptureSourceMetadata,
     CaptureState,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
     EnrichmentRecord,
     EnrichmentStatus,
     EntityId,
@@ -25,6 +27,7 @@ from jaws.domain import (
     ObservationScopeKind,
     OutlierStatus,
     PacketRecord,
+    ProfileEmbeddingProvenance,
     ProfileStatus,
     ResearcherAnnotation,
     SchemaMigrationProvenance,
@@ -165,6 +168,19 @@ def evidence_fixture() -> EvidenceSnapshot:
         interval_mean=0.1,
         interval_cv=0.0,
         embedding=(0.25, 0.75),
+        embedding_provenance=ProfileEmbeddingProvenance(
+            provider=EmbeddingProviderSpec(
+                provider_id="fixture-provider",
+                model_id="fixture-model",
+                model_revision="fixture-revision",
+                revision_exact=True,
+                dimensions=2,
+                normalization=EmbeddingNormalization.L2,
+                batch_size=16,
+                device="test",
+            ),
+            input_text_digest=CanonicalDigest("fixture-input-digest"),
+        ),
         outlier=OutlierStatus.INLIER,
     )
     quarantined = ArchivedProfile(

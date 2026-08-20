@@ -1,5 +1,10 @@
 """Outer runtime adapters for standard domain ports."""
 
+from .embeddings import (
+    EmbeddingProviderResponseError,
+    LocalTransformerEmbeddingProvider,
+    OpenAIEmbeddingProvider,
+)
 from .enrichment import (
     IpinfoEnrichmentProvider,
     ipinfo_location,
@@ -31,11 +36,14 @@ from .runtime import (
 )
 
 __all__ = [
+    "EmbeddingProviderResponseError",
     "EvidenceBundleError",
     "IpinfoEnrichmentProvider",
+    "LocalTransformerEmbeddingProvider",
     "LivePacketSource",
     "PacketParseStats",
     "PcapPacketSource",
+    "OpenAIEmbeddingProvider",
     "PySharkPacketParser",
     "SystemClock",
     "SystemWaitStrategy",

@@ -147,6 +147,9 @@ explicit legacy-profile semantics. It retains all version-1 and version-2 object
 | `ENTITY_ANNOTATION.ANNOTATION_KEY` | Canonical unique entity/key identity for researcher-authored metadata |
 | `ENDPOINT.PROFILE_STATUS` | `current`, `legacy_unversioned`, or `legacy_quarantined` |
 | `ENDPOINT.OUTLIER_STATUS` | `outlier`, `inlier`, or `not_scored`; legacy `OUTLIER` remains dual-written |
+| `ENDPOINT.EMBEDDING_PROVIDER_ID`, `MODEL_ID`, `MODEL_REVISION`, `MODEL_REVISION_EXACT` | Provider/model identity and whether the retained revision is immutable |
+| `ENDPOINT.EMBEDDING_DIMENSIONS`, `EMBEDDING_NORMALIZATION`, `EMBEDDING_BATCH_SIZE`, `EMBEDDING_DEVICE` | Exact embedding execution shape and runtime metadata |
+| `ENDPOINT.EMBEDDING_INPUT_DIGEST` | Canonical digest joining the stored profile/vector to its exact rendered input text |
 
 `(:IP_ADDRESS)-[:ANNOTATED_WITH]->(:ENTITY_ANNOTATION)` keeps annotations separate from
 provider ownership. `scope_pooled_all` has kind `pooled`. Unstamped legacy profiles move

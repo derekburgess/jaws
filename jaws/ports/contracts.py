@@ -13,6 +13,9 @@ from typing import Protocol, TypeVar
 from jaws.domain import (
     CanonicalDigest,
     CaptureId,
+    EmbeddingBatch,
+    EmbeddingInput,
+    EmbeddingProviderSpec,
     ObservationWindow,
     RankedFinding,
     RankerSpec,
@@ -71,9 +74,12 @@ class WaitStrategy(Protocol):
 
 
 class EmbeddingProvider(Protocol):
-    """Embed texts in input order; provider metadata belongs in later result records."""
+    """Embed identified texts in order with exact execution provenance."""
 
-    def embed(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]: ...
+    @property
+    def spec(self) -> EmbeddingProviderSpec: ...
+
+    def embed(self, inputs: Sequence[EmbeddingInput]) -> EmbeddingBatch: ...
 
 
 class Ranker(Protocol[CandidateT_contra]):

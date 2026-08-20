@@ -107,6 +107,11 @@ class MissingValuePolicy(StrEnum):
     POPULATION_MEDIAN_OR_ZERO = "population_median_or_zero"
 
 
+class EmbeddingNormalization(StrEnum):
+    NONE = "none"
+    L2 = "l2"
+
+
 class TimingDirection(StrEnum):
     OUTBOUND = "outbound"
     INBOUND = "inbound"

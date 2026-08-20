@@ -10,13 +10,17 @@ from jaws.domain import (
     ArchivedEntity,
     ArchivedObservationScope,
     ArchivedProfile,
+    CanonicalDigest,
     CaptureId,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
     EntityId,
     EvidenceSchemaProvenance,
     EvidenceSnapshot,
     ObservationScopeId,
     ObservationScopeKind,
     OutlierStatus,
+    ProfileEmbeddingProvenance,
     ProfileStatus,
     SchemaMigrationProvenance,
     canonical_digest,
@@ -109,6 +113,13 @@ RETURN endpoint.SCOPE_ID AS scope_id,
        endpoint.INTERVAL_MEAN AS interval_mean,
        endpoint.INTERVAL_CV AS interval_cv,
        endpoint.EMBEDDING AS embedding,
+       endpoint.EMBEDDING_INPUT_DIGEST AS embedding_input_digest,
+       endpoint.EMBEDDING_PROVIDER_ID AS embedding_provider_id,
+       endpoint.MODEL_REVISION_EXACT AS model_revision_exact,
+       endpoint.EMBEDDING_DIMENSIONS AS embedding_dimensions,
+       endpoint.EMBEDDING_NORMALIZATION AS embedding_normalization,
+       endpoint.EMBEDDING_BATCH_SIZE AS embedding_batch_size,
+       endpoint.EMBEDDING_DEVICE AS embedding_device,
        endpoint.OUTLIER_STATUS AS outlier_status,
        endpoint.OUTLIER AS legacy_outlier,
        endpoint.PROFILE_STATUS AS profile_status
@@ -283,6 +294,13 @@ CREATE (entity)-[:PROFILE]->(:ENDPOINT {
     INTERVAL_MEAN: record.interval_mean,
     INTERVAL_CV: record.interval_cv,
     EMBEDDING: record.embedding,
+    EMBEDDING_INPUT_DIGEST: record.embedding_input_digest,
+    EMBEDDING_PROVIDER_ID: record.embedding_provider_id,
+    MODEL_REVISION_EXACT: record.model_revision_exact,
+    EMBEDDING_DIMENSIONS: record.embedding_dimensions,
+    EMBEDDING_NORMALIZATION: record.embedding_normalization,
+    EMBEDDING_BATCH_SIZE: record.embedding_batch_size,
+    EMBEDDING_DEVICE: record.embedding_device,
     OUTLIER_STATUS: record.outlier_status,
     OUTLIER: record.legacy_outlier,
     PROFILE_STATUS: record.profile_status
@@ -464,6 +482,26 @@ class Neo4jEvidenceRepository:
     @staticmethod
     def _profile(row: _Record) -> ArchivedProfile:
         status = _optional_text(row["profile_status"])
+        provider_id = _optional_text(row["embedding_provider_id"])
+        embedding_provenance = None
+        if provider_id is not None:
+            embedding_provenance = ProfileEmbeddingProvenance(
+                provider=EmbeddingProviderSpec(
+                    provider_id=provider_id,
+                    model_id=_text(row["model_id"], "MODEL_ID"),
+                    model_revision=_text(row["model_revision"], "MODEL_REVISION"),
+                    revision_exact=bool(row["model_revision_exact"]),
+                    dimensions=_integer(row["embedding_dimensions"]),
+                    normalization=EmbeddingNormalization(
+                        _text(row["embedding_normalization"], "EMBEDDING_NORMALIZATION")
+                    ),
+                    batch_size=_integer(row["embedding_batch_size"]),
+                    device=_text(row["embedding_device"], "EMBEDDING_DEVICE"),
+                ),
+                input_text_digest=CanonicalDigest(
+                    _text(row["embedding_input_digest"], "EMBEDDING_INPUT_DIGEST")
+                ),
+            )
         return ArchivedProfile(
             scope_id=ObservationScopeId(_text(row["scope_id"], "SCOPE_ID")),
             entity_id=EntityId(f"ip:{_text(row['entity_address'], 'IP_ADDRESS')}"),
@@ -490,6 +528,7 @@ class Neo4jEvidenceRepository:
             interval_mean=_float(row["interval_mean"]),
             interval_cv=_float(row["interval_cv"]),
             embedding=_floats(row["embedding"]),
+            embedding_provenance=embedding_provenance,
             outlier=_outlier(row["outlier_status"], row["legacy_outlier"]),
             status=ProfileStatus(status) if status else ProfileStatus.LEGACY_UNVERSIONED,
         )
@@ -679,6 +718,39 @@ class Neo4jEvidenceRepository:
                 "interval_mean": item.interval_mean,
                 "interval_cv": item.interval_cv,
                 "embedding": list(item.embedding),
+                "embedding_input_digest": (
+                    str(item.embedding_provenance.input_text_digest)
+                    if item.embedding_provenance
+                    else None
+                ),
+                "embedding_provider_id": (
+                    item.embedding_provenance.provider.provider_id
+                    if item.embedding_provenance
+                    else None
+                ),
+                "model_revision_exact": (
+                    item.embedding_provenance.provider.revision_exact
+                    if item.embedding_provenance
+                    else None
+                ),
+                "embedding_dimensions": (
+                    item.embedding_provenance.provider.dimensions
+                    if item.embedding_provenance
+                    else None
+                ),
+                "embedding_normalization": (
+                    item.embedding_provenance.provider.normalization.value
+                    if item.embedding_provenance
+                    else None
+                ),
+                "embedding_batch_size": (
+                    item.embedding_provenance.provider.batch_size
+                    if item.embedding_provenance
+                    else None
+                ),
+                "embedding_device": (
+                    item.embedding_provenance.provider.device if item.embedding_provenance else None
+                ),
                 "outlier_status": item.outlier.value,
                 "legacy_outlier": (
                     True

@@ -18,6 +18,15 @@ from .captures import (
     ProfileIdentity,
     capture_scope_id,
 )
+from .embeddings import (
+    EmbeddingBatch,
+    EmbeddingInput,
+    EmbeddingProviderSpec,
+    EmbeddingUsage,
+    EmbeddingVector,
+    ProfileEmbedding,
+    ProfileEmbeddingProvenance,
+)
 from .enrichment import (
     NON_CONVERSATIONAL_CLASSIFICATIONS,
     AddressClassification,
@@ -31,6 +40,7 @@ from .enrichment import (
 from .enums import (
     CaptureSourceKind,
     CaptureState,
+    EmbeddingNormalization,
     EnrichmentStatus,
     EntityType,
     ErrorCategory,
@@ -172,6 +182,12 @@ __all__ = [
     "EnrichmentObservation",
     "EntityMetadata",
     "EnrichmentStatus",
+    "EmbeddingBatch",
+    "EmbeddingInput",
+    "EmbeddingNormalization",
+    "EmbeddingProviderSpec",
+    "EmbeddingUsage",
+    "EmbeddingVector",
     "EVIDENCE_BUNDLE_FORMAT",
     "EVIDENCE_BUNDLE_VERSION",
     "EVIDENCE_SECTIONS",
@@ -222,6 +238,8 @@ __all__ = [
     "ScoreDirection",
     "ScoredEntity",
     "ProfileIdentity",
+    "ProfileEmbedding",
+    "ProfileEmbeddingProvenance",
     "ProfileStatus",
     "ProfileScopeSummary",
     "ResearcherAnnotation",

@@ -11,6 +11,12 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from jaws.domain import (
     CanonicalDigest,
     CaptureId,
+    EmbeddingBatch,
+    EmbeddingInput,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
+    EmbeddingUsage,
+    EmbeddingVector,
     ObservationWindow,
     RankedFinding,
     RankerSpec,
@@ -128,12 +134,33 @@ class RecordingWaitStrategy:
 @dataclass(slots=True)
 class FakeEmbeddingProvider:
     responses: Mapping[str, tuple[float, ...]]
-    requests: list[tuple[str, ...]] = field(default_factory=list)
+    provider_spec: EmbeddingProviderSpec = EmbeddingProviderSpec(
+        provider_id="fake",
+        model_id="fixture-model",
+        model_revision="sha256:fixture",
+        revision_exact=True,
+        dimensions=2,
+        normalization=EmbeddingNormalization.L2,
+        batch_size=32,
+        device="test",
+    )
+    usage: EmbeddingUsage = EmbeddingUsage()
+    requests: list[tuple[EmbeddingInput, ...]] = field(default_factory=list)
 
-    def embed(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]:
-        request = tuple(texts)
+    @property
+    def spec(self) -> EmbeddingProviderSpec:
+        return self.provider_spec
+
+    def embed(self, inputs: Sequence[EmbeddingInput]) -> EmbeddingBatch:
+        request = tuple(inputs)
         self.requests.append(request)
-        return tuple(self.responses[text] for text in request)
+        return EmbeddingBatch(
+            provider=self.provider_spec,
+            vectors=tuple(
+                EmbeddingVector(item.text_digest, self.responses[item.text]) for item in request
+            ),
+            usage=self.usage,
+        )
 
 
 @dataclass(slots=True)

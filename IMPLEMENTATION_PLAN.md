@@ -584,13 +584,13 @@ Extract evidence acquisition and representation building into deterministic serv
 
 #### Embedding providers
 
-- [ ] Define a common embedding-provider protocol for local and remote providers.
-- [ ] Record provider, model, exact revision/digest when available, dimensions, normalization, batching, and device.
-- [ ] Validate returned count, dimension, order, and finite values before replacing a profile scope.
-- [ ] Retain the mapping from profile ID and input-text digest to embedding.
-- [ ] Make remote API cost/token metadata available to experiment provenance.
-- [ ] Permit numeric-only representations with no embedding provider installed.
-- [ ] Test provider failures without leaving a half-replaced profile set.
+- [x] Define a common embedding-provider protocol for local and remote providers (`EmbeddingProvider`; `OpenAIEmbeddingProvider`; `LocalTransformerEmbeddingProvider`).
+- [x] Record provider, model, exact revision/digest when available, dimensions, normalization, batching, and device (`EmbeddingProviderSpec`; `ProfileEmbeddingProvenance`; [embedding contract](docs/services/embeddings.md)).
+- [x] Validate returned count, dimension, order, and finite values before replacing a profile scope (`ProfileRepresentationService`; `EmbeddingValidationError`).
+- [x] Retain the mapping from profile ID and input-text digest to embedding (`ProfileEmbedding`; persisted profile/evidence provenance).
+- [x] Make remote API cost/token metadata available to experiment provenance (`EmbeddingUsage`; OpenAI adapter usage/cost coverage).
+- [x] Permit numeric-only representations with no embedding provider installed (`ProfileRepresentationService.replace_endpoint_scope`).
+- [x] Test provider failures without leaving a half-replaced profile set (`tests/test_embedding_service.py`; atomic repository replacement).
 
 #### CLI compatibility adapter
 
@@ -1255,10 +1255,25 @@ model identity. Timing representations now carry a versioned evidence policy for
 directions, lower-variation selection, the per-direction packet gate, and within-capture
 interval boundaries; qualifying typed drafts retain their selected direction. The
 entity-neutral profile service now produces canonical deterministic results for both
-endpoint-IP and host-relative destination definitions (26 of 37 checklist items complete).
-Typed local and remote embedding providers are the next active Milestone 3 slice.
+endpoint-IP and host-relative destination definitions. A provider-neutral representation
+service validates local/remote embedding output and persists complete vector lineage while
+also supporting numeric-only profiles (33 of 37 checklist items complete). Reducing the
+three legacy command modules to compatibility adapters is the final active Milestone 3
+slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 validated embedding representation service
+
+- Replaced the tuple-only embedding port with typed inputs, vectors, provider execution
+  specifications, usage/cost metadata, and retained profile/input/vector lineage.
+- Added dependency-neutral local-transformer and OpenAI adapters with explicit revision
+  exactness, dimensions, normalization, batching, device, API-index ordering, and tokens.
+- Added `ProfileRepresentationService` validation for provider drift, count, order,
+  dimensions, and finite values before one atomic repository replacement.
+- Added numeric-only representation support and failure tests proving provider errors do
+  not partially replace existing scopes.
+- Persisted embedding provenance through Neo4j profiles and portable evidence bundles.
 
 ### 2026-08-20 — Milestone 3 deterministic multi-entity profiling
 

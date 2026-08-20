@@ -8,6 +8,9 @@ from typing import Any, Protocol, Self, TypeVar, cast
 
 from jaws.domain import (
     AuditEvent,
+    CanonicalDigest,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
     EndpointProfile,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -15,6 +18,7 @@ from jaws.domain import (
     EntityMetadata,
     ObservationScopeId,
     OutlierStatus,
+    ProfileEmbeddingProvenance,
     ProfileIdentity,
     ProfileScopeSummary,
     ProfileStatus,
@@ -123,6 +127,13 @@ endpoint.PROTOCOLS AS protocols,
 endpoint.INTERVAL_MEAN AS interval_mean,
 endpoint.INTERVAL_CV AS interval_cv,
 endpoint.EMBEDDING AS embedding,
+endpoint.EMBEDDING_INPUT_DIGEST AS embedding_input_digest,
+endpoint.EMBEDDING_PROVIDER_ID AS embedding_provider_id,
+endpoint.MODEL_REVISION_EXACT AS model_revision_exact,
+endpoint.EMBEDDING_DIMENSIONS AS embedding_dimensions,
+endpoint.EMBEDDING_NORMALIZATION AS embedding_normalization,
+endpoint.EMBEDDING_BATCH_SIZE AS embedding_batch_size,
+endpoint.EMBEDDING_DEVICE AS embedding_device,
 endpoint.OUTLIER_STATUS AS outlier_status,
 endpoint.OUTLIER AS legacy_outlier,
 endpoint.PROFILE_STATUS AS profile_status
@@ -179,6 +190,13 @@ CREATE (address)-[:PROFILE]->(endpoint:ENDPOINT {
     INTERVAL_MEAN: profile.interval_mean,
     INTERVAL_CV: profile.interval_cv,
     EMBEDDING: profile.embedding,
+    EMBEDDING_INPUT_DIGEST: profile.embedding_input_digest,
+    EMBEDDING_PROVIDER_ID: profile.embedding_provider_id,
+    MODEL_REVISION_EXACT: profile.model_revision_exact,
+    EMBEDDING_DIMENSIONS: profile.embedding_dimensions,
+    EMBEDDING_NORMALIZATION: profile.embedding_normalization,
+    EMBEDDING_BATCH_SIZE: profile.embedding_batch_size,
+    EMBEDDING_DEVICE: profile.embedding_device,
     OUTLIER_STATUS: profile.outlier_status,
     OUTLIER: profile.legacy_outlier,
     PROFILE_STATUS: profile.profile_status
@@ -234,6 +252,29 @@ def _profile(row: _Record) -> EndpointProfile:
     if (model_id is None) != (model_revision is None):
         model_id = None
         model_revision = None
+    embedding = tuple(float(value) for value in (row["embedding"] or ()))
+    provider_id = _optional_text(row["embedding_provider_id"])
+    embedding_provenance = None
+    if provider_id is not None:
+        if model_id is None or model_revision is None:
+            raise ProfileScopeConflictError("stored embedding provenance is missing model identity")
+        embedding_provenance = ProfileEmbeddingProvenance(
+            provider=EmbeddingProviderSpec(
+                provider_id=provider_id,
+                model_id=model_id,
+                model_revision=model_revision,
+                revision_exact=bool(row["model_revision_exact"]),
+                dimensions=int(row["embedding_dimensions"]),
+                normalization=EmbeddingNormalization(
+                    _text(row["embedding_normalization"], "EMBEDDING_NORMALIZATION")
+                ),
+                batch_size=int(row["embedding_batch_size"]),
+                device=_text(row["embedding_device"], "EMBEDDING_DEVICE"),
+            ),
+            input_text_digest=CanonicalDigest(
+                _text(row["embedding_input_digest"], "EMBEDDING_INPUT_DIGEST")
+            ),
+        )
     return EndpointProfile(
         identity=ProfileIdentity(
             entity_id=EntityId(f"ip:{address}"),
@@ -260,7 +301,8 @@ def _profile(row: _Record) -> EndpointProfile:
         protocols=tuple(row["protocols"] or ()),
         interval_mean=float(row["interval_mean"]) if row["interval_mean"] is not None else None,
         interval_cv=float(row["interval_cv"]) if row["interval_cv"] is not None else None,
-        embedding=tuple(float(value) for value in (row["embedding"] or ())),
+        embedding=embedding,
+        embedding_provenance=embedding_provenance,
         outlier=_outlier(row["outlier_status"], row["legacy_outlier"]),
         status=status,
     )
@@ -496,6 +538,41 @@ class Neo4jProfileRepository:
                     "interval_mean": record.interval_mean,
                     "interval_cv": record.interval_cv,
                     "embedding": list(record.embedding),
+                    "embedding_input_digest": (
+                        str(record.embedding_provenance.input_text_digest)
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "embedding_provider_id": (
+                        record.embedding_provenance.provider.provider_id
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "model_revision_exact": (
+                        record.embedding_provenance.provider.revision_exact
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "embedding_dimensions": (
+                        record.embedding_provenance.provider.dimensions
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "embedding_normalization": (
+                        record.embedding_provenance.provider.normalization.value
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "embedding_batch_size": (
+                        record.embedding_provenance.provider.batch_size
+                        if record.embedding_provenance
+                        else None
+                    ),
+                    "embedding_device": (
+                        record.embedding_provenance.provider.device
+                        if record.embedding_provenance
+                        else None
+                    ),
                     "outlier_status": record.outlier.value,
                     "legacy_outlier": (
                         True

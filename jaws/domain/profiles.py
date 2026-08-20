@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .captures import ProfileIdentity
+from .embeddings import ProfileEmbeddingProvenance
 from .enrichment import AddressClassification, normalized_ip
 from .enums import OutlierStatus, ProfileStatus, TimingDirection
 from .identifiers import EntityId, ObservationScopeId
@@ -164,6 +165,7 @@ class EndpointProfile:
     interval_mean: float | None = None
     interval_cv: float | None = None
     embedding: tuple[float, ...] = ()
+    embedding_provenance: ProfileEmbeddingProvenance | None = None
     outlier: OutlierStatus = OutlierStatus.NOT_SCORED
     status: ProfileStatus = ProfileStatus.CURRENT
 
@@ -187,6 +189,17 @@ class EndpointProfile:
                 raise ValueError(f"profile {field_name} must be finite and nonnegative")
         if any(not math.isfinite(value) for value in self.embedding):
             raise ValueError("profile embedding values must be finite")
+        if self.embedding_provenance is not None:
+            provider = self.embedding_provenance.provider
+            if not self.embedding:
+                raise ValueError("profile embedding provenance requires an embedding")
+            if provider.dimensions != len(self.embedding):
+                raise ValueError("profile embedding provenance dimensions must match vector")
+            if (
+                self.identity.model_id != provider.model_id
+                or self.identity.model_revision != provider.model_revision
+            ):
+                raise ValueError("profile identity and embedding model provenance must match")
         object.__setattr__(self, "legacy_scope", scope)
         object.__setattr__(self, "address_classification", classification)
         if self.computed_at is not None:

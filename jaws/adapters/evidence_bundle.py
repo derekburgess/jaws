@@ -20,6 +20,8 @@ from jaws.domain import (
     CaptureSourceKind,
     CaptureSourceMetadata,
     CaptureState,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
     EnrichmentRecord,
     EnrichmentStatus,
     EntityId,
@@ -31,6 +33,7 @@ from jaws.domain import (
     ObservationScopeKind,
     OutlierStatus,
     PacketRecord,
+    ProfileEmbeddingProvenance,
     ProfileStatus,
     ResearcherAnnotation,
     SchemaMigrationProvenance,
@@ -264,6 +267,33 @@ def _annotation(value: object) -> ResearcherAnnotation:
 
 def _profile(value: object) -> ArchivedProfile:
     record = _mapping(value, "profile")
+    provenance_value = record.get("embedding_provenance")
+    embedding_provenance = None
+    if provenance_value is not None:
+        provenance = _mapping(provenance_value, "profile embedding provenance")
+        provider_record = _mapping(provenance.get("provider"), "profile embedding provider")
+        dimensions = _integer(provider_record.get("dimensions"), "embedding dimensions")
+        embedding_provenance = ProfileEmbeddingProvenance(
+            provider=EmbeddingProviderSpec(
+                provider_id=_text(provider_record.get("provider_id"), "embedding provider ID"),
+                model_id=_text(provider_record.get("model_id"), "embedding model ID"),
+                model_revision=_text(
+                    provider_record.get("model_revision"), "embedding model revision"
+                ),
+                revision_exact=_boolean(
+                    provider_record.get("revision_exact"), "embedding revision exact"
+                ),
+                dimensions=dimensions,
+                normalization=EmbeddingNormalization(
+                    _text(provider_record.get("normalization"), "embedding normalization")
+                ),
+                batch_size=_integer(provider_record.get("batch_size"), "embedding batch size"),
+                device=_text(provider_record.get("device"), "embedding device"),
+            ),
+            input_text_digest=CanonicalDigest(
+                _text(provenance.get("input_text_digest"), "embedding input digest")
+            ),
+        )
     return ArchivedProfile(
         scope_id=ObservationScopeId(_text(record.get("scope_id"), "profile scope ID")),
         entity_id=EntityId(_text(record.get("entity_id"), "profile entity ID")),
@@ -296,6 +326,7 @@ def _profile(value: object) -> ArchivedProfile:
         interval_mean=_optional_number(record.get("interval_mean"), "profile interval_mean"),
         interval_cv=_optional_number(record.get("interval_cv"), "profile interval_cv"),
         embedding=_number_tuple(record.get("embedding"), "profile embedding"),
+        embedding_provenance=embedding_provenance,
         outlier=OutlierStatus(_text(record.get("outlier"), "profile outlier status")),
         status=ProfileStatus(_text(record.get("status"), "profile status")),
     )

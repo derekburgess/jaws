@@ -37,7 +37,10 @@ assigns capture identity, binds source packet observations to that session, writ
 batches, and finalizes complete, partial, failed, or cancelled state without owning packet
 capture privileges. Enrichment classifies addresses and coordinates bounded provider
 acquisition. Profiling converts typed packet evidence into deterministic pre-embedding
-endpoint drafts without pandas or NumPy ([profiling contract](services/profiling.md)).
+entity drafts without pandas or NumPy ([profiling contract](services/profiling.md)). The
+profile-representation service validates provider-neutral embedding batches
+and owns the single atomic profile-scope replacement; local/OpenAI model clients remain
+outer adapters. Numeric-only representations never import an embedding stack.
 Retention planning consumes typed policies and profile summaries,
 produces a mutation-free dry-run plan, and applies only an unchanged exact plan. Evidence
 transfer consumes typed snapshots, builds checksummed bundles, and imports only into an

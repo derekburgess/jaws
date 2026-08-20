@@ -6,12 +6,16 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from jaws.domain import (
+    CanonicalDigest,
+    EmbeddingNormalization,
+    EmbeddingProviderSpec,
     EndpointProfile,
     EnrichmentRecord,
     EnrichmentStatus,
     EntityId,
     ObservationScopeId,
     OutlierStatus,
+    ProfileEmbeddingProvenance,
     ProfileIdentity,
     ResearcherAnnotation,
 )
@@ -51,6 +55,19 @@ def _profile(
         interval_mean=1.5,
         interval_cv=0.1,
         embedding=(0.25, 0.75),
+        embedding_provenance=ProfileEmbeddingProvenance(
+            provider=EmbeddingProviderSpec(
+                provider_id="fixture-provider",
+                model_id="fixture-model",
+                model_revision="sha256:fixture",
+                revision_exact=True,
+                dimensions=2,
+                normalization=EmbeddingNormalization.L2,
+                batch_size=16,
+                device="test",
+            ),
+            input_text_digest=CanonicalDigest("fixture-input-digest"),
+        ),
     )
 
 

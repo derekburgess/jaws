@@ -10,6 +10,11 @@ from .enrichment import (
 )
 from .evidence import EvidenceTransferService
 from .ingest import IngestService
+from .profile_representations import (
+    EmbeddingValidationError,
+    ProfileRepresentationResult,
+    ProfileRepresentationService,
+)
 from .profiling import (
     EndpointProfiler,
     EndpointProfilingResult,
@@ -42,7 +47,10 @@ __all__ = [
     "ProfilingResult",
     "EndpointTextEvidence",
     "EndpointTextRenderer",
+    "EmbeddingValidationError",
     "ProfilePacketEvidence",
+    "ProfileRepresentationResult",
+    "ProfileRepresentationService",
     "ProfilingWindowError",
     "IngestService",
     "RetentionService",
