@@ -78,5 +78,5 @@ line of `tshark --version`, using `unknown` when unavailable.
 
 `jaws-capture` now constructs the appropriate source adapter and invokes `IngestService`;
 it no longer parses packets, batches repository writes, or finalizes lifecycle state.
-The remaining CLI compatibility checklist covers `jaws-ipinfo` and `jaws-compute`, which
+The completed CLI compatibility boundary covers `jaws-ipinfo` and `jaws-compute`, which
 have not yet moved onto their Milestone 3 services.

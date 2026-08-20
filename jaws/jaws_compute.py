@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 import pandas as pd
 from rich.console import Group
 
-from jaws.adapters import SystemClock
+from jaws.adapters import (
+    LocalTransformerEmbeddingProvider,
+    OpenAIEmbeddingProvider,
+    SystemClock,
+)
 from jaws.config import (
     CONSOLE,
     DATABASE,
@@ -42,6 +46,7 @@ from jaws.optional_dependencies import require_module
 from jaws.services import (
     EndpointProfiler,
     EndpointTextRenderer,
+    ProfileRepresentationService,
     RetentionService,
     interval_timing_seconds,
 )
@@ -304,6 +309,26 @@ def build_endpoint_profiles(
     source) and inbound traffic (as the destination), so outbound anomalies are
     first-class. The local host is included intentionally.
     """
+    drafts = profile_endpoint_drafts(
+        packets,
+        metadata,
+        entity_definition=entity_definition,
+        observation_window=observation_window,
+        numeric_feature_set=numeric_feature_set,
+    )
+    return [_legacy_profile(draft) for draft in drafts]
+
+
+def profile_endpoint_drafts(
+    packets,
+    metadata,
+    *,
+    entity_definition=None,
+    observation_window=None,
+    numeric_feature_set=None,
+):
+    """Compatibility DataFrame adapter returning typed drafts for the service pipeline."""
+
     evidence = _frame_profile_packets(packets)
     window = observation_window or ObservationWindow(
         capture_ids=tuple(
@@ -320,7 +345,7 @@ def build_endpoint_profiles(
         numeric_feature_set=numeric_feature_set or ENDPOINT_NUMERIC_FEATURE_SET_V1,
         metadata=_metadata_records(metadata),
     )
-    return [_legacy_profile(draft) for draft in result.profiles]
+    return result.profiles
 
 
 def build_endpoint_description(p, *, text_template=None):
@@ -489,9 +514,9 @@ def main():
     )
     parser.add_argument(
         "--api",
-        choices=["openai", "transformers"],
+        choices=["openai", "transformers", "numeric"],
         default="openai",
-        help="Specify the API to use for computing embeddings, either 'openai' or 'transformers' (default: 'openai' — for easy demos without a GPU; note the MCP server defaults to 'transformers', the preferred path on a GPU host).",
+        help="Representation provider: 'openai', 'transformers', or 'numeric' for no embedding provider (default: 'openai').",
     )
     parser.add_argument(
         "--model",
@@ -554,7 +579,7 @@ def main():
 
     packets = fetch_packets(driver, args.database, capture_id, repositories.packets)
     metadata = fetch_ip_metadata(driver, args.database, repositories.enrichment)
-    profiles = build_endpoint_profiles(
+    drafts = profile_endpoint_drafts(
         packets,
         metadata,
         entity_definition=_ENDPOINT_ENTITY_DEFINITION,
@@ -562,12 +587,23 @@ def main():
         numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
     )
 
-    model_name = PACKET_MODELS[args.model] if args.api == "transformers" else OPENAI_EMBEDDING_MODEL
+    model_name = (
+        PACKET_MODELS[args.model]
+        if args.api == "transformers"
+        else OPENAI_EMBEDDING_MODEL
+        if args.api == "openai"
+        else None
+    )
     embedding_strings = []
     embedding_tensors = []
     embedder = None
 
-    processing_message = f"Embedding {len(profiles)} endpoint profiles using: {model_name}{f' ({device})' if args.api == 'transformers' else ''}"
+    processing_message = (
+        f"Profiling {len(drafts)} endpoints numerically"
+        if args.api == "numeric"
+        else f"Embedding {len(drafts)} endpoint profiles using: {model_name}"
+        f"{f' ({device})' if args.api == 'transformers' else ''}"
+    )
 
     def render():
         return Group(
@@ -579,39 +615,50 @@ def main():
         )
 
     try:
+        provider = None
         if args.api == "transformers":
             embedder = sentence_transformer(model_name, device=device, trust_remote_code=True)
+            provider = LocalTransformerEmbeddingProvider(
+                embedder,
+                model_id=model_name,
+                model_revision="runtime-unpinned",
+                revision_exact=False,
+                device=device,
+            )
+        elif args.api == "openai":
+            provider = OpenAIEmbeddingProvider(
+                get_openai_client(),
+                model_id=model_name,
+                model_revision="runtime-unpinned",
+                revision_exact=False,
+                batch_size=OPENAI_EMBEDDING_BATCH,
+            )
 
-        # Embed every profile in one batched pass (the panels then narrate the DB
-        # writes). reporter.info first so a human sees progress during a long encode.
         reporter.info("CONFIG", processing_message)
-        text_template = ENDPOINT_TEXT_TEMPLATE_V1
-        descriptions = [
-            build_endpoint_description(profile, text_template=text_template) for profile in profiles
-        ]
-        if not descriptions:
-            embeddings = []
-        elif args.api == "transformers":
-            embeddings = compute_transformer_embeddings(descriptions, embedder)
-        else:
-            embeddings = compute_openai_embeddings(get_openai_client(), descriptions)
+        text_template = ENDPOINT_TEXT_TEMPLATE_V1 if provider is not None else None
+        result = ProfileRepresentationService(
+            repository=repositories.profiles,
+            clock=SystemClock(),
+        ).replace_endpoint_scope(
+            drafts,
+            scope_id=profile_scope_id(session_scope),
+            legacy_scope=session_scope,
+            numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+            text_template=text_template,
+            embedding_provider=provider,
+        )
+        descriptions = (
+            [EndpointTextRenderer().render(draft, text_template) for draft in drafts]
+            if text_template is not None
+            else []
+        )
+        embeddings = [embedding.values for embedding in result.embeddings]
 
         with reporter.activity(render) as update:
-            for profile, description, embedding in zip(profiles, descriptions, embeddings):
+            for description, embedding in zip(descriptions, embeddings, strict=True):
                 embedding_strings.append(description)
                 embedding_tensors.append(embedding)
                 update()
-
-        replace_session_profiles(
-            profiles,
-            embeddings,
-            session_scope,
-            model_name,
-            driver,
-            args.database,
-            repositories.profiles,
-            text_template=text_template,
-        )
 
         # Compatibility adapter: the explicit retention service runs after the write so
         # this run's own set is always among the kept. Operators can inspect the same
@@ -640,7 +687,14 @@ def main():
                 "profiled_sessions": profiled_scopes,
                 "profiles_pruned": pruned,
             },
-            summary=f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) from {len(packets)} packets (session: {session_scope}) via {args.api} in: '{args.database}'",
+            summary=(
+                f"Profiled {len(drafts)} endpoint profiles (one per IP) from {len(packets)} "
+                f"packets (session: {session_scope}) via {args.api} in: '{args.database}'"
+                if args.api == "numeric"
+                else f"Embedded {len(embedding_strings)} endpoint profiles (one per IP) "
+                f"from {len(packets)} packets (session: {session_scope}) via {args.api} "
+                f"in: '{args.database}'"
+            ),
         )
         return
 

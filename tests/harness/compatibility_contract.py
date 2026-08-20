@@ -244,6 +244,7 @@ def _profile(ip: str, scale: int) -> dict[str, Any]:
 
 def _compute_success_case() -> dict[str, Any]:
     from jaws import jaws_compute as compute
+    from jaws.domain import EndpointProfileDraft, EntityId, TimingDirection
 
     driver = _FakeDriver()
     packets = pd.DataFrame(
@@ -254,6 +255,29 @@ def _compute_success_case() -> dict[str, Any]:
         ]
     )
     profiles = [_profile("8.8.8.8", 1), _profile("1.1.1.1", 2)]
+    drafts = tuple(
+        EndpointProfileDraft(
+            entity_id=EntityId(f"ip:{profile['ip_address']}"),
+            ip_address=profile["ip_address"],
+            address_classification=profile["endpoint_type"],
+            organization=profile["org"],
+            hostname=profile["hostname"],
+            location=profile["location"],
+            bytes_out=profile["bytes_out"],
+            packets_out=profile["packets_out"],
+            out_peers=profile["out_peers"],
+            out_ports=tuple(profile["out_ports"]),
+            bytes_in=profile["bytes_in"],
+            packets_in=profile["packets_in"],
+            in_peers=profile["in_peers"],
+            in_ports=tuple(profile["in_ports"]),
+            protocols=tuple(profile["protocols"]),
+            interval_mean=profile["interval_mean"],
+            interval_cv=profile["interval_cv"],
+            timing_direction=TimingDirection.OUTBOUND,
+        )
+        for profile in profiles
+    )
     return _invoke_main(
         case_id="compute-success",
         entry_point="jaws-compute",
@@ -289,14 +313,18 @@ def _compute_success_case() -> dict[str, Any]:
             ),
             patch.object(compute, "fetch_packets", return_value=packets),
             patch.object(compute, "fetch_ip_metadata", return_value={}),
-            patch.object(compute, "build_endpoint_profiles", return_value=profiles),
+            patch.object(compute, "profile_endpoint_drafts", return_value=drafts),
             patch.object(compute, "get_openai_client", return_value=object()),
             patch.object(
-                compute,
-                "compute_openai_embeddings",
-                return_value=[[0.1, 0.2], [0.3, 0.4]],
+                compute.ProfileRepresentationService,
+                "replace_endpoint_scope",
+                return_value=SimpleNamespace(
+                    embeddings=(
+                        SimpleNamespace(values=(0.1, 0.2)),
+                        SimpleNamespace(values=(0.3, 0.4)),
+                    )
+                ),
             ),
-            patch.object(compute, "replace_session_profiles", return_value=2),
             patch.object(compute, "prune_profile_sessions", return_value=(0, [])),
             patch.object(compute, "count_profile_sessions", return_value=2),
         ),

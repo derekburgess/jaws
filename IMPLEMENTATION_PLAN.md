@@ -594,10 +594,10 @@ Extract evidence acquisition and representation building into deterministic serv
 
 #### CLI compatibility adapter
 
-- [ ] Make `jaws-capture`, `jaws-ipinfo`, and `jaws-compute` thin adapters over the services.
-- [ ] Preserve existing flags or emit specific deprecation guidance.
-- [ ] Preserve structured agent-mode envelopes and human-readable Rich output.
-- [ ] Remove analytical/storage logic from these entry-point modules.
+- [x] Make `jaws-capture`, `jaws-ipinfo`, and `jaws-compute` thin adapters over the services ([CLI compatibility boundary](docs/interfaces/legacy-cli.md)).
+- [x] Preserve existing flags or emit specific deprecation guidance (frozen CLI contract; additive `jaws-compute --api numeric`).
+- [x] Preserve structured agent-mode envelopes and human-readable Rich output (`Reporter`; `tests/test_compatibility_contract.py`).
+- [x] Remove analytical/storage logic from these entry-point modules (service execution paths; repository adapters; architecture Cypher ratchet).
 
 ### Completion gate
 
@@ -1257,11 +1257,23 @@ interval boundaries; qualifying typed drafts retain their selected direction. Th
 entity-neutral profile service now produces canonical deterministic results for both
 endpoint-IP and host-relative destination definitions. A provider-neutral representation
 service validates local/remote embedding output and persists complete vector lineage while
-also supporting numeric-only profiles (33 of 37 checklist items complete). Reducing the
-three legacy command modules to compatibility adapters is the final active Milestone 3
-slice.
+also supporting numeric-only profiles. The three legacy commands now retain their flags,
+Rich/agent surfaces, and frozen outputs as adapters over the ingest, enrichment, profiling,
+and representation services. Milestone 3 is complete (37 of 37 checklist items); the next
+active work begins Milestone 4 reference strategies.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 CLI compatibility completion
+
+- Routed `jaws-compute` through typed profile drafts and
+  `ProfileRepresentationService` instead of direct provider calls and profile writes.
+- Added `--api numeric` without changing existing OpenAI/transformer flags or output
+  contracts; numeric mode initializes no embedding provider or optional model stack.
+- Retained legacy helper functions as compatibility projections while service execution
+  paths own analysis and storage repositories own all query logic.
+- Revalidated the frozen structured CLI inventory, Rich reporter boundary, provider-lazy
+  numeric CLI, and architecture Cypher ownership to close Milestone 3 at 37 of 37 items.
 
 ### 2026-08-20 — Milestone 3 validated embedding representation service
 

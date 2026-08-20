@@ -286,6 +286,12 @@ jaws-utils --model jina-code
 jaws-compute --api transformers --model jina-code --session latest
 ```
 
+For a dependency-light numeric representation with no embedding provider:
+
+```bash
+jaws-compute --api numeric --session latest
+```
+
 Do not erase the database between ordinary captures: earlier profile sets provide the endpoint history used by the baseline. When a human operator intentionally needs a fresh research dataset, run `jaws-admin plan --database captures`, inspect the exact counts, then pass its full confirmation string to `jaws-admin erase --database captures --confirm 'ERASE captures …'`. Destructive administration has no default database and is not exposed through MCP.
 
 Inspect retention before applying it explicitly:
