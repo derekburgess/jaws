@@ -262,6 +262,23 @@ artifact, from which this index must be reconstructable.
 | Range index | `jaws_finding_run_rank_index` | `JAWS_FINDING_INDEX(RUN_ID, RANK)` |
 | Range index | `jaws_finding_entity_index` | `JAWS_FINDING_INDEX(ENTITY_ID)` |
 
+## Managed target: database schema version 7
+
+Version 7 adds typed descriptive source provenance for new PCAP imports. It retains every
+earlier property and schema object; no legacy capture is backfilled with guessed metadata.
+
+| `CAPTURE` property | Contract |
+| --- | --- |
+| `SOURCE_FILE_NAME` | Original filename reported by the source adapter |
+| `SOURCE_SIZE_BYTES` | Nonnegative file size at ingest time |
+| `SOURCE_LOCATOR` | Optional original path or dataset locator; descriptive, never capture identity |
+| `SOURCE_LOCATOR_PORTABLE` | Boolean declaring whether the locator is portable; local CLI paths are always `false` |
+
+`CONTENT_SHA256` remains the portable content identity. Evidence bundles carry the typed
+metadata and retain format-version-1 compatibility with bundles created before these
+optional fields existed. The additive range index
+`capture_source_file_name_index` covers `CAPTURE(SOURCE_FILE_NAME)`.
+
 ## Operations
 
 The installed `jaws-schema` command uses the same Neo4j connection settings as the other
@@ -314,10 +331,10 @@ The plan reports exact evidence/unclassified node counts, relationship count, sc
 provenance, digest, and confirmation. Erase repeats that plan inside one transaction,
 preserves schema/audit nodes, and fails closed if anything changed.
 
-## Milestone 2 target and later versions
+## Managed target and later versions
 
-Version 6 completes the Milestone 2 managed schema. Retention, administration, and portable
-managed-evidence export/import operate over version 6; experiment and finding index nodes
-are reconstructable discovery metadata and are not copied into evidence bundles. Later
-versions must document their contracts before implementation and retain Benchmark 0
-compatibility until their parity gates pass.
+Version 6 completes the Milestone 2 managed schema; version 7 is the first Milestone 3
+addition. Retention, administration, and portable managed-evidence export/import operate
+over version 7. Experiment and finding index nodes are reconstructable discovery metadata
+and are not copied into evidence bundles. Later versions must document their contracts
+before implementation and retain Benchmark 0 compatibility until their parity gates pass.

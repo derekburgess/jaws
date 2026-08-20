@@ -12,6 +12,7 @@ from jaws.adapters import (
     SystemClock,
     UuidCaptureIdGenerator,
     capture_tool_versions,
+    pcap_source_metadata,
 )
 from jaws.adapters import file_sha256 as _file_sha256
 from jaws.config import CONSOLE, DATABASE
@@ -181,6 +182,7 @@ def main():
                 source_name=source,
                 perspective=perspective,
                 content_digest=file_sha256(args.capture_file),
+                source_metadata=pcap_source_metadata(args.capture_file),
                 capture_filter=declared_filter,
                 tool_versions=capture_tool_versions(),
             )

@@ -15,6 +15,7 @@ from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureState,
     EntityId,
     ObservationScope,
@@ -87,6 +88,10 @@ toString(capture.STARTED_AT) AS started_at,
 toString(capture.ENDED_AT) AS ended_at,
 capture.PACKET_COUNT AS packet_count,
 capture.CONTENT_SHA256 AS content_sha256,
+capture.SOURCE_FILE_NAME AS source_file_name,
+capture.SOURCE_SIZE_BYTES AS source_size_bytes,
+capture.SOURCE_LOCATOR AS source_locator,
+capture.SOURCE_LOCATOR_PORTABLE AS source_locator_portable,
 capture.PERSPECTIVE_IP AS perspective_ip,
 capture.CAPTURE_FILTER AS capture_filter,
 capture.TOOL_VERSIONS_JSON AS tool_versions_json,
@@ -101,6 +106,10 @@ CREATE (capture:CAPTURE {
     SOURCE_KIND: $source_kind,
     SOURCE_NAME: $source_name,
     CONTENT_SHA256: $content_sha256,
+    SOURCE_FILE_NAME: $source_file_name,
+    SOURCE_SIZE_BYTES: $source_size_bytes,
+    SOURCE_LOCATOR: $source_locator,
+    SOURCE_LOCATOR_PORTABLE: $source_locator_portable,
     REGISTERED_AT: datetime($registered_at),
     STARTED_AT: datetime($started_at),
     STARTED: datetime($started_at),
@@ -289,6 +298,24 @@ def _tool_versions(value: object) -> dict[str, str]:
     return cast(dict[str, str], decoded)
 
 
+def _source_metadata(row: _Record) -> CaptureSourceMetadata | None:
+    file_name = _optional_text(row["source_file_name"])
+    size_bytes = row["source_size_bytes"]
+    locator = _optional_text(row["source_locator"])
+    portable = row["source_locator_portable"]
+    values = (file_name, size_bytes, locator, portable)
+    if all(value is None for value in values):
+        return None
+    if file_name is None or not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
+        raise RepositorySchemaError("stored capture source metadata is incomplete")
+    if not isinstance(portable, bool):
+        raise RepositorySchemaError("stored capture source locator portability must be boolean")
+    try:
+        return CaptureSourceMetadata(file_name, size_bytes, locator, portable)
+    except ValueError as error:
+        raise RepositorySchemaError("stored capture source metadata is invalid") from error
+
+
 def _capture_from_record(row: _Record) -> CaptureRecord:
     digest = _optional_text(row["content_sha256"])
     perspective = _optional_text(row["perspective_ip"])
@@ -303,6 +330,7 @@ def _capture_from_record(row: _Record) -> CaptureRecord:
         ended_at=_optional_datetime(row["ended_at"]),
         packet_count=int(row["packet_count"] or 0),
         content_digest=CanonicalDigest(digest) if digest else None,
+        source_metadata=_source_metadata(row),
         perspective=EntityId(perspective) if perspective else None,
         capture_filter=_optional_text(row["capture_filter"]),
         tool_versions=_tool_versions(row["tool_versions_json"]),
@@ -324,6 +352,16 @@ def _capture_parameters(record: CaptureRecord) -> dict[str, object]:
         "source_kind": record.source_kind.value,
         "source_name": record.source_name,
         "content_sha256": str(record.content_digest) if record.content_digest else None,
+        "source_file_name": (record.source_metadata.file_name if record.source_metadata else None),
+        "source_size_bytes": (
+            record.source_metadata.size_bytes if record.source_metadata else None
+        ),
+        "source_locator": (
+            record.source_metadata.source_locator if record.source_metadata else None
+        ),
+        "source_locator_portable": (
+            record.source_metadata.locator_portable if record.source_metadata else None
+        ),
         "registered_at": utc_text(record.registered_at),
         "started_at": utc_text(record.started_at) if record.started_at else None,
         "packet_count": record.packet_count,

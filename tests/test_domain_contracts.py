@@ -14,6 +14,7 @@ from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureState,
     EndpointInspection,
     EndpointProfile,
@@ -124,10 +125,30 @@ def test_capture_record_tracks_live_and_import_lifecycle_without_inferred_perspe
         state=CaptureState.REGISTERED,
         registered_at=registered_at,
         content_digest=CanonicalDigest("a" * 64),
+        source_metadata=CaptureSourceMetadata("fixture.pcap", 128, "/research/fixture.pcap", False),
     ).transition(CaptureState.IMPORTING, registered_at)
     assert imported.perspective is None
+    assert imported.source_metadata == CaptureSourceMetadata(
+        "fixture.pcap", 128, "/research/fixture.pcap", False
+    )
     with pytest.raises(ValueError, match="invalid lifecycle transition"):
         complete.transition(CaptureState.RUNNING, registered_at + timedelta(seconds=12))
+
+
+def test_capture_source_metadata_validates_file_provenance_and_portability():
+    metadata = CaptureSourceMetadata(" fixture.pcap ", 0, " datasets/fixture.pcap ", True)
+
+    assert metadata.file_name == "fixture.pcap"
+    assert metadata.source_locator == "datasets/fixture.pcap"
+    assert metadata.locator_portable
+    with pytest.raises(ValueError, match="cannot be negative"):
+        CaptureSourceMetadata("fixture.pcap", -1)
+    with pytest.raises(ValueError, match="must be an integer"):
+        CaptureSourceMetadata("fixture.pcap", True)
+    with pytest.raises(ValueError, match="must be boolean"):
+        CaptureSourceMetadata("fixture.pcap", 1, locator_portable="false")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="portable.*cannot be empty"):
+        CaptureSourceMetadata("fixture.pcap", 1, locator_portable=True)
 
 
 def test_packet_evidence_normalizes_addresses_and_requires_valid_units():

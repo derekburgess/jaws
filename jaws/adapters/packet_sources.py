@@ -13,7 +13,7 @@ from queue import Empty, Full, Queue
 from threading import Event, Thread
 from typing import Any, Protocol
 
-from jaws.domain import PacketObservation, normalize_utc
+from jaws.domain import CaptureSourceMetadata, PacketObservation, normalize_utc
 
 PacketObserver = Callable[[PacketObservation, str], None]
 
@@ -42,6 +42,18 @@ def file_sha256(path: str | Path) -> str:
         for chunk in iter(lambda: capture_file.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def pcap_source_metadata(path: str | Path) -> CaptureSourceMetadata:
+    """Describe a local PCAP while explicitly marking its locator non-portable."""
+
+    source = Path(path)
+    return CaptureSourceMetadata(
+        file_name=source.name,
+        size_bytes=source.stat().st_size,
+        source_locator=str(path),
+        locator_portable=False,
+    )
 
 
 def capture_tool_versions(

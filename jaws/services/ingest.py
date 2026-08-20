@@ -56,6 +56,7 @@ class IngestService:
             registered_at=registered_at,
             legacy_capture_id=legacy_capture_id,
             content_digest=spec.content_digest,
+            source_metadata=spec.source_metadata,
             perspective=spec.perspective,
             capture_filter=spec.capture_filter,
             tool_versions=spec.tool_versions,

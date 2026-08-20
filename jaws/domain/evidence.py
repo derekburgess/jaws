@@ -12,7 +12,7 @@ from .enrichment import EnrichmentRecord, ResearcherAnnotation, normalized_ip
 from .enums import ObservationScopeKind, OutlierStatus, ProfileStatus
 from .identifiers import CanonicalDigest, CaptureId, EntityId, ObservationScopeId
 from .packets import PacketRecord
-from .serialization import canonical_digest
+from .serialization import canonical_digest, primitive
 from .time import normalize_utc
 
 EVIDENCE_BUNDLE_FORMAT = "jaws-evidence-bundle"
@@ -343,9 +343,34 @@ class EvidenceBundle:
             raise ValueError("evidence bundle schema provenance does not match its manifest")
         if dict(self.manifest.record_counts) != dict(self.evidence.record_counts):
             raise ValueError("evidence bundle record counts do not match its contents")
-        if dict(self.manifest.section_checksums) != dict(self.evidence.section_checksums):
+        if dict(self.manifest.section_checksums) == dict(self.evidence.section_checksums):
+            if self.manifest.content_checksum != self.evidence.content_checksum:
+                raise ValueError("evidence bundle content checksum mismatch")
+            return
+
+        # Format version 1 predates optional CaptureRecord.source_metadata. Verify
+        # those bundles against their original shape, but only when no metadata
+        # would be omitted from integrity protection.
+        if any(capture.source_metadata is not None for capture in self.evidence.captures):
             raise ValueError("evidence bundle section checksum mismatch")
-        if self.manifest.content_checksum != self.evidence.content_checksum:
+        legacy_captures = []
+        for capture in self.evidence.captures:
+            record = primitive(capture)
+            assert isinstance(record, dict)
+            record.pop("source_metadata")
+            legacy_captures.append(record)
+        legacy_checksums = dict(self.evidence.section_checksums)
+        legacy_checksums["captures"] = canonical_digest(legacy_captures)
+        if dict(self.manifest.section_checksums) != legacy_checksums:
+            raise ValueError("evidence bundle section checksum mismatch")
+        legacy_content = canonical_digest(
+            {
+                "schema": self.evidence.schema,
+                "record_counts": self.evidence.record_counts,
+                "section_checksums": legacy_checksums,
+            }
+        )
+        if self.manifest.content_checksum != legacy_content:
             raise ValueError("evidence bundle content checksum mismatch")
 
     @classmethod

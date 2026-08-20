@@ -9,6 +9,7 @@ from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureState,
     EntityId,
     ObservationWindow,
@@ -46,6 +47,9 @@ def assert_capture_and_packet_repository_contract(repositories):
         state=CaptureState.REGISTERED,
         registered_at=captured_at + timedelta(seconds=1),
         legacy_capture_id="20260811T120000Z",
+        source_metadata=CaptureSourceMetadata(
+            "fixture.pcap", 2048, "/fixtures/fixture.pcap", False
+        ),
         tool_versions={"jaws": "2.0.0"},
     ).transition(CaptureState.IMPORTING, captured_at + timedelta(seconds=1))
 

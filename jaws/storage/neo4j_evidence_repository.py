@@ -161,6 +161,10 @@ CREATE (:CAPTURE {
     SOURCE_KIND: record.source_kind,
     SOURCE_NAME: record.source_name,
     CONTENT_SHA256: record.content_sha256,
+    SOURCE_FILE_NAME: record.source_file_name,
+    SOURCE_SIZE_BYTES: record.source_size_bytes,
+    SOURCE_LOCATOR: record.source_locator,
+    SOURCE_LOCATOR_PORTABLE: record.source_locator_portable,
     REGISTERED_AT: datetime(record.registered_at),
     STARTED_AT: CASE WHEN record.started_at IS NULL THEN null ELSE datetime(record.started_at) END,
     ENDED_AT: CASE WHEN record.ended_at IS NULL THEN null ELSE datetime(record.ended_at) END,
@@ -554,6 +558,18 @@ class Neo4jEvidenceRepository:
                 "source_kind": item.source_kind.value,
                 "source_name": item.source_name,
                 "content_sha256": str(item.content_digest) if item.content_digest else None,
+                "source_file_name": (
+                    item.source_metadata.file_name if item.source_metadata else None
+                ),
+                "source_size_bytes": (
+                    item.source_metadata.size_bytes if item.source_metadata else None
+                ),
+                "source_locator": (
+                    item.source_metadata.source_locator if item.source_metadata else None
+                ),
+                "source_locator_portable": (
+                    item.source_metadata.locator_portable if item.source_metadata else None
+                ),
                 "registered_at": utc_text(item.registered_at),
                 "started_at": utc_text(item.started_at) if item.started_at else None,
                 "ended_at": utc_text(item.ended_at) if item.ended_at else None,

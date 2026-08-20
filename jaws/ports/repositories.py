@@ -45,6 +45,7 @@ def capture_metadata(record: CaptureRecord) -> tuple[object, ...]:
         record.registered_at,
         record.legacy_capture_id,
         record.content_digest,
+        record.source_metadata,
         record.perspective,
         record.capture_filter,
         tuple(record.tool_versions.items()),

@@ -7,11 +7,18 @@ can therefore invoke the same lifecycle behavior.
 
 ## Explicit input
 
-`CaptureSpec` declares source kind/name, host perspective, content digest, capture filter,
-tool versions, and optional legacy display identity. A live-interface spec requires an
-explicit host `EntityId`. A PCAP spec requires its content SHA-256 and accepts either an
-explicit host entity supplied by the user/dataset manifest or `None` for genuinely unknown
-perspective. The service never substitutes the importer machine's address.
+`CaptureSpec` declares source kind/name, host perspective, content digest, typed source
+metadata, capture filter, tool versions, and optional legacy display identity. A live-
+interface spec requires an explicit host `EntityId`. A PCAP spec requires its content
+SHA-256 plus `CaptureSourceMetadata`, and accepts either an explicit host entity supplied
+by the user/dataset manifest or `None` for genuinely unknown perspective. The service
+never substitutes the importer machine's address.
+
+For a local PCAP, source metadata records the original filename, byte size, and the exact
+locator supplied to the adapter. The locator is explicitly marked non-portable. It is
+descriptive provenance only: the content SHA-256 is the file identity, and moving the same
+bytes to another machine or path does not create different evidence. Dataset adapters may
+later supply a genuinely portable locator only by setting that property explicitly.
 
 Packet-source adapters emit `PacketObservation` values without capture ownership. Each
 observation carries its original timestamp and normalized packet fields. The service
@@ -67,10 +74,9 @@ keeps the legacy raw value; display filters use a `display=` prefix; both are ex
 prefixed). Tool provenance records JAWS and PyShark package versions plus the first exact
 line of `tshark --version`, using `unknown` when unavailable.
 
-## Remaining ingest follow-up
+## Remaining CLI follow-up
 
 `jaws-capture` now constructs the appropriate source adapter and invokes `IngestService`;
 it no longer parses packets, batches repository writes, or finalizes lifecycle state.
-Portable file size/path/source metadata still needs a versioned persistence contract. The
-remaining CLI compatibility checklist also covers `jaws-ipinfo` and `jaws-compute`, which
+The remaining CLI compatibility checklist covers `jaws-ipinfo` and `jaws-compute`, which
 have not yet moved onto their Milestone 3 services.

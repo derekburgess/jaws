@@ -63,6 +63,29 @@ def test_bundle_json_round_trip_and_checksum_tamper_detection(tmp_path):
         parse_evidence_bundle(document)
 
 
+def test_format_one_bundle_without_source_metadata_remains_verifiable():
+    bundle = EvidenceBundle.build(evidence_fixture(), exported_at=OBSERVED_AT)
+    document = copy.deepcopy(evidence_bundle_document(bundle))
+    captures = document["evidence"]["captures"]
+    for capture in captures:
+        capture.pop("source_metadata")
+    section_checksums = document["manifest"]["section_checksums"]
+    section_checksums["captures"] = str(canonical_digest(captures))
+    document["manifest"]["content_checksum"] = str(
+        canonical_digest(
+            {
+                "schema": document["evidence"]["schema"],
+                "record_counts": document["manifest"]["record_counts"],
+                "section_checksums": section_checksums,
+            }
+        )
+    )
+
+    parsed = parse_evidence_bundle(document)
+
+    assert parsed.evidence.captures[0].source_metadata is None
+
+
 def test_import_rejects_different_schema_provenance():
     bundle = EvidenceBundle.build(evidence_fixture(), exported_at=OBSERVED_AT)
     incompatible = EvidenceSchemaProvenance(

@@ -229,6 +229,22 @@ def test_version_six_adds_only_reconstructable_finding_discovery_indexes():
     assert all("DELETE" not in statement.query for statement in migration.statements)
 
 
+def test_version_seven_adds_only_descriptive_capture_source_index():
+    migration = MIGRATIONS[6]
+    assert migration.version == 7
+    assert migration.reversible is True
+    assert migration.backup_required is False
+    assert migration.required_schema == (
+        SchemaObject(
+            "index",
+            "capture_source_file_name_index",
+            "CAPTURE",
+            ("SOURCE_FILE_NAME",),
+        ),
+    )
+    assert all("DELETE" not in statement.query for statement in migration.statements)
+
+
 def test_existing_additive_migration_checksums_remain_immutable():
     assert tuple(migration.checksum for migration in MIGRATIONS) == (
         "22e1720bf04aa692ab3bc71a9e23a880829923f11c44bf38b164e21c1e9bb081",
@@ -237,6 +253,7 @@ def test_existing_additive_migration_checksums_remain_immutable():
         "8cf6114bb284d64eac5715c59e87720b302790c9b707e722fe565f14053ae37a",
         "e2510fbe1c78bb6a468c85e4d9ebb1892e5eee6609480ad87b27a944f20c5487",
         "367c2bc68824f8faeb99751b8686aa0296727ca8406d645dffbf4aa0bb6205a9",
+        "cf7ca753da2a5e41a396bac3bccbd94e10264f0c3e96cc8cf39e95f973608f24",
     )
     assert all(migration.safety is MigrationSafety.ADDITIVE for migration in MIGRATIONS)
     assert not MIGRATIONS[0].backup_required
@@ -259,16 +276,16 @@ def test_fresh_database_dry_run_is_read_only_and_migration_is_idempotent(clock):
 
     status = migration_manager.status()
     assert status.current_version is None
-    assert status.pending_versions == (1, 2, 3, 4, 5, 6)
+    assert status.pending_versions == (1, 2, 3, 4, 5, 6, 7)
     plan = migration_manager.dry_run()
     assert plan.current_version is None
-    assert plan.target_version == 6
+    assert plan.target_version == 7
     assert plan.pending == MIGRATIONS
     assert len(plan.statements) == sum(len(migration.statements) for migration in MIGRATIONS)
     assert graph.writes == []
 
     result = migration_manager.migrate()
-    assert result.applied_versions == (1, 2, 3, 4, 5, 6)
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6, 7)
     assert result.status.is_current
     assert graph.applied == [
         {
@@ -329,7 +346,7 @@ def test_partial_schema_application_writes_no_version_and_can_retry(clock):
     graph.fail_on = None
     result = migration_manager.migrate()
     assert result.status.is_current
-    assert len(graph.applied) == 6
+    assert len(graph.applied) == 7
 
 
 def test_applied_checksum_drift_blocks_validation_and_migration(clock):
@@ -387,7 +404,7 @@ def test_noncontiguous_applied_history_blocks_an_earlier_migration(clock):
 
 def _risky_manager(graph: FakeNeo4j, clock: FrozenClock) -> Neo4jMigrationManager:
     risky = Migration(
-        version=7,
+        version=8,
         name="fixture_destructive_rewrite",
         statements=(MIGRATIONS[1].statements[5],),
         required_schema=(),
@@ -419,13 +436,13 @@ def test_risky_migration_plan_names_backup_requirement_and_fails_closed(clock):
     plan = migration_manager.dry_run()
 
     assert plan.backup_required
-    assert plan.backup_required_versions == (7,)
+    assert plan.backup_required_versions == (8,)
     assert plan.source_schema_digest is not None
     writes = list(graph.writes)
     with pytest.raises(MigrationError, match="verified evidence backup required"):
         migration_manager.migrate()
     assert graph.writes == writes
-    assert len(graph.applied) == 6
+    assert len(graph.applied) == 7
 
 
 def test_risky_migration_rejects_mismatched_proof_and_accepts_exact_proof(clock):
@@ -446,10 +463,10 @@ def test_risky_migration_rejects_mismatched_proof_and_accepts_exact_proof(clock)
 
     with pytest.raises(MigrationError, match="different database"):
         migration_manager.migrate(wrong_database)
-    assert len(graph.applied) == 6
+    assert len(graph.applied) == 7
 
     result = migration_manager.migrate(proof)
-    assert result.applied_versions == (7,)
+    assert result.applied_versions == (8,)
     assert result.status.is_current
 
 

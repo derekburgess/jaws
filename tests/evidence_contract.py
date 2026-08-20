@@ -14,6 +14,7 @@ from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureState,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -61,6 +62,12 @@ def evidence_fixture() -> EvidenceSnapshot:
         ended_at=OBSERVED_AT + timedelta(seconds=1),
         packet_count=1,
         content_digest=CanonicalDigest("1" * 64),
+        source_metadata=CaptureSourceMetadata(
+            "evidence-fixture.pcap",
+            8192,
+            "/research/evidence-fixture.pcap",
+            False,
+        ),
         capture_filter="tcp port 443",
         tool_versions={"jaws": "2.0.0", "tshark": "4.4.0"},
     )

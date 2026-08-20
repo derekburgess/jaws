@@ -177,6 +177,10 @@ def test_failed_import_flushes_available_evidence_and_is_partial(monkeypatch, tm
 
     finalization = repositories.captures.get(CaptureId("cap_fixture"))
     assert str(finalization.content_digest) == hashlib.sha256(b"fixture evidence").hexdigest()
+    assert finalization.source_metadata.file_name == "fixture.pcap"
+    assert finalization.source_metadata.size_bytes == len(b"fixture evidence")
+    assert finalization.source_metadata.source_locator == str(capture_path)
+    assert not finalization.source_metadata.locator_portable
     assert finalization.perspective is None
     assert finalization.state.value == "partial"
     assert finalization.packet_count == 1
@@ -225,6 +229,7 @@ def test_imported_capture_accepts_explicit_host_perspective_and_preserves_result
     assert finalization is not None
     assert finalization.perspective.value == "ip:203.0.113.7"
     assert finalization.capture_filter == "display=ip"
+    assert finalization.source_metadata.file_name == "fixture.pcap"
     assert finalization.state.value == "complete"
     assert reporter.results[0][0] == {
         "database": "fixtures",

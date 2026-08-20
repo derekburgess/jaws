@@ -41,6 +41,32 @@ def _tool_versions(value: Mapping[str, str]) -> Mapping[str, str]:
 
 
 @dataclass(frozen=True, slots=True)
+class CaptureSourceMetadata:
+    """Descriptive file provenance whose locator is never implicit identity."""
+
+    file_name: str
+    size_bytes: int
+    source_locator: str | None = None
+    locator_portable: bool = False
+
+    def __post_init__(self) -> None:
+        file_name = self.file_name.strip()
+        if not file_name:
+            raise ValueError("capture source file_name cannot be empty")
+        if not isinstance(self.size_bytes, int) or isinstance(self.size_bytes, bool):
+            raise ValueError("capture source size_bytes must be an integer")
+        if self.size_bytes < 0:
+            raise ValueError("capture source size_bytes cannot be negative")
+        if not isinstance(self.locator_portable, bool):
+            raise ValueError("capture source locator_portable must be boolean")
+        locator = self.source_locator.strip() if self.source_locator else None
+        if self.locator_portable and locator is None:
+            raise ValueError("portable capture source locator cannot be empty")
+        object.__setattr__(self, "file_name", file_name)
+        object.__setattr__(self, "source_locator", locator)
+
+
+@dataclass(frozen=True, slots=True)
 class CaptureSpec:
     """Explicit provenance and host perspective for one bounded ingest operation."""
 
@@ -51,6 +77,7 @@ class CaptureSpec:
     capture_filter: str | None = None
     tool_versions: Mapping[str, str] = field(default_factory=dict)
     legacy_capture_id: str | None = None
+    source_metadata: CaptureSourceMetadata | None = None
 
     def __post_init__(self) -> None:
         source_name = self.source_name.strip()
@@ -62,6 +89,10 @@ class CaptureSpec:
             raise ValueError("live capture requires an explicit host perspective")
         if self.source_kind is CaptureSourceKind.PCAP_FILE and self.content_digest is None:
             raise ValueError("PCAP import requires its content SHA-256 digest")
+        if self.source_kind is CaptureSourceKind.PCAP_FILE and self.source_metadata is None:
+            raise ValueError("PCAP import requires file source metadata")
+        if self.source_kind is not CaptureSourceKind.PCAP_FILE and self.source_metadata is not None:
+            raise ValueError("file source metadata requires a PCAP-file source")
         if self.content_digest is not None:
             digest = str(self.content_digest)
             if len(digest) != 64 or any(
@@ -100,6 +131,7 @@ class CaptureRecord:
     capture_filter: str | None = None
     tool_versions: Mapping[str, str] = field(default_factory=dict)
     failure_code: str | None = None
+    source_metadata: CaptureSourceMetadata | None = None
 
     def __post_init__(self) -> None:
         source_name = self.source_name.strip()
@@ -146,6 +178,8 @@ class CaptureRecord:
                 character not in "0123456789abcdef" for character in digest
             ):
                 raise ValueError("capture content_digest must be lowercase SHA-256 text")
+        if self.source_kind is not CaptureSourceKind.PCAP_FILE and self.source_metadata is not None:
+            raise ValueError("file source metadata requires a PCAP-file source")
         capture_filter = self.capture_filter.strip() if self.capture_filter else None
         object.__setattr__(self, "capture_filter", capture_filter)
         failure_code = self.failure_code.strip() if self.failure_code else None

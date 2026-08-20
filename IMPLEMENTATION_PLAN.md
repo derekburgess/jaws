@@ -555,7 +555,7 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Preserve original packet timestamps and capture-session boundaries (`PacketObservation`; `IngestService`).
 - [x] Define handling for non-IP, IPv4, IPv6, VLAN/tunnel, TCP, UDP, ICMP, and malformed/partial packets ([ingest contract](docs/services/ingest.md); `PySharkPacketParser`).
 - [x] Record capture/display filters and tshark/PyShark versions ([ingest contract](docs/services/ingest.md)).
-- [ ] Hash imported files and record size/path/source metadata without assuming paths are portable.
+- [x] Hash imported files and record size/path/source metadata without assuming paths are portable (`CaptureSourceMetadata`; schema version 7; [ingest contract](docs/services/ingest.md)).
 - [x] Batch writes with bounded memory and clear partial-failure semantics (`IngestService`).
 - [x] Finalize capture state in `finally` paths so interrupted work is distinguishable from a clean zero-packet capture (`IngestService`).
 - [x] Add cancellation support that safely flushes or marks a partial batch (`CancellationSignal`; `IngestService`).
@@ -1222,7 +1222,7 @@ Milestone 0 is complete. Its execution order and evidence are retained below:
 Milestone 1 is complete: dependency/package boundaries, quality automation, typed
 domain/results, validated settings, initial service ports, deterministic fakes, and the
 enforced import-direction ratchet are in place. Milestone 2 is complete: schema
-ownership plus database versions 1–6 now cover evidence identity, lifecycle, enrichment
+ownership plus database versions 1–7 now cover evidence identity, lifecycle, enrichment
 provenance, observation scope, versioned profiles, legacy quarantine, pooled scope, and
 tri-state outlier compatibility. `CaptureRepository`, `PacketRepository`,
 `EnrichmentRepository`, `ProfileRepository`, `InspectionRepository`, and
@@ -1240,10 +1240,27 @@ are small, artifact-bound, reconstructable projections; portable artifacts remai
 canonical. Milestone 3 is now in progress: the deterministic ingest core owns explicit
 capture perspective, source timestamps/session identity, bounded writes, finalization, and
 cooperative cancellation. Separate bounded live/PCAP adapters now own capture privileges,
-packet parsing policy, filters, and runtime provenance (10 of 37 checklist items complete).
-Portable file size/path/source metadata is the next active ingest slice.
+packet parsing policy, filters, runtime provenance, and portable PCAP content identity with
+explicitly non-portable local locators (11 of 37 checklist items complete). Provider-neutral
+enrichment acquisition is the next active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-19 — Milestone 3 PCAP source provenance
+
+- Added validated `CaptureSourceMetadata` for original filename, byte size, optional source
+  locator, and an explicit portability declaration. New PCAP specs require it; local CLI
+  paths are always marked non-portable, while SHA-256 remains the content identity.
+- Persisted source provenance through capture lifecycle metadata, in-memory and Neo4j
+  repositories, portable evidence export/import, and evidence restoration. Format-version-1
+  bundles created before the optional metadata field remain checksummed and readable.
+- Added reversible additive schema version 7 with
+  `capture_source_file_name_index`; older captures remain valid without guessed backfill.
+- Added domain, adapter, ingest, CLI, repository, evidence-transfer, migration, and
+  disposable-Neo4j contract coverage.
+- Passed 220 offline correctness tests and all 14 disposable-Neo4j tests with 243 total
+  tests collected; Ruff, strict types, and the report-only synthetic benchmark remain
+  green at Recall@3 5/5 with the same three named benign false positives.
 
 ### 2026-08-19 — Milestone 3 live and PCAP packet-source adapters
 

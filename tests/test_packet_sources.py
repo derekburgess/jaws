@@ -16,6 +16,7 @@ from jaws.adapters import (
     PySharkPacketParser,
     capture_tool_versions,
     file_sha256,
+    pcap_source_metadata,
 )
 
 
@@ -270,6 +271,10 @@ def test_file_hash_and_tool_versions_are_bounded_explicit_provenance(tmp_path):
     )
 
     assert file_sha256(path) == hashlib.sha256(content).hexdigest()
+    assert pcap_source_metadata(path).file_name == "fixture.pcap"
+    assert pcap_source_metadata(path).size_bytes == len(content)
+    assert pcap_source_metadata(path).source_locator == str(path)
+    assert not pcap_source_metadata(path).locator_portable
     assert versions == {
         "jaws": "2.0.0",
         "pyshark": "unknown",

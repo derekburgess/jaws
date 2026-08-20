@@ -15,6 +15,7 @@ from .packet_sources import (
     capture_tool_versions,
     file_sha256,
     packet_summary,
+    pcap_source_metadata,
 )
 from .runtime import SystemClock, UuidAuditEventIdGenerator, UuidCaptureIdGenerator
 
@@ -34,4 +35,5 @@ __all__ = [
     "parse_evidence_bundle",
     "write_evidence_bundle",
     "packet_summary",
+    "pcap_source_metadata",
 ]

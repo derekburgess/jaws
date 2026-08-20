@@ -18,6 +18,7 @@ from jaws.domain import (
     CaptureId,
     CaptureRecord,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureState,
     EnrichmentRecord,
     EnrichmentStatus,
@@ -139,6 +140,18 @@ def _capture(value: object) -> CaptureRecord:
     tool_versions = _mapping(record.get("tool_versions"), "capture tool_versions")
     digest = record.get("content_digest")
     perspective = record.get("perspective")
+    source_metadata_value = record.get("source_metadata")
+    source_metadata = None
+    if source_metadata_value is not None:
+        metadata = _mapping(source_metadata_value, "capture source metadata")
+        source_metadata = CaptureSourceMetadata(
+            file_name=_text(metadata.get("file_name"), "capture source file name"),
+            size_bytes=_integer(metadata.get("size_bytes"), "capture source size bytes"),
+            source_locator=_optional_text(metadata.get("source_locator"), "capture source locator"),
+            locator_portable=_boolean(
+                metadata.get("locator_portable"), "capture source locator portability"
+            ),
+        )
     return CaptureRecord(
         capture_id=CaptureId(_text(record.get("capture_id"), "capture ID")),
         source_kind=CaptureSourceKind(_text(record.get("source_kind"), "capture source kind")),
@@ -152,6 +165,7 @@ def _capture(value: object) -> CaptureRecord:
         content_digest=(
             CanonicalDigest(_text(digest, "capture content digest")) if digest is not None else None
         ),
+        source_metadata=source_metadata,
         perspective=(
             EntityId(_text(perspective, "capture perspective")) if perspective is not None else None
         ),

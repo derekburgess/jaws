@@ -159,7 +159,7 @@ def test_fresh_database_reaches_managed_schema(disposable_migration_database):
 
     result = manager(driver, database).migrate()
 
-    assert result.applied_versions == (1, 2, 3, 4, 5, 6)
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6, 7)
     assert result.status.is_current
     assert manager(driver, database).migrate().applied_versions == ()
 
@@ -422,7 +422,7 @@ def test_destructive_migration_requires_current_verified_evidence_backup(
     backup_path = tmp_path / "pre-migration-evidence.json"
     write_evidence_bundle(backup_path, bundle)
     destructive = Migration(
-        version=7,
+        version=8,
         name="fixture_delete_profiles",
         statements=(
             MIGRATIONS[0]
@@ -474,7 +474,7 @@ def test_destructive_migration_requires_current_verified_evidence_backup(
     )
     result = migration_manager.migrate(proof)
 
-    assert result.applied_versions == (7,)
+    assert result.applied_versions == (8,)
     with driver.session(database=database) as session:
         assert (
             session.run("MATCH (endpoint:ENDPOINT) RETURN count(endpoint) AS count").single()[

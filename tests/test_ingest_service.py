@@ -12,6 +12,7 @@ from jaws.domain import (
     CanonicalDigest,
     CaptureId,
     CaptureSourceKind,
+    CaptureSourceMetadata,
     CaptureSpec,
     CaptureState,
     EntityId,
@@ -142,6 +143,7 @@ def test_pcap_perspective_is_explicit_and_never_inferred_from_runtime(perspectiv
         source_name="datasets/fixture.pcap",
         perspective=perspective,
         content_digest=digest,
+        source_metadata=CaptureSourceMetadata("fixture.pcap", 4096, "datasets/fixture.pcap", False),
         tool_versions={"tshark": "4.4.0"},
     )
 
@@ -151,6 +153,7 @@ def test_pcap_perspective_is_explicit_and_never_inferred_from_runtime(perspectiv
     assert result.packet_count == 0
     assert result.perspective == perspective
     assert result.content_digest == digest
+    assert result.source_metadata == spec.source_metadata
 
 
 def test_capture_spec_rejects_implicit_live_identity_and_unhashed_pcap():
@@ -158,6 +161,19 @@ def test_capture_spec_rejects_implicit_live_identity_and_unhashed_pcap():
         CaptureSpec(CaptureSourceKind.LIVE_INTERFACE, "eth0")
     with pytest.raises(ValueError, match="content SHA-256"):
         CaptureSpec(CaptureSourceKind.PCAP_FILE, "fixture.pcap")
+    with pytest.raises(ValueError, match="file source metadata"):
+        CaptureSpec(
+            CaptureSourceKind.PCAP_FILE,
+            "fixture.pcap",
+            content_digest=CanonicalDigest("a" * 64),
+        )
+    with pytest.raises(ValueError, match="requires a PCAP-file"):
+        CaptureSpec(
+            CaptureSourceKind.LIVE_INTERFACE,
+            "eth0",
+            perspective=EntityId("ip:192.0.2.10"),
+            source_metadata=CaptureSourceMetadata("fixture.pcap", 1),
+        )
     with pytest.raises(ValueError, match="legacy-unknown"):
         CaptureSpec(CaptureSourceKind.LEGACY_UNKNOWN, "legacy")
 
