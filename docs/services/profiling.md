@@ -120,6 +120,18 @@ undefined. When both directions qualify, the direction with the lower coefficien
 variation supplies the endpoint cadence; its mean is retained with it. This preserves the
 existing beacon signal instead of interleaving request/response gaps.
 
+These semantics are machine-readable in `NumericFeatureSet.timing_evidence`, alongside the
+ordered timing features themselves. Endpoint numeric version 1 declares outbound and
+inbound as separate eligible directions, lower coefficient of variation as the selection
+rule, six packets as the per-direction minimum, and within-capture interval boundaries.
+Changing any of those values changes the feature-set digest. `EndpointProfiler` also rejects
+a runtime packet gate that disagrees with the declared contract.
+
+Each qualifying `EndpointProfileDraft` records the selected `timing_direction`; drafts with
+insufficient evidence record no direction and no timing values. This provenance belongs to
+the typed profiling result. The frozen legacy dictionary projection intentionally omits it
+so existing CLI and Benchmark 0 consumers retain their exact input shape.
+
 ## Legacy compatibility
 
 `jaws_compute.build_endpoint_profiles` remains the pandas-facing compatibility function
@@ -135,5 +147,5 @@ into the complete declared capture set, and a legacy graph with no capture recor
 explicit `legacy-unscoped` compatibility identity. Direct legacy callers may omit the new
 arguments only at this outer adapter; the pure service has no implicit entity or scope.
 
-The next profile-service slice makes timing direction and minimum-evidence requirements
-visible in representation metadata.
+The next profile-service slice proves deterministic generation for identical evidence and
+specifications.

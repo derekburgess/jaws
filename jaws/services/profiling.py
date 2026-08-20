@@ -19,6 +19,7 @@ from jaws.domain import (
     EntityType,
     NumericFeatureSet,
     ObservationWindow,
+    TimingDirection,
     classify_ip_address,
 )
 
@@ -180,6 +181,15 @@ class EndpointProfiler:
                 "endpoint profiler supports only feature_set_id='endpoint_profile_numeric', "
                 "version='1'"
             )
+        timing_evidence = numeric_feature_set.timing_evidence
+        if timing_evidence is None:
+            raise UnsupportedNumericFeatureSetError(
+                "endpoint profiler requires declared timing evidence metadata"
+            )
+        if self.minimum_timing_packets != timing_evidence.minimum_packets_per_direction:
+            raise UnsupportedNumericFeatureSetError(
+                "endpoint profiler timing packet gate must match feature-set metadata"
+            )
         capture_ids = frozenset(observation_window.capture_ids)
         for packet in packets:
             if packet.capture_id not in capture_ids:
@@ -221,15 +231,21 @@ class EndpointProfiler:
             sent = outbound.get(address, _DirectionAggregate())
             received = inbound.get(address, _DirectionAggregate())
             qualifying_timing = tuple(
-                (cv, mean)
-                for aggregate in (sent, received)
+                (cv, mean, direction_index, direction)
+                for direction_index, (direction, aggregate) in enumerate(
+                    (
+                        (TimingDirection.OUTBOUND, sent),
+                        (TimingDirection.INBOUND, received),
+                    )
+                )
                 for mean, cv in (aggregate.timing(self.minimum_timing_packets),)
                 if cv is not None
             )
             interval_mean: float | None = None
             interval_cv: float | None = None
+            timing_direction: TimingDirection | None = None
             if qualifying_timing:
-                interval_cv, interval_mean = min(qualifying_timing)
+                interval_cv, interval_mean, _, timing_direction = min(qualifying_timing)
             display = metadata_by_address.get(address)
             drafts.append(
                 EndpointProfileDraft(
@@ -250,6 +266,7 @@ class EndpointProfiler:
                     protocols=tuple(sorted(sent.protocols | received.protocols)),
                     interval_mean=interval_mean,
                     interval_cv=interval_cv,
+                    timing_direction=timing_direction,
                 )
             )
         return EndpointProfilingResult(

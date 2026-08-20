@@ -21,6 +21,9 @@ from .enums import (
     ReferenceKind,
     ScoreDirection,
     TextSequenceFormat,
+    TimingDirection,
+    TimingDirectionSelection,
+    TimingIntervalScope,
 )
 from .identifiers import (
     CanonicalDigest,
@@ -30,6 +33,7 @@ from .identifiers import (
     FindingId,
     SchemaVersion,
 )
+from .profiles import MIN_TIMING_PACKETS
 from .serialization import canonical_digest
 from .time import normalize_utc
 
@@ -138,12 +142,31 @@ class NumericFeatureDefinition:
 
 
 @dataclass(frozen=True, slots=True)
+class TimingEvidenceRequirement:
+    """Evidence and direction policy shared by timing features in a representation."""
+
+    directions: tuple[TimingDirection, ...]
+    selection: TimingDirectionSelection
+    minimum_packets_per_direction: int
+    interval_scope: TimingIntervalScope
+
+    def __post_init__(self) -> None:
+        directions = tuple(self.directions)
+        if not directions or len(set(directions)) != len(directions):
+            raise ValueError("timing evidence directions must be nonempty and unique")
+        if self.minimum_packets_per_direction < 2:
+            raise ValueError("timing evidence requires at least two packets per direction")
+        object.__setattr__(self, "directions", directions)
+
+
+@dataclass(frozen=True, slots=True)
 class NumericFeatureSet(VersionedSpec):
     """Versioned, ordered numeric representation contract."""
 
     feature_set_id: str = ""
     version: str = "1"
     features: tuple[NumericFeatureDefinition, ...] = ()
+    timing_evidence: TimingEvidenceRequirement | None = None
 
     def __post_init__(self) -> None:
         feature_set_id = self.feature_set_id.strip()
@@ -158,6 +181,13 @@ class NumericFeatureSet(VersionedSpec):
         names = tuple(feature.name for feature in features)
         if len(set(names)) != len(names):
             raise ValueError("numeric feature names must be unique")
+        has_timing_features = any(
+            feature.family is NumericFeatureFamily.TIMING for feature in features
+        )
+        if has_timing_features != (self.timing_evidence is not None):
+            raise ValueError(
+                "numeric feature sets with timing features require timing evidence metadata"
+            )
         object.__setattr__(self, "feature_set_id", feature_set_id)
         object.__setattr__(self, "version", version)
         object.__setattr__(self, "features", features)
@@ -265,6 +295,12 @@ ENDPOINT_NUMERIC_FEATURE_SET_V1 = NumericFeatureSet(
             ("interval_cv",),
             missing_value_policy=MissingValuePolicy.POPULATION_MEDIAN_OR_ZERO,
         ),
+    ),
+    timing_evidence=TimingEvidenceRequirement(
+        directions=(TimingDirection.OUTBOUND, TimingDirection.INBOUND),
+        selection=TimingDirectionSelection.LOWEST_COEFFICIENT_OF_VARIATION,
+        minimum_packets_per_direction=MIN_TIMING_PACKETS,
+        interval_scope=TimingIntervalScope.WITHIN_CAPTURE,
     ),
 )
 

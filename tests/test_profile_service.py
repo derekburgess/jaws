@@ -16,6 +16,7 @@ from jaws.domain import (
     EntityType,
     ObservationWindow,
     PacketRecord,
+    TimingDirection,
 )
 from jaws.jaws_compute import (
     build_endpoint_profiles,
@@ -177,6 +178,7 @@ def test_timing_gate_and_capture_boundaries_preserve_beacon_cadence():
 
     assert local.interval_mean == pytest.approx(10.0)
     assert local.interval_cv == pytest.approx(0.0)
+    assert local.timing_direction is TimingDirection.OUTBOUND
 
 
 def test_more_regular_qualifying_direction_supplies_endpoint_timing():
@@ -189,6 +191,34 @@ def test_more_regular_qualifying_direction_supplies_endpoint_timing():
 
     assert local.interval_mean == pytest.approx(10.0)
     assert local.interval_cv == pytest.approx(0.0)
+    assert local.timing_direction is TimingDirection.OUTBOUND
+
+
+def test_selected_inbound_timing_direction_and_sparse_provenance_are_explicit():
+    outbound = tuple(_packet(seconds, "10.0.0.2", "8.8.8.8") for seconds in (0, 1, 4, 10, 20, 35))
+    inbound = tuple(
+        _packet(seconds, "1.1.1.1", "10.0.0.2") for seconds in (100, 110, 120, 130, 140, 150)
+    )
+
+    local = next(draft for draft in _profiles(outbound + inbound) if draft.ip_address == "10.0.0.2")
+    sparse = next(draft for draft in _profiles(outbound[:1]) if draft.ip_address == "10.0.0.2")
+
+    assert local.interval_mean == pytest.approx(10.0)
+    assert local.interval_cv == pytest.approx(0.0)
+    assert local.timing_direction is TimingDirection.INBOUND
+    assert sparse.interval_mean is None
+    assert sparse.interval_cv is None
+    assert sparse.timing_direction is None
+
+
+def test_profiler_packet_gate_must_match_representation_metadata():
+    with pytest.raises(UnsupportedNumericFeatureSetError, match="packet gate must match"):
+        EndpointProfiler(minimum_timing_packets=7).profile(
+            (),
+            entity_definition=ENDPOINT_IP_V1,
+            observation_window=_window(),
+            numeric_feature_set=ENDPOINT_NUMERIC_FEATURE_SET_V1,
+        )
 
 
 def test_profile_draft_rejects_identity_drift_and_profiler_bounds():
@@ -196,6 +226,8 @@ def test_profile_draft_rejects_identity_drift_and_profiler_bounds():
 
     with pytest.raises(ValueError, match="entity_id must match"):
         replace(draft, entity_id=EntityId("ip:1.1.1.1"))
+    with pytest.raises(ValueError, match="direction must accompany"):
+        replace(draft, timing_direction=TimingDirection.OUTBOUND)
     with pytest.raises(ValueError, match="at least two"):
         EndpointProfiler(minimum_timing_packets=1)
     with pytest.raises(ValueError, match="ports must be positive"):

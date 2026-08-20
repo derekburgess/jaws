@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .captures import ProfileIdentity
 from .enrichment import AddressClassification, normalized_ip
-from .enums import OutlierStatus, ProfileStatus
+from .enums import OutlierStatus, ProfileStatus, TimingDirection
 from .identifiers import EntityId, ObservationScopeId
 from .time import normalize_utc
 
@@ -61,6 +61,7 @@ class EndpointProfileDraft:
     protocols: tuple[str, ...] = ()
     interval_mean: float | None = None
     interval_cv: float | None = None
+    timing_direction: TimingDirection | None = None
 
     def __post_init__(self) -> None:
         address = normalized_ip(self.ip_address)
@@ -79,6 +80,11 @@ class EndpointProfileDraft:
             value = getattr(self, field_name)
             if value is not None and (not math.isfinite(value) or value < 0):
                 raise ValueError(f"profile {field_name} must be finite and nonnegative")
+        has_timing = self.interval_mean is not None or self.interval_cv is not None
+        if (self.interval_mean is None) != (self.interval_cv is None):
+            raise ValueError("profile timing mean and variation must be defined together")
+        if has_timing != (self.timing_direction is not None):
+            raise ValueError("profile timing direction must accompany timing values")
         object.__setattr__(self, "ip_address", address)
         for field_name in ("organization", "hostname", "location"):
             object.__setattr__(self, field_name, _optional_text(getattr(self, field_name)))

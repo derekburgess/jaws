@@ -46,6 +46,9 @@ from .enums import (
     RunState,
     ScoreDirection,
     TextSequenceFormat,
+    TimingDirection,
+    TimingDirectionSelection,
+    TimingIntervalScope,
 )
 from .errors import DomainError
 from .evidence import (
@@ -113,6 +116,7 @@ from .specifications import (
     RepresentationSpec,
     Score,
     TextTemplateSpec,
+    TimingEvidenceRequirement,
     VersionedSpec,
 )
 from .time import CAPTURE_TRANSITIONS, RUN_TRANSITIONS, normalize_utc, require_transition, utc_text
@@ -223,6 +227,10 @@ __all__ = [
     "TERMINAL_RUN_STATES",
     "TextSequenceFormat",
     "TextTemplateSpec",
+    "TimingDirection",
+    "TimingDirectionSelection",
+    "TimingEvidenceRequirement",
+    "TimingIntervalScope",
     "VersionedSpec",
     "bytes_count",
     "capture_scope_id",

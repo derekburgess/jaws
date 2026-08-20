@@ -578,7 +578,7 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0 (`tests/test_profile_service.py`; report-only benchmark parity).
 - [x] Version numeric feature definitions, transformations, missing-value policy, and units (`NumericFeatureSet`; `ENDPOINT_NUMERIC_FEATURE_SET_V1`; [profiling contract](docs/services/profiling.md)).
 - [x] Version the endpoint text-description template separately from embedding models (`TextTemplateSpec`; `ENDPOINT_TEXT_TEMPLATE_V1`; `EndpointTextRenderer`; [profiling contract](docs/services/profiling.md)).
-- [ ] Make timing direction and minimum-evidence requirements visible in representation metadata.
+- [x] Make timing direction and minimum-evidence requirements visible in representation metadata (`TimingEvidenceRequirement`; per-draft `TimingDirection`; [profiling contract](docs/services/profiling.md)).
 - [ ] Ensure profile generation is deterministic for identical evidence and spec.
 - [ ] Support endpoint-IP and host-destination profiles as first-class entity definitions rather than unrelated code paths.
 
@@ -1251,11 +1251,24 @@ out-of-window evidence before aggregation. The twelve endpoint numeric features 
 single ordered, versioned contract for families, source fields, safe-ratio offsets, units,
 missing-value behavior, and analysis transforms. Endpoint description rendering now uses
 an exact versioned template whose identity is persisted independently from embedding
-model identity (23 of 37 checklist items complete). Making timing direction and
-minimum-evidence requirements visible in representation metadata is the next active
-Milestone 3 slice.
+model identity. Timing representations now carry a versioned evidence policy for eligible
+directions, lower-variation selection, the per-direction packet gate, and within-capture
+interval boundaries; qualifying typed drafts retain their selected direction (24 of 37
+checklist items complete). Proving deterministic generation for identical evidence and
+specifications is the next active Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 timing representation metadata
+
+- Added `TimingEvidenceRequirement` to the endpoint numeric feature contract with explicit
+  outbound/inbound eligibility, lower-CV selection, the six-packet per-direction gate, and
+  within-capture interval scope included in canonical representation identity.
+- Added selected `TimingDirection` provenance to typed endpoint drafts while leaving the
+  frozen legacy profile dictionary shape unchanged.
+- Rejected runtime timing gates that disagree with the declared numeric representation and
+  covered outbound, inbound, sparse, and contract-digest behavior without changing cadence
+  values.
 
 ### 2026-08-20 — Milestone 3 versioned endpoint text template
 

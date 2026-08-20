@@ -14,6 +14,10 @@ from jaws.domain import (
     NumericFeatureFamily,
     NumericFeatureSet,
     NumericFeatureTransformation,
+    TimingDirection,
+    TimingDirectionSelection,
+    TimingEvidenceRequirement,
+    TimingIntervalScope,
 )
 from jaws.jaws_finder import (
     FEATURE_UNITS,
@@ -109,6 +113,12 @@ def test_endpoint_numeric_feature_set_versions_exact_order_semantics_and_units()
     )
     assert tuple(NUMERIC_FEATURE_NAMES) == feature_set.feature_names
     assert FEATURE_UNITS == {feature.name: feature.unit.value for feature in feature_set.features}
+    assert feature_set.timing_evidence == TimingEvidenceRequirement(
+        directions=(TimingDirection.OUTBOUND, TimingDirection.INBOUND),
+        selection=TimingDirectionSelection.LOWEST_COEFFICIENT_OF_VARIATION,
+        minimum_packets_per_direction=6,
+        interval_scope=TimingIntervalScope.WITHIN_CAPTURE,
+    )
 
 
 def test_declared_transformations_preserve_legacy_matrix_and_missing_value_behavior():
@@ -179,3 +189,20 @@ def test_missing_value_policy_is_part_of_feature_set_identity():
     )
 
     assert changed.digest != ENDPOINT_NUMERIC_FEATURE_SET_V1.digest
+
+
+def test_timing_evidence_policy_is_required_and_part_of_feature_set_identity():
+    feature_set = ENDPOINT_NUMERIC_FEATURE_SET_V1
+    changed = replace(
+        feature_set,
+        timing_evidence=replace(
+            feature_set.timing_evidence,
+            minimum_packets_per_direction=7,
+        ),
+    )
+
+    assert changed.digest != feature_set.digest
+    with pytest.raises(ValueError, match="require timing evidence metadata"):
+        replace(feature_set, timing_evidence=None)
+    with pytest.raises(ValueError, match="at least two packets"):
+        replace(feature_set.timing_evidence, minimum_packets_per_direction=1)

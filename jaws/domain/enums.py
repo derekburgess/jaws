@@ -107,6 +107,19 @@ class MissingValuePolicy(StrEnum):
     POPULATION_MEDIAN_OR_ZERO = "population_median_or_zero"
 
 
+class TimingDirection(StrEnum):
+    OUTBOUND = "outbound"
+    INBOUND = "inbound"
+
+
+class TimingDirectionSelection(StrEnum):
+    LOWEST_COEFFICIENT_OF_VARIATION = "lowest_coefficient_of_variation"
+
+
+class TimingIntervalScope(StrEnum):
+    WITHIN_CAPTURE = "within_capture"
+
+
 class TextSequenceFormat(StrEnum):
     PYTHON_LIST = "python_list"
 
