@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from math import isfinite
+from string import Formatter
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -19,6 +20,7 @@ from .enums import (
     OutlierStatus,
     ReferenceKind,
     ScoreDirection,
+    TextSequenceFormat,
 )
 from .identifiers import (
     CanonicalDigest,
@@ -264,6 +266,79 @@ ENDPOINT_NUMERIC_FEATURE_SET_V1 = NumericFeatureSet(
             missing_value_policy=MissingValuePolicy.POPULATION_MEDIAN_OR_ZERO,
         ),
     ),
+)
+
+
+@dataclass(frozen=True, slots=True)
+class TextTemplateSpec(VersionedSpec):
+    """Versioned text layout independent of provider and model identity."""
+
+    template_id: str = ""
+    version: str = "1"
+    template: str = ""
+    fields: tuple[str, ...] = ()
+    missing_value_text: str = "None"
+    sequence_format: TextSequenceFormat = TextSequenceFormat.PYTHON_LIST
+
+    def __post_init__(self) -> None:
+        template_id = self.template_id.strip()
+        version = self.version.strip()
+        fields = tuple(value.strip() for value in self.fields)
+        if not template_id:
+            raise ValueError("text template ID cannot be empty")
+        if not version:
+            raise ValueError("text template version cannot be empty")
+        if not self.template:
+            raise ValueError("text template cannot be empty")
+        if not fields or any(not value for value in fields):
+            raise ValueError("text template fields cannot be empty")
+        if len(set(fields)) != len(fields):
+            raise ValueError("text template fields must be unique")
+        parsed = tuple(Formatter().parse(self.template))
+        placeholders = tuple(field_name for _, field_name, _, _ in parsed if field_name)
+        if placeholders != fields:
+            raise ValueError("text template placeholders must exactly match declared fields")
+        if any(
+            format_spec or conversion
+            for _, field_name, format_spec, conversion in parsed
+            if field_name
+        ):
+            raise ValueError("text template placeholders cannot use formatting or conversions")
+        object.__setattr__(self, "template_id", template_id)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "fields", fields)
+
+
+ENDPOINT_TEXT_TEMPLATE_V1 = TextTemplateSpec(
+    template_id="endpoint-description",
+    version="1",
+    template=(
+        "IP: {ip_address} ({endpoint_type}) | Organization: {organization} | "
+        "Hostname: {hostname} | Location: {location}\n"
+        "Outbound: {bytes_out} bytes, {packets_out} packets to {out_peers} peers | "
+        "Ports: {out_ports}\n"
+        "Inbound: {bytes_in} bytes, {packets_in} packets from {in_peers} peers | "
+        "Ports: {in_ports}\n"
+        "Protocols: {protocols}\n"
+    ),
+    fields=(
+        "ip_address",
+        "endpoint_type",
+        "organization",
+        "hostname",
+        "location",
+        "bytes_out",
+        "packets_out",
+        "out_peers",
+        "out_ports",
+        "bytes_in",
+        "packets_in",
+        "in_peers",
+        "in_ports",
+        "protocols",
+    ),
+    missing_value_text="None",
+    sequence_format=TextSequenceFormat.PYTHON_LIST,
 )
 
 

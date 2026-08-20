@@ -577,7 +577,7 @@ Extract evidence acquisition and representation building into deterministic serv
 - [x] Make entity definition and observation window inputs explicit (`EndpointProfilingResult`; `ProfilingWindowError`; [profiling contract](docs/services/profiling.md)).
 - [x] Preserve inbound/outbound counts, peers, ports, protocols, and timing semantics from Benchmark 0 (`tests/test_profile_service.py`; report-only benchmark parity).
 - [x] Version numeric feature definitions, transformations, missing-value policy, and units (`NumericFeatureSet`; `ENDPOINT_NUMERIC_FEATURE_SET_V1`; [profiling contract](docs/services/profiling.md)).
-- [ ] Version the endpoint text-description template separately from embedding models.
+- [x] Version the endpoint text-description template separately from embedding models (`TextTemplateSpec`; `ENDPOINT_TEXT_TEMPLATE_V1`; `EndpointTextRenderer`; [profiling contract](docs/services/profiling.md)).
 - [ ] Make timing direction and minimum-evidence requirements visible in representation metadata.
 - [ ] Ensure profile generation is deterministic for identical evidence and spec.
 - [ ] Support endpoint-IP and host-destination profiles as first-class entity definitions rather than unrelated code paths.
@@ -1249,11 +1249,30 @@ pandas function is a compatibility projection. Profiling now requires and retain
 entity-definition and observation-window declarations, rejecting unsupported semantics or
 out-of-window evidence before aggregation. The twelve endpoint numeric features now have a
 single ordered, versioned contract for families, source fields, safe-ratio offsets, units,
-missing-value behavior, and analysis transforms (22 of 37 checklist items complete).
-Versioning the endpoint text-description template separately from embedding models is the
-next active Milestone 3 slice.
+missing-value behavior, and analysis transforms. Endpoint description rendering now uses
+an exact versioned template whose identity is persisted independently from embedding
+model identity (23 of 37 checklist items complete). Making timing direction and
+minimum-evidence requirements visible in representation metadata is the next active
+Milestone 3 slice.
 
 ## Change log
+
+### 2026-08-20 — Milestone 3 versioned endpoint text template
+
+- Added `TextTemplateSpec` and declared `endpoint-description` version 1 with its exact
+  four-line layout, placeholder order, missing-value text, Python-list rendering, and
+  terminal newline covered by canonical identity.
+- Added a standard-library `EndpointTextRenderer` that rejects unsupported or altered
+  declarations and renders typed profile evidence without provider/model dependencies.
+- Reduced `build_endpoint_description` to a legacy dictionary adapter while preserving
+  every embedding input byte, and validated the same declaration again before profile
+  persistence.
+- Replaced the current writer's `legacy-v1` representation stamp with declared template
+  ID/version while keeping mutable model name and `runtime-unpinned` revision in separate
+  model fields.
+- Passed strict types, Ruff format/lint, 279 offline tests, and all 15 disposable-Neo4j
+  tests on 5.26.28. Report-only Recall@3 remains 5/5 with the same three named benign
+  false positives.
 
 ### 2026-08-20 — Milestone 3 versioned numeric feature contract
 

@@ -43,10 +43,13 @@ unstamped profiles in `scope_legacy_unstamped`, marks other old profiles
 while preserving the legacy `OUTLIER` property. It never invents a profile key,
 representation revision, model revision, or timestamp for old data.
 
-The legacy compute CLI's mutable model name has no immutable revision input. During the
-compatibility bridge it records `model_revision='runtime-unpinned'` and
-`representation_version='legacy-v1'`. Milestone 3 must replace these explicit limitations
-with declared provider revisions rather than treating either string as reproducible.
+The legacy compute CLI's mutable model name has no immutable revision input. The initial
+compatibility bridge recorded `model_revision='runtime-unpinned'` and
+`representation_version='legacy-v1'`. Milestone 3 now declares the exact endpoint text
+template as `endpoint-description` version `1`, independently from model identity. The
+writer still records `model_revision='runtime-unpinned'`; a later embedding-provider
+checkpoint must replace that remaining limitation with declared provider/model revision
+rather than treating the compatibility string as reproducible.
 
 ## Alternatives considered
 

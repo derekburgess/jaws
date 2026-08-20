@@ -107,6 +107,10 @@ class MissingValuePolicy(StrEnum):
     POPULATION_MEDIAN_OR_ZERO = "population_median_or_zero"
 
 
+class TextSequenceFormat(StrEnum):
+    PYTHON_LIST = "python_list"
+
+
 class ErrorCategory(StrEnum):
     VALIDATION = "validation"
     CONFIGURATION = "configuration"

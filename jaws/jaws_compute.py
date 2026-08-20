@@ -16,6 +16,7 @@ from jaws.config import (
 )
 from jaws.domain import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
+    ENDPOINT_TEXT_TEMPLATE_V1,
     MIN_TIMING_PACKETS,
     CaptureId,
     EndpointProfile,
@@ -38,7 +39,12 @@ from jaws.jaws_utils import (
     render_info_panel,
 )
 from jaws.optional_dependencies import require_module
-from jaws.services import EndpointProfiler, RetentionService, interval_timing_seconds
+from jaws.services import (
+    EndpointProfiler,
+    EndpointTextRenderer,
+    RetentionService,
+    interval_timing_seconds,
+)
 from jaws.storage import Neo4jProfileRepository, Neo4jRepositories
 
 
@@ -157,6 +163,24 @@ class _LegacyProfilePacket:
     destination_ip: str
     source_port: int | None
     destination_port: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class _LegacyEndpointTextEvidence:
+    ip_address: str
+    address_classification: str
+    organization: str | None
+    hostname: str | None
+    location: str | None
+    bytes_out: int
+    packets_out: int
+    out_peers: int
+    out_ports: tuple[int, ...]
+    bytes_in: int
+    packets_in: int
+    in_peers: int
+    in_ports: tuple[int, ...]
+    protocols: tuple[str, ...]
 
 
 def _optional_frame_port(value):
@@ -299,12 +323,28 @@ def build_endpoint_profiles(
     return [_legacy_profile(draft) for draft in result.profiles]
 
 
-def build_endpoint_description(p):
-    return (
-        f"IP: {p['ip_address']} ({p['endpoint_type']}) | Organization: {p['org']} | Hostname: {p['hostname']} | Location: {p['location']}\n"
-        f"Outbound: {p['bytes_out']} bytes, {p['packets_out']} packets to {p['out_peers']} peers | Ports: {p['out_ports']}\n"
-        f"Inbound: {p['bytes_in']} bytes, {p['packets_in']} packets from {p['in_peers']} peers | Ports: {p['in_ports']}\n"
-        f"Protocols: {p['protocols']}\n"
+def build_endpoint_description(p, *, text_template=None):
+    """Compatibility projection into the versioned pure text renderer."""
+
+    profile = _LegacyEndpointTextEvidence(
+        ip_address=str(p["ip_address"]),
+        address_classification=str(p["endpoint_type"]),
+        organization=p["org"],
+        hostname=p["hostname"],
+        location=p["location"],
+        bytes_out=p["bytes_out"],
+        packets_out=p["packets_out"],
+        out_peers=p["out_peers"],
+        out_ports=tuple(p["out_ports"]),
+        bytes_in=p["bytes_in"],
+        packets_in=p["packets_in"],
+        in_peers=p["in_peers"],
+        in_ports=tuple(p["in_ports"]),
+        protocols=tuple(p["protocols"]),
+    )
+    return EndpointTextRenderer().render(
+        profile,
+        text_template or ENDPOINT_TEXT_TEMPLATE_V1,
     )
 
 
@@ -322,18 +362,22 @@ def replace_session_profiles(
     driver,
     database,
     repository=None,
+    *,
+    text_template=None,
 ):
     """Atomically replace one complete, explicitly versioned profile set."""
 
     scope_id = profile_scope_id(session_scope)
     computed_at = SystemClock().now()
+    template = text_template or ENDPOINT_TEXT_TEMPLATE_V1
+    EndpointTextRenderer().validate_template(template)
     records = tuple(
         EndpointProfile(
             identity=ProfileIdentity(
                 entity_id=EntityId(f"ip:{profile['ip_address']}"),
                 scope_id=scope_id,
-                representation_id="endpoint-description",
-                representation_version="legacy-v1",
+                representation_id=template.template_id,
+                representation_version=template.version,
                 model_id=model_name,
                 # The legacy CLI accepts mutable provider/model names but no immutable
                 # revision. Record that limitation explicitly rather than inventing one.
@@ -541,7 +585,10 @@ def main():
         # Embed every profile in one batched pass (the panels then narrate the DB
         # writes). reporter.info first so a human sees progress during a long encode.
         reporter.info("CONFIG", processing_message)
-        descriptions = [build_endpoint_description(profile) for profile in profiles]
+        text_template = ENDPOINT_TEXT_TEMPLATE_V1
+        descriptions = [
+            build_endpoint_description(profile, text_template=text_template) for profile in profiles
+        ]
         if not descriptions:
             embeddings = []
         elif args.api == "transformers":
@@ -563,6 +610,7 @@ def main():
             driver,
             args.database,
             repositories.profiles,
+            text_template=text_template,
         )
 
         # Compatibility adapter: the explicit retention service runs after the write so

@@ -45,6 +45,7 @@ from .enums import (
     ReferenceKind,
     RunState,
     ScoreDirection,
+    TextSequenceFormat,
 )
 from .errors import DomainError
 from .evidence import (
@@ -99,6 +100,7 @@ from .secrets import REDACTED, UNSET, Secret
 from .serialization import canonical_digest, canonical_json, primitive
 from .specifications import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
+    ENDPOINT_TEXT_TEMPLATE_V1,
     EntityDefinition,
     EvidencePointer,
     ExperimentSpec,
@@ -110,6 +112,7 @@ from .specifications import (
     ReferenceSpec,
     RepresentationSpec,
     Score,
+    TextTemplateSpec,
     VersionedSpec,
 )
 from .time import CAPTURE_TRANSITIONS, RUN_TRANSITIONS, normalize_utc, require_transition, utc_text
@@ -142,6 +145,7 @@ __all__ = [
     "DatasetId",
     "DomainError",
     "ENDPOINT_NUMERIC_FEATURE_SET_V1",
+    "ENDPOINT_TEXT_TEMPLATE_V1",
     "EntityDefinition",
     "EntityId",
     "EntityType",
@@ -217,6 +221,8 @@ __all__ = [
     "Success",
     "TERMINAL_CAPTURE_STATES",
     "TERMINAL_RUN_STATES",
+    "TextSequenceFormat",
+    "TextTemplateSpec",
     "VersionedSpec",
     "bytes_count",
     "capture_scope_id",

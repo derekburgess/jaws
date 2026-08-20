@@ -19,6 +19,11 @@ from .profiling import (
     UnsupportedNumericFeatureSetError,
     interval_timing_seconds,
 )
+from .representations import (
+    EndpointTextEvidence,
+    EndpointTextRenderer,
+    UnsupportedTextTemplateError,
+)
 from .retention import RetentionService, UnsupportedRetentionPolicyError
 
 __all__ = [
@@ -31,6 +36,8 @@ __all__ = [
     "EnrichmentService",
     "EndpointProfiler",
     "EndpointProfilingResult",
+    "EndpointTextEvidence",
+    "EndpointTextRenderer",
     "ProfilePacketEvidence",
     "ProfilingWindowError",
     "IngestService",
@@ -38,6 +45,7 @@ __all__ = [
     "UnsupportedRetentionPolicyError",
     "UnsupportedEntityDefinitionError",
     "UnsupportedNumericFeatureSetError",
+    "UnsupportedTextTemplateError",
     "cleanup_legacy_unknown",
     "interval_timing_seconds",
 ]

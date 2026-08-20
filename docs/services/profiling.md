@@ -63,6 +63,28 @@ versions, or definitions with `UnsupportedNumericFeatureSetError`. The legacy co
 adapter supplies version 1 for existing callers, so current CLI and Benchmark 0 output
 remain unchanged.
 
+## Endpoint text representation
+
+`ENDPOINT_TEXT_TEMPLATE_V1` declares `endpoint-description` version `1` independently
+from any embedding provider or model. The declaration contains the exact four-line
+template, ordered placeholders, missing-display-value text (`None`), Python-list sequence
+formatting, and terminal newline. All of those choices participate in its canonical
+digest; changing any of them requires a new template version.
+
+`EndpointTextRenderer` accepts typed endpoint evidence and this exact declaration. It
+renders IP/classification and display metadata, outbound counts/peers/ports, inbound
+counts/peers/ports, and protocols without importing pandas, an embedding stack, or a
+provider client. Unsupported IDs, versions, or template content fail with
+`UnsupportedTextTemplateError` rather than being stamped as version 1.
+
+The legacy `build_endpoint_description` function is now only a dictionary adapter into
+that renderer. Its text remains byte-for-byte compatible, including list punctuation and
+the final newline. The compute CLI passes the same template declaration to rendering and
+profile persistence. Stored `representation_id`/`representation_version` therefore name
+the template (`endpoint-description`/`1`), while `model_id` and `model_revision` remain
+separate fields. The current CLI still records `runtime-unpinned` for model revision; exact
+provider/model provenance belongs to the later embedding-provider checkpoint.
+
 ## Directional aggregation invariants
 
 Every packet contributes independently to its source's outbound view and destination's
@@ -113,5 +135,5 @@ into the complete declared capture set, and a legacy graph with no capture recor
 explicit `legacy-unscoped` compatibility identity. Direct legacy callers may omit the new
 arguments only at this outer adapter; the pure service has no implicit entity or scope.
 
-The next profile-service slice versions the endpoint text-description template separately
-from embedding-provider and model identity.
+The next profile-service slice makes timing direction and minimum-evidence requirements
+visible in representation metadata.
