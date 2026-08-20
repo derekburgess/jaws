@@ -10,7 +10,9 @@ from .enums import RunState
 from .identifiers import CanonicalDigest, ExperimentId, RunId
 from .time import RUN_TRANSITIONS, normalize_utc, require_transition
 
-TERMINAL_RUN_STATES = frozenset({RunState.SUCCEEDED, RunState.FAILED, RunState.CANCELLED})
+TERMINAL_RUN_STATES = frozenset(
+    {RunState.COMPLETED, RunState.FAILED, RunState.CANCELLED, RunState.SUPERSEDED}
+)
 
 
 def _sha256(value: CanonicalDigest, field_name: str) -> None:

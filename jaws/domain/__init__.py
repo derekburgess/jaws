@@ -121,6 +121,22 @@ from .profiles import (
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
 from .rendering import ClusterPlotData, KDistancePlotData, PortSizePlotData
+from .research import (
+    ArtifactOrigin,
+    ArtifactRecord,
+    DependencyVersion,
+    EvaluationResult,
+    ExperimentRun,
+    HypothesisOutcome,
+    ObservationReport,
+    ProvenanceRecord,
+    RankMovement,
+    ResourceUsage,
+    RunFailure,
+    RunTransition,
+    StrategyProvenance,
+    ranked_findings_digest,
+)
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
 from .retention import (
     RetentionMode,
@@ -131,14 +147,16 @@ from .retention import (
     RetentionRule,
 )
 from .secrets import REDACTED, UNSET, Secret
-from .serialization import canonical_digest, canonical_json, primitive
+from .serialization import canonical_digest, canonical_json, primitive, redact_text, sensitive_key
 from .specifications import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
     ENDPOINT_TEXT_TEMPLATE_V1,
     HOST_DESTINATION_NUMERIC_FEATURE_SET_V1,
+    ComponentSpec,
     EntityDefinition,
     EvidencePointer,
     ExperimentSpec,
+    HypothesisSpec,
     NumericFeatureDefinition,
     NumericFeatureSet,
     ObservationWindow,
@@ -307,4 +325,22 @@ __all__ = [
     "require_transition",
     "structured_envelope",
     "utc_text",
+    "ArtifactOrigin",
+    "ArtifactRecord",
+    "ComponentSpec",
+    "DependencyVersion",
+    "EvaluationResult",
+    "ExperimentRun",
+    "HypothesisOutcome",
+    "HypothesisSpec",
+    "ObservationReport",
+    "ProvenanceRecord",
+    "RankMovement",
+    "ResourceUsage",
+    "RunFailure",
+    "RunTransition",
+    "StrategyProvenance",
+    "ranked_findings_digest",
+    "redact_text",
+    "sensitive_key",
 ]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import fields, is_dataclass
 from datetime import datetime
@@ -13,6 +14,27 @@ from typing import Any
 from .identifiers import CanonicalDigest, Identifier
 from .secrets import REDACTED, Secret
 from .time import utc_text
+
+_SENSITIVE_KEY = re.compile(
+    r"(?:^|[_-])(api[_-]?key|credential|password|private[_-]?key|secret|token)(?:$|[_-])",
+    re.IGNORECASE,
+)
+_SENSITIVE_TEXT = re.compile(
+    r"(?i)\b(api[_-]?key|authorization|credential|password|secret|token)\b"
+    r"(\s*[:=]\s*|\s+)([^\s,;]+)"
+)
+
+
+def sensitive_key(value: object) -> bool:
+    """Return whether a field/key names credential material."""
+
+    return bool(_SENSITIVE_KEY.search(str(value)))
+
+
+def redact_text(value: str) -> str:
+    """Redact common key/value credential fragments from diagnostic text."""
+
+    return _SENSITIVE_TEXT.sub(lambda match: f"{match.group(1)}={REDACTED}", value)
 
 
 def primitive(value: Any) -> Any:
@@ -29,9 +51,15 @@ def primitive(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
     if is_dataclass(value) and not isinstance(value, type):
-        return {field.name: primitive(getattr(value, field.name)) for field in fields(value)}
+        return {
+            field.name: REDACTED if sensitive_key(field.name) else primitive(getattr(value, field.name))
+            for field in fields(value)
+        }
     if isinstance(value, Mapping):
-        return {str(key): primitive(item) for key, item in value.items()}
+        return {
+            str(key): REDACTED if sensitive_key(key) else primitive(item)
+            for key, item in value.items()
+        }
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [primitive(item) for item in value]
     return value

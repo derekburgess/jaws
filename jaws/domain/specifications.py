@@ -28,6 +28,7 @@ from .enums import (
 from .identifiers import (
     CanonicalDigest,
     CaptureId,
+    DatasetId,
     EntityId,
     ExperimentId,
     FindingId,
@@ -460,19 +461,85 @@ class RankerSpec(VersionedSpec):
 
 
 @dataclass(frozen=True, slots=True)
+class ComponentSpec(VersionedSpec):
+    """Version-pinned pluggable strategy referenced by an experiment."""
+
+    component_id: str = ""
+    version: str = "1"
+    parameters: Parameters = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        component_id = self.component_id.strip()
+        version = self.version.strip()
+        if not component_id or not version:
+            raise ValueError("component ID and version cannot be empty")
+        object.__setattr__(self, "component_id", component_id)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "parameters", _immutable_mapping(self.parameters))
+
+
+@dataclass(frozen=True, slots=True)
+class HypothesisSpec(VersionedSpec):
+    """A falsifiable control/treatment claim with declared decision criteria."""
+
+    claim: str = ""
+    control: str = ""
+    treatments: tuple[str, ...] = ()
+    metrics: tuple[str, ...] = ()
+    regression_budgets: Parameters = field(default_factory=dict)
+    motivated_by_observation_id: str | None = None
+
+    def __post_init__(self) -> None:
+        claim = self.claim.strip()
+        control = self.control.strip()
+        treatments = tuple(item.strip() for item in self.treatments)
+        metrics = tuple(item.strip() for item in self.metrics)
+        if not claim or not control:
+            raise ValueError("hypothesis requires a claim and control")
+        if not treatments or any(not item for item in treatments):
+            raise ValueError("hypothesis requires at least one treatment")
+        if len(set(treatments)) != len(treatments) or control in treatments:
+            raise ValueError("hypothesis control and treatments must be distinct")
+        if not metrics or any(not item for item in metrics) or len(set(metrics)) != len(metrics):
+            raise ValueError("hypothesis metrics must be nonempty and unique")
+        budgets = _immutable_mapping(self.regression_budgets)
+        if any(not str(metric).strip() for metric in budgets):
+            raise ValueError("regression budget metric names cannot be empty")
+        object.__setattr__(self, "claim", claim)
+        object.__setattr__(self, "control", control)
+        object.__setattr__(self, "treatments", treatments)
+        object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "regression_budgets", budgets)
+
+
+@dataclass(frozen=True, slots=True)
 class ExperimentSpec(VersionedSpec):
-    hypothesis: str = ""
+    hypothesis: str | HypothesisSpec = ""
     observation: ObservationWindow | None = None
     entity: EntityDefinition = field(default_factory=EntityDefinition)
     representation: RepresentationSpec | None = None
     reference: ReferenceSpec = field(default_factory=ReferenceSpec)
     ranker: RankerSpec | None = None
+    evaluator: ComponentSpec = field(
+        default_factory=lambda: ComponentSpec(component_id="standard_metrics")
+    )
+    renderer: ComponentSpec = field(default_factory=lambda: ComponentSpec(component_id="json"))
+    dataset_ids: tuple[DatasetId, ...] = ()
+    label_source_versions: Parameters = field(default_factory=dict)
+    deterministic_settings: Parameters = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not self.hypothesis.strip():
+        if isinstance(self.hypothesis, str) and not self.hypothesis.strip():
             raise ValueError("experiment hypothesis cannot be empty")
         if self.observation is None or self.representation is None or self.ranker is None:
             raise ValueError("experiment requires observation, representation, and ranker specs")
+        if len(set(self.dataset_ids)) != len(self.dataset_ids):
+            raise ValueError("experiment dataset IDs must be unique")
+        object.__setattr__(self, "dataset_ids", tuple(self.dataset_ids))
+        object.__setattr__(self, "label_source_versions", _immutable_mapping(self.label_source_versions))
+        object.__setattr__(
+            self, "deterministic_settings", _immutable_mapping(self.deterministic_settings)
+        )
 
     @property
     def experiment_id(self) -> ExperimentId:

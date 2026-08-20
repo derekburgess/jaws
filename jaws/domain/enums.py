@@ -1,6 +1,7 @@
 """Stable domain enumerations."""
 
 from enum import StrEnum
+from typing import Self
 
 
 class CaptureState(StrEnum):
@@ -41,11 +42,26 @@ class ProfileStatus(StrEnum):
 
 
 class RunState(StrEnum):
-    CREATED = "created"
+    PLANNED = "planned"
+    QUEUED = "queued"
     RUNNING = "running"
-    SUCCEEDED = "succeeded"
+    COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    SUPERSEDED = "superseded"
+
+    # Source-compatibility aliases for the pre-Milestone-5 vocabulary. New
+    # serialized records always use planned/completed.
+    CREATED = "planned"
+    SUCCEEDED = "completed"
+
+    @classmethod
+    def _missing_(cls, value: object) -> Self | None:
+        if value == "created":
+            return cls.PLANNED
+        if value == "succeeded":
+            return cls.COMPLETED
+        return None
 
 
 class EntityType(StrEnum):
