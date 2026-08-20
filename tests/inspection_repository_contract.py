@@ -200,6 +200,10 @@ def assert_inspection_repository_contract(repositories):
     assert inspection.profile is not None
     assert inspection.profile.legacy_scope == first_id.value
     assert inspection.profile.organization == "Example Networks"
+    scoped_profile = repositories.inspection.profile(EntityId(f"ip:{target}"), second_id)
+    assert scoped_profile is not None
+    assert scoped_profile.legacy_scope == second_id.value
+    assert scoped_profile.organization == "Example Networks"
     assert [record.legacy_scope for record in inspection.history] == [
         second_id.value,
         first_id.value,

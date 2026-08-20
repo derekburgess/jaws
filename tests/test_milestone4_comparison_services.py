@@ -1,17 +1,27 @@
 """Milestone 4 service contracts and legacy behavior parity."""
 
+import json
 from dataclasses import replace
+from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 import pytest
+from jsonschema import Draft202012Validator
 
 from jaws.domain import (
+    CaptureId,
     ComparisonFrame,
+    EndpointInspection,
+    EndpointProfile,
     EntityId,
+    ObservationScopeId,
+    ProfileIdentity,
     RankerSpec,
     ReferenceEligibility,
     ReferenceKind,
     ReferenceSpec,
+    primitive,
 )
 from jaws.jaws_finder import score_endpoints
 from jaws.services import (
@@ -20,6 +30,8 @@ from jaws.services import (
     ComparisonRequest,
     ComparisonService,
     ExplanationService,
+    InspectionRequest,
+    InspectionService,
     KDistanceEpsilonStrategy,
     ReferenceObservation,
     TypedReferenceBuilder,
@@ -43,6 +55,7 @@ def test_peer_service_matches_legacy_endpoint_scores(pack):
             histories={},
             reference=ReferenceSpec(kind=ReferenceKind.PEER),
             ranker=_legacy_spec(),
+            capture_id="cap_scored",
         )
     )
     legacy = score_endpoints(pack, np.zeros(len(pack), dtype=int), None)
@@ -55,6 +68,7 @@ def test_peer_service_matches_legacy_endpoint_scores(pack):
             expected[finding.entity_id.value.removeprefix("ip:")], abs=5e-5
         )
         assert finding.evidence[0].selector is not None
+        assert finding.evidence[0].capture_id == CaptureId("cap_scored")
 
 
 def test_hybrid_reference_marks_history_states_and_keeps_timing_peer_relative(pack):
@@ -164,6 +178,8 @@ def test_labels_are_separate_deterministic_artifacts_and_record_pca(pack):
     assert first.representation.explained_variance
     assert first.representation.pca_components == 2
     assert tuple(row.model_label for row in first.findings) != ()
+    assert len(first.findings) == len(rows)
+    assert any(row.score > 0 for row in first.findings)
 
 
 def test_epsilon_strategy_declares_override_and_median_or_knee():
@@ -190,8 +206,89 @@ def test_explanations_use_retained_contributions_and_support_fidelity_ablation(p
     top = result.findings[0]
     service = ExplanationService(ENDPOINT_FEATURE_REGISTRY_V1)
     explanation = service.explain(top, is_local=False, cloud_hosted=True)
-    assert explanation.schema_version == "1.0.0"
+    local = service.explain(top, is_local=True)
+    snapshot = primitive(explanation)
+    assert snapshot["schema_version"] == "1.0.0"
+    assert set(snapshot) == {
+        "schema_version",
+        "entity_id",
+        "rank",
+        "score",
+        "reasons",
+        "evidence",
+        "infrastructure_caveat",
+    }
+    schema = json.loads(
+        (Path(__file__).parents[1] / "docs/schemas/explanation-1.0.0.schema.json").read_text()
+    )
+    Draft202012Validator.check_schema(schema)
+    Draft202012Validator(schema).validate(snapshot)
     assert explanation.reasons
+    directional = next(
+        reason for reason in explanation.reasons if reason.host_relative is not None
+    )
+    local_directional = next(
+        reason for reason in local.reasons if reason.feature == directional.feature
+    )
+    assert directional.host_relative != local_directional.host_relative
     assert explanation.infrastructure_caveat and "not" in explanation.infrastructure_caveat
     effect = service.ablate(result.findings, entity_id=top.entity_id, feature="bytes_out")
     assert effect.ablated_score <= effect.original_score
+
+
+class _InspectionRepository:
+    def __init__(self, detail):
+        self.detail = detail
+
+    def inspect(self, entity_id, *, peer_limit, packet_limit, history_limit):
+        return self.detail
+
+    def recent_profiles(self, *, computed_after, limit):
+        return ()
+
+    def profile(self, entity_id, capture_id):
+        return next(
+            (row for row in self.detail.history if row.legacy_scope == capture_id.value), None
+        )
+
+
+def _profile(capture):
+    return EndpointProfile(
+        identity=ProfileIdentity(
+            entity_id=EntityId("ip:198.51.100.2"),
+            scope_id=ObservationScopeId(f"scope_{capture}"),
+            representation_id="fixture",
+            representation_version="1",
+            model_id="fixture",
+            model_revision="1",
+        ),
+        legacy_scope=capture,
+        computed_at=datetime(2026, 8, 20, tzinfo=UTC),
+        address_classification="public",
+        bytes_out=10,
+        packets_out=1,
+        out_peers=1,
+        bytes_in=20,
+        packets_in=1,
+        in_peers=1,
+    )
+
+
+def test_inspection_service_selects_requested_profile_and_retains_all_session_context():
+    latest = _profile("cap_latest")
+    earlier = _profile("cap_earlier")
+    detail = EndpointInspection(
+        entity_id=latest.identity.entity_id,
+        profile=latest,
+        total_packets=42,
+        total_peers=7,
+        history=(latest, earlier),
+    )
+    scoped = InspectionService(_InspectionRepository(detail)).inspect(
+        InspectionRequest(latest.identity.entity_id, CaptureId("cap_earlier"))
+    )
+    assert scoped.inspection.profile == earlier
+    assert scoped.inspection.total_packets == 42
+    assert scoped.all_session_totals is True
+    assert scoped.evidence.capture_id == CaptureId("cap_earlier")
+    assert "heuristic" in scoped.port_heuristic_note

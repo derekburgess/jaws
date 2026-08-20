@@ -85,7 +85,9 @@ class ExplanationService:
                     ),
                 )
             )
-        reasons.sort(key=lambda row: (-abs(row.standardized_deviation), row.feature))
+        # Preserve declared feature-family order when deviations tie; Benchmark 0
+        # exposes that order in its serialized reason list.
+        reasons.sort(key=lambda row: -abs(row.standardized_deviation))
         caveat = None
         if cloud_hosted:
             caveat = (

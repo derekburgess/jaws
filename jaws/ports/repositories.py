@@ -224,6 +224,8 @@ class InspectionRepository(Protocol):
         self, *, computed_after: datetime, limit: int
     ) -> tuple[EndpointProfile, ...]: ...
 
+    def profile(self, entity_id: EntityId, capture_id: CaptureId) -> EndpointProfile | None: ...
+
     def inspect(
         self,
         entity_id: EntityId,

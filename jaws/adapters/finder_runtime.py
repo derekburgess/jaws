@@ -3,6 +3,7 @@
 import argparse
 import os
 import tempfile
+from pathlib import Path
 
 import numpy as np
 from kneed import KneeLocator
@@ -12,11 +13,14 @@ from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
+from jaws.adapters.rendering import render_clusters, render_k_distance, render_port_size
 from jaws.config import DATABASE, FINDER_ENDPOINT, is_cloud_hosted
 from jaws.domain import (
     ENDPOINT_NUMERIC_FEATURE_SET_V1,
     CaptureId,
+    ClusterPlotData,
     EntityId,
+    KDistancePlotData,
     MissingValuePolicy,
     NumericAnalysisTransformation,
     NumericFeatureFamily,
@@ -24,6 +28,7 @@ from jaws.domain import (
     ObservationScopeId,
     ObservationWindow,
     OutlierStatus,
+    PortSizePlotData,
     ProfileStatus,
 )
 from jaws.jaws_utils import (
@@ -1121,6 +1126,28 @@ build_feature_matrix = _comparison_adapter.build_feature_matrix  # noqa: F811
 recommend_eps = _comparison_adapter.recommend_eps  # noqa: F811
 
 
+def _render_port_size_compat(plot_data, endpoint):
+    retained = PortSizePlotData(
+        tuple((row["size"], row["src_port"], row["dst_port"]) for row in plot_data)
+    )
+    rendered = render_port_size(retained, Path(endpoint))
+    if rendered.terminal:
+        print(rendered.terminal)
+    return rendered.metadata
+
+
+def _render_k_distance_compat(distances, endpoint):
+    retained = KDistancePlotData(tuple(float(value) for value in distances))
+    rendered = render_k_distance(retained, Path(endpoint))
+    if rendered.terminal:
+        print(rendered.terminal)
+    return rendered.metadata
+
+
+plot_size_over_ports = _render_port_size_compat  # noqa: F811
+plot_k_distances = _render_k_distance_compat  # noqa: F811
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Perform DBSCAN clustering on embeddings fetched from the database."
@@ -1361,96 +1388,12 @@ def main():
             "INFO",
             "The below plot shows the PCA/DBSCAN outliers, in red, from the embeddings.\nAdditionally, embedding clusters are shown to help understand how outliers are distributed amongst noise.",
         )
-
-    plt.figure(
-        num=f"PCA/DBSCAN Outliers from Embeddings | n_components: {args.components}, min_samples: {min_samples}, eps: {eps_value}",
-        figsize=(8, 7),
-    )
-    clustered_indices = clusters != -1
-    plt.scatter(
-        plot_xy[clustered_indices, 0],
-        plot_xy[clustered_indices, 1],
-        c=clusters[clustered_indices],
-        cmap="winter",
-        edgecolors="none",
-        marker="^",
-        s=50,
-        alpha=0.1,
-        zorder=2,
-    )
-
-    outlier_indices = clusters == -1
-    plt.scatter(
-        plot_xy[outlier_indices, 0],
-        plot_xy[outlier_indices, 1],
-        color="red",
-        marker="o",
-        s=50,
-        label="Outliers",
-        alpha=0.8,
-        zorder=10,
-    )
-
-    for i, item in enumerate(data):
-        annotation_text = f"{item['ip_address']}\n{item['org']}\n{item['hostname']}\n{item['location']}\nout {item['bytes_out']}B/{item['packets_out']}p | in {item['bytes_in']}B/{item['packets_in']}p"
-        if clusters[i] == -1:
-            # Outlier
-            bbox_style = dict(
-                boxstyle="round,pad=0.2", facecolor="#333333", edgecolor="none", alpha=0.9
-            )
-            plt.annotate(
-                annotation_text,
-                (plot_xy[i, 0], plot_xy[i, 1]),
-                fontsize=6,
-                color="white",
-                bbox=bbox_style,
-                horizontalalignment="center",
-                verticalalignment="bottom",
-                xytext=(0, 10),
-                textcoords="offset points",
-                alpha=0.9,
-                zorder=10,
-            )
-        else:
-            # Non-Outlier
-            bbox_style = dict(
-                boxstyle="round,pad=0.2", facecolor="#BEBEBE", edgecolor="none", alpha=0.5
-            )
-            plt.annotate(
-                annotation_text,
-                (plot_xy[i, 0], plot_xy[i, 1]),
-                fontsize=6,
-                color="#666666",
-                bbox=bbox_style,
-                horizontalalignment="center",
-                verticalalignment="bottom",
-                xytext=(0, 10),
-                textcoords="offset points",
-                alpha=0.8,
-                zorder=1,
-            )
-
-    plt.grid(color="#BEBEBE", linestyle="-", linewidth=0.25, alpha=0.5)
-    plt.xticks(fontsize=8)
-    plt.yticks(fontsize=8)
-    plt.tight_layout()
-    save_outliers = os.path.join(endpoint, "pca_dbscan_outliers.png")
-    plt.savefig(save_outliers, dpi=90)
-
-    outlier_plotille = new_plotille_figure()
-    outlier_plotille.color_mode = "byte"
-    outlier_plotille.width = 80
-    outlier_plotille.height = 20
-    clustered_indices_pc1 = plot_xy[clustered_indices, 0]
-    clustered_indices_pc2 = plot_xy[clustered_indices, 1]
-    outlier_indices_pc1 = plot_xy[outlier_indices, 0]
-    outlier_indices_pc2 = plot_xy[outlier_indices, 1]
-    outlier_plotille.scatter(clustered_indices_pc1, clustered_indices_pc2, marker="^")
-    outlier_plotille.scatter(outlier_indices_pc1, outlier_indices_pc2, marker="o")
-    display_outlier = outlier_plotille.show(legend=False)
-
-    if not reporter.agent:
-        reporter.raw(display_outlier)
+        retained_plot = ClusterPlotData(
+            coordinates=tuple((float(row[0]), float(row[1])) for row in plot_xy),
+            labels=tuple(int(value) for value in clusters),
+            annotations=tuple(data),
+        )
+        render_clusters(retained_plot, Path(endpoint))
 
     # Every endpoint gets a rankable anomaly score and reason codes, sorted most
     # anomalous first; `is_outlier` marks the DBSCAN-flagged ones. Returning the full

@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Protocol, Self, cast
 
 from jaws.domain import (
+    CaptureId,
     EndpointInspection,
     EndpointPacketSample,
     EndpointPeerTraffic,
@@ -66,6 +67,20 @@ _INSPECT_PROFILE_QUERY = f"""
 MATCH (endpoint:ENDPOINT {{IP_ADDRESS: $ip_address}})
 WITH endpoint
 ORDER BY endpoint.TIMESTAMP DESC, endpoint.SCOPE_ID DESC, endpoint.PROFILE_KEY DESC
+LIMIT 1
+OPTIONAL MATCH (address:IP_ADDRESS {{IP_ADDRESS: endpoint.IP_ADDRESS}})
+OPTIONAL MATCH (organization:ORGANIZATION)-[:OWNERSHIP]->(address)
+WITH endpoint, address, min(organization.ORGANIZATION) AS fallback_organization
+RETURN {_PROFILE_FIELDS},
+       fallback_organization,
+       address.HOSTNAME AS fallback_hostname,
+       address.LOCATION AS fallback_location
+"""
+
+_INSPECT_SCOPED_PROFILE_QUERY = f"""
+MATCH (endpoint:ENDPOINT {{IP_ADDRESS: $ip_address, CAPTURE_ID: $capture_id}})
+WITH endpoint
+ORDER BY endpoint.TIMESTAMP DESC, endpoint.PROFILE_KEY DESC
 LIMIT 1
 OPTIONAL MATCH (address:IP_ADDRESS {{IP_ADDRESS: endpoint.IP_ADDRESS}})
 OPTIONAL MATCH (organization:ORGANIZATION)-[:OWNERSHIP]->(address)
@@ -254,6 +269,15 @@ class Neo4jInspectionRepository:
                 _profile_with_fallback(row)
                 for row in session.run(_RECENT_PROFILES_QUERY, parameters)
             )
+
+    def profile(self, entity_id: EntityId, capture_id: CaptureId) -> EndpointProfile | None:
+        parameters = {
+            "ip_address": entity_id.value.removeprefix("ip:"),
+            "capture_id": capture_id.value,
+        }
+        with self._driver.session(database=self.database) as session:
+            row = session.run(_INSPECT_SCOPED_PROFILE_QUERY, parameters).single()
+        return _profile_with_fallback(row) if row is not None else None
 
     def inspect(
         self,

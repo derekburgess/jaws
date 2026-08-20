@@ -55,11 +55,7 @@ class InspectionService:
         scope = "latest"
         if request.capture_id is not None:
             scope = request.capture_id.value
-            candidates = inspection.history + ((inspection.profile,) if inspection.profile else ())
-            profile = next(
-                (row for row in candidates if row is not None and row.legacy_scope == scope),
-                None,
-            )
+            profile = self.repository.profile(request.entity_id, request.capture_id)
         scoped = replace(inspection, profile=profile)
         evidence = (
             EvidencePointer(

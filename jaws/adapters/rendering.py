@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
-from jaws.domain import PlotArtifactMetadata, canonical_digest
+from jaws.domain import (
+    ClusterPlotData,
+    KDistancePlotData,
+    PlotArtifactMetadata,
+    PortSizePlotData,
+    canonical_digest,
+)
 from jaws.optional_dependencies import require_module
 
 RENDERER_ID = "jaws_matplotlib_plotille"
@@ -31,12 +36,12 @@ def _metadata(kind: str, payload: object, path: Path | None) -> PlotArtifactMeta
     )
 
 
-def render_port_size(rows: list[dict[str, int]], output: Path) -> RenderedPlot:
+def render_port_size(data: PortSizePlotData, output: Path) -> RenderedPlot:
     plt = require_module("matplotlib.pyplot", "plotting", "Plot rendering")
     plotille = require_module("plotille", "plotting", "Terminal plot rendering")
-    sizes = [row["size"] for row in rows]
-    source_ports = [row["src_port"] for row in rows]
-    destination_ports = [row["dst_port"] for row in rows]
+    sizes = [row[0] for row in data.rows]
+    source_ports = [row[1] for row in data.rows]
+    destination_ports = [row[2] for row in data.rows]
     plt.figure(figsize=(8, 7))
     plt.scatter(sizes, source_ports, marker=">", alpha=0.3)
     plt.scatter(sizes, destination_ports, marker="<", alpha=0.3)
@@ -50,17 +55,17 @@ def render_port_size(rows: list[dict[str, int]], output: Path) -> RenderedPlot:
     figure.height = 20
     figure.x_label = "SIZE"
     figure.y_label = "PORT"
-    for row in rows:
-        figure.scatter([row["size"]], [row["src_port"]], marker=">")
-        figure.scatter([row["size"]], [row["dst_port"]], marker="<")
-    return RenderedPlot(_metadata("port_size", rows, path), figure.show(legend=False))
+    for size, source, destination in data.rows:
+        figure.scatter([size], [source], marker=">")
+        figure.scatter([size], [destination], marker="<")
+    return RenderedPlot(_metadata("port_size", data, path), figure.show(legend=False))
 
 
-def render_k_distance(distances: tuple[float, ...], output: Path) -> RenderedPlot:
+def render_k_distance(data: KDistancePlotData, output: Path) -> RenderedPlot:
     plt = require_module("matplotlib.pyplot", "plotting", "Plot rendering")
     plotille = require_module("plotille", "plotting", "Terminal plot rendering")
     plt.figure(figsize=(8, 7))
-    plt.plot(range(len(distances)), distances)
+    plt.plot(range(len(data.distances)), data.distances)
     plt.xlabel("Index")
     plt.ylabel("K-distance")
     plt.tight_layout()
@@ -71,20 +76,17 @@ def render_k_distance(distances: tuple[float, ...], output: Path) -> RenderedPlo
     figure.height = 20
     figure.x_label = "INDEX"
     figure.y_label = "K-DISTANCE"
-    figure.plot(list(range(len(distances))), list(distances), marker="o", lc=40)
-    return RenderedPlot(_metadata("k_distance", distances, path), figure.show(legend=False))
+    figure.plot(list(range(len(data.distances))), list(data.distances), marker="o", lc=40)
+    return RenderedPlot(_metadata("k_distance", data, path), figure.show(legend=False))
 
 
 def render_clusters(
-    coordinates: np.ndarray,
-    labels: tuple[int, ...],
-    annotations: list[dict[str, Any]],
+    data: ClusterPlotData,
     output: Path,
 ) -> RenderedPlot:
     plt = require_module("matplotlib.pyplot", "plotting", "Plot rendering")
-    if coordinates.ndim != 2 or coordinates.shape[1] != 2 or len(coordinates) != len(labels):
-        raise ValueError("cluster rendering requires one two-dimensional point per label")
-    label_array = np.asarray(labels)
+    coordinates = np.asarray(data.coordinates)
+    label_array = np.asarray(data.labels)
     clustered = label_array != -1
     plt.figure(figsize=(8, 7))
     plt.scatter(
@@ -94,14 +96,9 @@ def render_clusters(
     plt.scatter(
         coordinates[~clustered, 0], coordinates[~clustered, 1], color="red", marker="o"
     )
-    for index, row in enumerate(annotations):
+    for index, row in enumerate(data.annotations):
         plt.annotate(str(row.get("ip_address", "")), tuple(coordinates[index]), fontsize=6)
     plt.tight_layout()
     path = output / "pca_dbscan_outliers.png"
     plt.savefig(path, dpi=90)
-    payload = {
-        "coordinates": coordinates.tolist(),
-        "labels": labels,
-        "annotations": annotations,
-    }
-    return RenderedPlot(_metadata("pca_dbscan", payload, path))
+    return RenderedPlot(_metadata("pca_dbscan", data, path))

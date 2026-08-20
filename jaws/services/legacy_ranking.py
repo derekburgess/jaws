@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler  # type: ignore[import-untyped]
 
 from jaws.domain import (
     BehavioralRank,
+    CaptureId,
     ClusterDiagnostics,
     ComparisonFrame,
     EntityId,
@@ -189,6 +190,7 @@ class LegacyBehavioralRanker:
                     contributions=contributions,
                     evidence=(
                         EvidencePointer(
+                            capture_id=representation.capture_id,
                             artifact_digest=canonical_digest(representation),
                             entity_id=entity_ids[index],
                             selector=f"representation.rows[{index}]",
@@ -236,7 +238,11 @@ class LegacyRepresentationBuilder:
         self.registry = registry
 
     def build_numeric(
-        self, entities: Sequence[EntityId], rows: Sequence[Mapping[str, object]]
+        self,
+        entities: Sequence[EntityId],
+        rows: Sequence[Mapping[str, object]],
+        *,
+        capture_id: CaptureId | None = None,
     ) -> RepresentationArtifacts:
         raw = self.registry.raw_matrix(rows)
         transformed = self.registry.transform(raw)
@@ -248,6 +254,7 @@ class LegacyRepresentationBuilder:
             raw=tuple(tuple(float(value) for value in row) for row in raw),
             transformed=tuple(tuple(float(value) for value in row) for row in transformed),
             matrix=tuple(tuple(float(value) for value in row) for row in transformed),
+            capture_id=capture_id,
         )
 
     def blend_embeddings(
@@ -284,6 +291,7 @@ class LegacyRepresentationBuilder:
             whiten=whiten,
             explained_variance=tuple(float(value) for value in pca.explained_variance_ratio_),
             feature_weight=feature_weight,
+            capture_id=numeric.capture_id,
         )
 
 

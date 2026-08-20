@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
-from jaws.domain import EntityId, LegacyRankingResult, RankerSpec, ReferenceSpec
+from jaws.domain import CaptureId, EntityId, LegacyRankingResult, RankerSpec, ReferenceSpec
 
 from .feature_registry import NumericFeatureRegistry
 from .legacy_ranking import (
@@ -59,7 +59,14 @@ class ComparisonService:
         reference = self.references.build(observations, request.reference)
         selected = {entity: row for entity, row in zip(request.entities, request.rows, strict=True)}
         rows = tuple(selected[entity] for entity in reference.entity_ids)
-        numeric = self.representations.build_numeric(reference.entity_ids, rows)
+        capture_id = (
+            CaptureId(request.capture_id)
+            if request.capture_id is not None and request.capture_id != "all"
+            else None
+        )
+        numeric = self.representations.build_numeric(
+            reference.entity_ids, rows, capture_id=capture_id
+        )
         representation = numeric
         diagnostics = None
         labels = None

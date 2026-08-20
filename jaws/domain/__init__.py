@@ -120,6 +120,7 @@ from .profiles import (
 )
 from .protocols import Clock, IdGenerator
 from .ranking import ScoredEntity, deterministic_ranking
+from .rendering import ClusterPlotData, KDistancePlotData, PortSizePlotData
 from .results import Failure, Result, Success, legacy_failure, legacy_success, structured_envelope
 from .retention import (
     RetentionMode,
@@ -176,6 +177,7 @@ __all__ = [
     "CaptureSpec",
     "CaptureSourceKind",
     "CaptureState",
+    "ClusterPlotData",
     "ComparisonFrame",
     "BehavioralRank",
     "ClusterDiagnostics",
@@ -225,6 +227,7 @@ __all__ = [
     "FindingIndex",
     "FindingIndexBatch",
     "IdGenerator",
+    "KDistancePlotData",
     "Measurement",
     "MeasurementUnit",
     "MissingValuePolicy",
@@ -264,6 +267,7 @@ __all__ = [
     "ProfileEmbedding",
     "ProfileEmbeddingProvenance",
     "ProfileStatus",
+    "PortSizePlotData",
     "PlotArtifactMetadata",
     "ProfileScopeSummary",
     "ResearcherAnnotation",

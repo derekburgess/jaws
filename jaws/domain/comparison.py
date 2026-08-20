@@ -130,6 +130,7 @@ class RepresentationArtifacts:
     whiten: bool = False
     explained_variance: tuple[float, ...] = ()
     feature_weight: float = 1.0
+    capture_id: CaptureId | None = None
 
 
 @dataclass(frozen=True, slots=True)

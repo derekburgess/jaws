@@ -7,12 +7,14 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
 from jaws.domain import (
+    CaptureId,
     EndpointInspection,
     EndpointPacketSample,
     EndpointPeerTraffic,
     EndpointProfile,
     EntityId,
     EntityMetadata,
+    ObservationScopeId,
     normalize_utc,
 )
 
@@ -97,6 +99,18 @@ class InMemoryInspectionRepository:
                     record.identity.entity_id.value,
                 ),
             )[:bound]
+        )
+
+    def profile(self, entity_id: EntityId, capture_id: CaptureId) -> EndpointProfile | None:
+        metadata = self._metadata()
+        scope = ObservationScopeId(f"scope_{capture_id.value}")
+        return next(
+            (
+                self._with_metadata(record, metadata)
+                for record in self.profiles.read_scope(scope)
+                if record.identity.entity_id == entity_id
+            ),
+            None,
         )
 
     def inspect(
