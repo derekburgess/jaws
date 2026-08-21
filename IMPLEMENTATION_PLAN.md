@@ -898,43 +898,43 @@ Replace the legacy `harbor/` and `ocean/` images with versioned, testable runtim
 
 #### Images
 
-- [ ] Build from the checked-out source context; never clone a moving branch inside an image.
-- [ ] Pin base-image versions/digests and record them in provenance.
-- [ ] Use multi-stage builds and dependency groups for database tools, CPU analysis, GPU analysis, sensor, and MCP roles.
-- [ ] Pass credentials at runtime through supported secrets/environment mechanisms, never build arguments or image layers.
-- [ ] Run as non-root wherever capture requirements do not prevent it.
-- [ ] Use explicit entry points that perform useful work or serve a health-checked process; remove `tail -f /dev/null`.
-- [ ] Add OCI labels for source revision, package version, and build date.
-- [ ] Generate dependency/image inventories suitable for auditing.
+- [x] Build from the checked-out source context; never clone a moving branch inside an image.
+- [x] Pin base-image versions/digests and record them in provenance.
+- [x] Use multi-stage builds and dependency groups for database tools, CPU analysis, GPU analysis, sensor, and MCP roles.
+- [x] Pass credentials at runtime through supported secrets/environment mechanisms, never build arguments or image layers.
+- [x] Run as non-root wherever capture requirements do not prevent it.
+- [x] Use explicit entry points that perform useful work or serve a health-checked process; remove `tail -f /dev/null`.
+- [x] Add OCI labels for source revision, package version, and build date.
+- [x] Generate dependency/image inventories suitable for auditing.
 
 #### Compose profiles
 
-- [ ] `compose.dev.yml`: pinned Neo4j, CPU analyzer, artifact volume, and MCP service.
-- [ ] `compose.gpu.yml`: dev profile plus a GPU-capable analyzer with explicit device requirements.
-- [ ] `compose.edge.yml`: privileged sensor/importer boundary plus remote/local evidence and analysis configuration suitable for constrained capture hosts.
-- [ ] Keep analyzer and MCP services free of raw packet-capture capabilities.
-- [ ] Grant sensor only the specific interface/capabilities required for capture.
-- [ ] Add named volumes for Neo4j data, artifacts, and optional model cache with separate retention/export procedures.
-- [ ] Add health checks and startup dependencies based on health, not timing assumptions.
-- [ ] Run schema migration as an explicit one-shot job before services accept work.
+- [x] `compose.dev.yml`: pinned Neo4j, CPU analyzer, artifact volume, and MCP service.
+- [x] `compose.gpu.yml`: dev profile plus a GPU-capable analyzer with explicit device requirements.
+- [x] `compose.edge.yml`: privileged sensor/importer boundary plus remote/local evidence and analysis configuration suitable for constrained capture hosts.
+- [x] Keep analyzer and MCP services free of raw packet-capture capabilities.
+- [x] Grant sensor only the specific interface/capabilities required for capture.
+- [x] Add named volumes for Neo4j data, artifacts, and optional model cache with separate retention/export procedures.
+- [x] Add health checks and startup dependencies based on health, not timing assumptions.
+- [x] Run schema migration as an explicit one-shot job before services accept work.
 
 #### Operations
 
-- [ ] Document backup, restore, export, import, benchmark reset, and model-cache management.
-- [ ] Provide a no-live-capture smoke test using a tiny safe fixture PCAP.
-- [ ] Test clean CPU startup with no CUDA dependencies.
-- [ ] Test GPU capability/model loading separately from correctness.
-- [ ] Test database restart and artifact-volume persistence.
-- [ ] Test service behavior when Neo4j, provider APIs, or model files are unavailable.
-- [ ] Record container/image and model digests in every experiment run.
+- [x] Document backup, restore, export, import, benchmark reset, and model-cache management.
+- [x] Provide a no-live-capture smoke test using a tiny safe fixture PCAP.
+- [x] Test clean CPU startup with no CUDA dependencies.
+- [x] Test GPU capability/model loading separately from correctness.
+- [x] Test database restart and artifact-volume persistence.
+- [x] Test service behavior when Neo4j, provider APIs, or model files are unavailable.
+- [x] Record container/image and model digests in every experiment run.
 
 #### Security boundaries
 
-- [ ] No credential values in images, build logs, committed compose files, or experiment bundles.
-- [ ] No Docker socket exposed to analyzer, MCP, or agent containers.
-- [ ] No host networking for analyzer/MCP unless a documented platform limitation makes it unavoidable.
-- [ ] Default filesystem permissions prevent agent/MCP processes from changing raw evidence or completed bundles.
-- [ ] Define egress policy separately for enrichment, remote embeddings, model download, and agent execution.
+- [x] No credential values in images, build logs, committed compose files, or experiment bundles.
+- [x] No Docker socket exposed to analyzer, MCP, or agent containers.
+- [x] No host networking for analyzer/MCP unless a documented platform limitation makes it unavoidable.
+- [x] Default filesystem permissions prevent agent/MCP processes from changing raw evidence or completed bundles.
+- [x] Define egress policy separately for enrichment, remote embeddings, model download, and agent execution.
 
 ### Completion gate
 
@@ -950,6 +950,14 @@ Replace the legacy `harbor/` and `ocean/` images with versioned, testable runtim
 - Migration, health-check, and smoke-test jobs.
 - Runtime operations and security-boundary documentation.
 - Container provenance in experiment runs.
+
+### Completion evidence
+
+- Commit `57b367e` builds the pinned CPU analyzer as image `sha256:b61aa05c127f7b66034d861a038aed22a9e16bb0e40e4c0aeaf8b90d96bdd75d`; its OCI revision label is `57b367e` and the checked-out tree was clean.
+- The analyzer runs non-root on a read-only filesystem with every capability dropped and no CUDA packages. The sensor alone receives `NET_RAW`/`NET_ADMIN`; its payload-free 82-byte TEST-NET fixture parses with `tshark` without live capture.
+- Pinned Neo4j starts healthy, migrations 1–7 apply, restart preserves the named data volume, and a second migration is idempotent. Artifact volumes persist independently and every retained experiment bundle is checksum verified.
+- A Compose-run Benchmark v1 smoke experiment completed 48/48 cells and verified 48/48 bundles. Bundle provenance records the exact analyzer digest plus experiment/hypothesis schema `1.0.0`; numeric runs correctly have no model identity, while model-backed profiles require `JAWS_MODEL_DIGEST`.
+- GPU correctness remains separate from capability loading: the overlay and build contract validate in CI, while the runtime smoke is host-gated on NVIDIA hardware. Strict lint/type checks pass and the non-Neo4j/non-recall suite reports 337 passed, 24 deselected.
 
 ## Milestone 8 — MCP v2 research interface
 
