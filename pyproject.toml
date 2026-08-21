@@ -116,6 +116,9 @@ packages = [
     "jaws_mcp",
 ]
 
+[tool.setuptools.package-data]
+jaws_mcp = ["contracts/v2/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # conftest helpers are imported by name from the test modules.
@@ -154,6 +157,7 @@ files = [
     "jaws/research_cli.py",
     "jaws/research_codec.py",
     "jaws/runtime_cli.py",
+    "jaws_mcp/",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

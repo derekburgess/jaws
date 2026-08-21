@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "2.0.0",
+  "api_schema_version": "2.0.0",
+  "capability_version": "research-v2",
+  "error_codes": ["cancel_conflict", "corrupt_artifact", "invalid_request", "job_not_found", "limit_exceeded", "operation_unavailable", "provider_unavailable"],
+  "$defs": {
+    "document": {"type": "object", "description": "Versioned JAWS research contract document"},
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 256},
+    "empty": {"type": "object", "additionalProperties": false},
+    "job": {"type": "object", "additionalProperties": false, "properties": {"job_id": {"$ref": "#/$defs/identifier"}}, "required": ["job_id"]}
+  },
+  "tools": {
+    "research_capabilities": {"policy": "read", "input_schema": {"$ref": "#/$defs/empty"}},
+    "research_orient": {"policy": "read", "input_schema": {"$ref": "#/$defs/empty"}},
+    "dataset_import": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"dataset_id": {"$ref": "#/$defs/identifier"}, "options": {"$ref": "#/$defs/document"}}, "required": ["dataset_id"]}},
+    "capture_enrich": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"capture_id": {"$ref": "#/$defs/identifier"}, "options": {"$ref": "#/$defs/document"}}, "required": ["capture_id"]}},
+    "capture_profile": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"capture_id": {"$ref": "#/$defs/identifier"}, "representation_id": {"$ref": "#/$defs/identifier"}, "options": {"$ref": "#/$defs/document"}}, "required": ["capture_id", "representation_id"]}},
+    "validate_hypothesis": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"document": {"$ref": "#/$defs/document"}}, "required": ["document"]}},
+    "validate_experiment": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"document": {"$ref": "#/$defs/document"}}, "required": ["document"]}},
+    "explore_operation": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"document": {"$ref": "#/$defs/document"}, "variant": {"$ref": "#/$defs/identifier"}, "stage": {"enum": ["represent", "reference", "rank", "evaluate"]}}, "required": ["document", "variant", "stage"]}},
+    "experiment_start": {"policy": "mutation", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"document": {"$ref": "#/$defs/document"}}, "required": ["document"]}},
+    "experiment_status": {"policy": "read", "input_schema": {"$ref": "#/$defs/job"}},
+    "experiment_result": {"policy": "read", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"job_id": {"$ref": "#/$defs/identifier"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 100}}, "required": ["job_id"]}},
+    "experiment_cancel": {"policy": "mutation", "input_schema": {"$ref": "#/$defs/job"}},
+    "inspect_evidence": {"policy": "read", "input_schema": {"type": "object", "additionalProperties": false, "properties": {"pointer": {"$ref": "#/$defs/document"}, "peer_limit": {"type": "integer", "minimum": 0, "maximum": 100}, "packet_limit": {"type": "integer", "minimum": 0, "maximum": 100}}, "required": ["pointer"]}}
+  }
+}

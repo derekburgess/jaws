@@ -367,13 +367,20 @@ For a spawn-based MCP client:
 jaws-mcp --stdio
 ```
 
-For an SSE server:
+For a Streamable HTTP server bound to loopback:
 
 ```bash
-jaws-mcp --host 0.0.0.0 --port 8765
+jaws-mcp --http --host 127.0.0.1 --port 8765
 ```
 
-The MCP tools follow the same sequence: `list_interfaces` → `capture_packets` → `document_organizations` → `compute_embeddings` → `anomaly_detection`. Use `list_captures`, `fetch_traffic`, and `inspect_endpoint` to orient and investigate without starting a new capture.
+MCP v2 exposes the same deterministic research services as the CLI: orient and validate
+small operations directly, or use `experiment_start` → `experiment_status` →
+`experiment_result`/`experiment_cancel` for long work. Every finding carries a structured
+pointer accepted by `inspect_evidence`. Capture and destructive database administration are
+absent from the research server. Configure only a scoped artifact root and an operator-chosen
+catalog; clients cannot submit host paths, credentials, shell commands, or arbitrary Cypher.
+See [the MCP v2 guide](docs/mcp-v2.md) for tool contracts and migration from the original
+pipeline-oriented tool names.
 
 ### 7. Run tests
 

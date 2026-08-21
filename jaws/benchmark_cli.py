@@ -43,9 +43,7 @@ from jaws.services.research import (
 )
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-BENCHMARK_ROOT = Path(
-    os.environ.get("JAWS_BENCHMARK_ROOT", str(REPOSITORY / "benchmarks" / "v1"))
-)
+BENCHMARK_ROOT = Path(os.environ.get("JAWS_BENCHMARK_ROOT", str(REPOSITORY / "benchmarks" / "v1")))
 SMOKE_SCENARIOS = ("software_updates", "periodic_beacon")
 
 

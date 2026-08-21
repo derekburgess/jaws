@@ -16,6 +16,7 @@ from jaws.domain import (
     EntityId,
     EntityType,
     EvaluationResult,
+    EvidencePointer,
     ExperimentSpec,
     FindingId,
     HypothesisSpec,
@@ -180,6 +181,7 @@ class DeclarativeResearchEngine:
         representation: object,
         reference: object,
     ) -> tuple[RankedFinding, ...]:
+        assert specification.observation is not None
         ranking = self._fixture(specification, variant).get("ranking")
         if not isinstance(ranking, Sequence) or isinstance(ranking, (str, bytes)) or not ranking:
             raise ValueError(f"fixture ranking must be a nonempty array: {variant}")
@@ -197,6 +199,13 @@ class DeclarativeResearchEngine:
                         specification.ranker.direction,  # type: ignore[union-attr]
                     ),
                     outlier=OutlierStatus(str(data.get("outlier", "not_scored"))),
+                    evidence=(
+                        EvidencePointer(
+                            capture_id=specification.observation.capture_ids[0],
+                            entity_id=EntityId(entity_id),
+                            selector="ranked_finding",
+                        ),
+                    ),
                 )
             )
         return tuple(findings)

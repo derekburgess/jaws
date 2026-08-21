@@ -10,6 +10,7 @@ from typing import Any
 
 from jaws.adapters.experiment_bundles import ExperimentBundleStore
 from jaws.adapters.provenance import ProvenanceCollector
+from jaws.adapters.research_api import exploratory_operation
 from jaws.adapters.run_journal import RunJournal
 from jaws.domain import RunId, canonical_json, primitive
 from jaws.research_codec import (
@@ -189,26 +190,10 @@ def _dispatch(arguments: argparse.Namespace) -> tuple[object, str]:
         )
     if arguments.command == "operation":
         specification = decode_experiment_spec(load_document(arguments.spec))
-        engine = DeclarativeResearchEngine()
-        representation = engine.represent(specification, arguments.variant)
-        if arguments.stage == "represent":
-            result = representation
-        else:
-            reference = engine.reference(specification, arguments.variant, representation)
-            if arguments.stage == "reference":
-                result = reference
-            else:
-                findings = engine.rank(specification, arguments.variant, representation, reference)
-                if arguments.stage == "rank":
-                    result = findings
-                else:
-                    result = engine.evaluate(
-                        specification, arguments.variant, RunId("exploratory"), findings
-                    )
+        operation = exploratory_operation(specification, arguments.variant, arguments.stage)
         return {
             "ok": True,
-            "stage": arguments.stage,
-            "result": primitive(result),
+            **operation,
         }, f"Completed {arguments.stage}"
     if arguments.command == "export":
         digest = ExperimentBundleStore(arguments.root).export_bundle(

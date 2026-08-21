@@ -91,6 +91,8 @@ services:
     environment:
       <<: *python-environment
       JAWS_CONTAINER_DIGEST: ${JAWS_MCP_IMAGE_DIGEST:-}
+      JAWS_ARTIFACT_ROOT: /var/lib/jaws/mcp-jobs
+      JAWS_MCP_CATALOG: ${JAWS_MCP_CATALOG:-}
     command: [--host, 0.0.0.0, --port, "8765"]
     depends_on:
       migrate:
@@ -99,6 +101,7 @@ services:
       - "127.0.0.1:${JAWS_MCP_PORT:-8765}:8765"
     volumes:
       - artifacts:/var/lib/jaws/artifacts:ro
+      - mcp-jobs:/var/lib/jaws/mcp-jobs
     healthcheck:
       test: [CMD, jaws-runtime, probe, --host, 127.0.0.1, --port, "8765"]
       interval: 10s
@@ -109,6 +112,7 @@ volumes:
   neo4j-data:
   neo4j-logs:
   artifacts:
+  mcp-jobs:
   model-cache:
 
 networks:
