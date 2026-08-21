@@ -1040,37 +1040,37 @@ Milestones 5, 6, and 8 must be complete. The agent cannot compensate for missing
 
 #### Framework decision
 
-- [ ] Write an ADR comparing a small in-house orchestrator, NOOA, and any other serious candidate against typed-state support, tracing, isolation, maintenance, reproducibility, dependency weight, and model portability.
-- [ ] Treat NOOA as a candidate, not a core dependency, until the ADR and a sandboxed spike pass.
-- [ ] Keep framework-specific code inside `jaws_lab` behind an orchestration protocol.
-- [ ] Ensure uninstalling agent extras leaves core, CLI, MCP, and benchmarks fully functional.
+- [x] Write an ADR comparing a small in-house orchestrator, NOOA, and any other serious candidate against typed-state support, tracing, isolation, maintenance, reproducibility, dependency weight, and model portability.
+- [x] Treat NOOA as a candidate, not a core dependency, until the ADR and a sandboxed spike pass.
+- [x] Keep framework-specific code inside `jaws_lab` behind an orchestration protocol.
+- [x] Ensure uninstalling agent extras leaves core, CLI, MCP, and benchmarks fully functional.
 
 #### Agent capabilities
 
-- [ ] Orient to dataset/capture catalogs, prior hypotheses, experiment summaries, component metadata, and benchmark results.
-- [ ] Propose a structured, falsifiable `HypothesisSpec`.
-- [ ] Produce a bounded control/treatment `ExperimentSpec` using registered components only.
-- [ ] Submit, monitor, and cancel runs through MCP/application services.
-- [ ] Read deterministic observation reports and summarize evidence, limitations, and follow-up questions.
-- [ ] Link a proposed follow-up hypothesis to the run/observation that motivated it.
+- [x] Orient to dataset/capture catalogs, prior hypotheses, experiment summaries, component metadata, and benchmark results.
+- [x] Propose a structured, falsifiable `HypothesisSpec`.
+- [x] Produce a bounded control/treatment `ExperimentSpec` using registered components only.
+- [x] Submit, monitor, and cancel runs through MCP/application services.
+- [x] Read deterministic observation reports and summarize evidence, limitations, and follow-up questions.
+- [x] Link a proposed follow-up hypothesis to the run/observation that motivated it.
 
 #### Restrictions
 
-- [ ] No unrestricted shell or generated-Python execution in the analysis/MCP process.
-- [ ] No direct Neo4j credentials, Cypher, database deletion, raw host filesystem access, Docker socket, or packet-capture privileges.
-- [ ] No self-modification of ranker/evaluator code during a scored experiment.
-- [ ] No access to held-out labels during hypothesis generation/tuning.
-- [ ] No authority to convert deterministic metrics into ground truth.
-- [ ] Live capture, external cost above policy, new dataset acquisition, and mutation require explicit human approval.
-- [ ] Run the agent in a separate sandboxed container with resource, time, network, and cost budgets.
+- [x] No unrestricted shell or generated-Python execution in the analysis/MCP process.
+- [x] No direct Neo4j credentials, Cypher, database deletion, raw host filesystem access, Docker socket, or packet-capture privileges.
+- [x] No self-modification of ranker/evaluator code during a scored experiment.
+- [x] No access to held-out labels during hypothesis generation/tuning.
+- [x] No authority to convert deterministic metrics into ground truth.
+- [x] Live capture, external cost above policy, new dataset acquisition, and mutation require explicit human approval.
+- [x] Run the agent in a separate sandboxed container with resource, time, network, and cost budgets.
 
 #### Trace and evaluation
 
-- [ ] Record agent framework/version, model/provider, prompt/instruction versions, tool calls, approvals, token/cost totals, and produced specs.
-- [ ] Redact secrets and sensitive packet content from traces by policy.
-- [ ] Evaluate spec validity, hypothesis falsifiability, experiment completion rate, evidence citation, budget adherence, repeated-run consistency, and human-rated research usefulness.
-- [ ] Compare agent-proposed studies with fixed/human-authored study sets; do not judge success only by whether it finds a positive metric delta.
-- [ ] Test prompt injection and malicious dataset metadata against the capability boundary.
+- [x] Record agent framework/version, model/provider, prompt/instruction versions, tool calls, approvals, token/cost totals, and produced specs.
+- [x] Redact secrets and sensitive packet content from traces by policy.
+- [x] Evaluate spec validity, hypothesis falsifiability, experiment completion rate, evidence citation, budget adherence, repeated-run consistency, and human-rated research usefulness.
+- [x] Compare agent-proposed studies with fixed/human-authored study sets; do not judge success only by whether it finds a positive metric delta.
+- [x] Test prompt injection and malicious dataset metadata against the capability boundary.
 
 ### Completion gate
 
@@ -1086,6 +1086,14 @@ Milestones 5, 6, and 8 must be complete. The agent cannot compensate for missing
 - Agent-framework ADR and sandboxed spike.
 - Optional `jaws_lab` package/container.
 - OHEO policies, prompts, traces, evaluation suite, and safety tests.
+
+### Completion evidence
+
+- Commit `dd1f444` adds a removable, dependency-free `jaws_lab` package behind provider-neutral gateway/model protocols. ADR-0020 compares the in-house state machine with current NOOA, LangGraph, and Pydantic AI capabilities and keeps every third-party framework out of the core.
+- The scripted reference completes Orient → Hypothesize → Experiment → Observe through registered application operations: two canonical runs complete, deterministic observation deltas are retained, four evidence pointers and both run IDs are cited, and the follow-up hypothesis links to its motivating observation.
+- Exact experiment approval, model/tool/time/cost/poll budgets, cooperative cancellation, held-out denial, prompt-injection withholding, packet-content/secret redaction, and threat-ground-truth denial pass adversarial tests. Evaluation covers validity, falsifiability, completion, citations, budget, repeated-run consistency, fixed-study comparison, and optional human usefulness independently of outcome direction.
+- Clean commit `dd1f444` builds image `sha256:527de10cbb3e3fcd4bbb2fe5ab2de6b69ecf22deaa7afcd2ae4ca371f0471c93`. The profile is non-root, read-only, network-disabled, capability-free, and PID/CPU/memory bounded; a complete approved container cycle retained a schema-valid, zero-cost trace with 12 tool calls, two runs, and four evidence citations.
+- Strict lint, format, and type gates pass. The non-Neo4j/non-recall suite reports 351 passed, 24 deselected, and core/CLI/MCP/benchmark tests run without an agent framework installed.
 
 ## Milestone 10 — Integrated rollout and release qualification
 
