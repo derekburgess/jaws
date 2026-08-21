@@ -969,39 +969,39 @@ Expose typed research operations over the deterministic services with no detecto
 
 #### Tool model
 
-- [ ] Derive input/output schemas from the same versioned contracts used by services and CLI.
-- [ ] Expose orientation/catalog tools for datasets, captures, components, experiments, runs, and benchmark summaries.
-- [ ] Expose bounded ingest/import, enrichment, profiling, ranking, inspection, evaluation, and experiment operations.
-- [ ] Prefer experiment start/status/result/cancel operations for long-running work rather than relying on one unbounded request.
-- [ ] Return run/experiment IDs immediately where work is asynchronous.
-- [ ] Preserve a direct exploratory path for small synchronous operations.
-- [ ] Include schema/capability versions so clients can detect compatibility.
+- [x] Derive input/output schemas from the same versioned contracts used by services and CLI.
+- [x] Expose orientation/catalog tools for datasets, captures, components, experiments, runs, and benchmark summaries.
+- [x] Expose bounded ingest/import, enrichment, profiling, ranking, inspection, evaluation, and experiment operations.
+- [x] Prefer experiment start/status/result/cancel operations for long-running work rather than relying on one unbounded request.
+- [x] Return run/experiment IDs immediately where work is asynchronous.
+- [x] Preserve a direct exploratory path for small synchronous operations.
+- [x] Include schema/capability versions so clients can detect compatibility.
 
 #### Thin adapter
 
-- [ ] Remove `subprocess` orchestration from `jaws_mcp/server.py`.
-- [ ] Remove direct Cypher from MCP modules.
-- [ ] Remove duplicated detector explanations that can drift from ranker metadata.
-- [ ] Translate validated MCP input to service calls and serialize typed service results.
-- [ ] Use one error envelope and stable error codes.
-- [ ] Test stdio and the selected supported HTTP transport independently.
+- [x] Remove `subprocess` orchestration from `jaws_mcp/server.py`.
+- [x] Remove direct Cypher from MCP modules.
+- [x] Remove duplicated detector explanations that can drift from ranker metadata.
+- [x] Translate validated MCP input to service calls and serialize typed service results.
+- [x] Use one error envelope and stable error codes.
+- [x] Test stdio and the selected supported HTTP transport independently.
 
 #### Safety and policy
 
-- [ ] Separate read-only research tools from capture, mutation, and administration capabilities.
-- [ ] Disable destructive database operations by default in the research server.
-- [ ] Require explicit server policy and exact confirmation inputs for enabled administration tools.
-- [ ] Bound capture duration, result size, concurrent runs, artifact access, cost, and cancellation behavior.
-- [ ] Treat file paths and dataset IDs as scoped resources, not arbitrary host filesystem access.
-- [ ] Prevent MCP clients from selecting secret values or unrestricted commands through spec fields.
+- [x] Separate read-only research tools from capture, mutation, and administration capabilities.
+- [x] Disable destructive database operations by default in the research server.
+- [x] Require explicit server policy and exact confirmation inputs for enabled administration tools.
+- [x] Bound capture duration, result size, concurrent runs, artifact access, cost, and cancellation behavior.
+- [x] Treat file paths and dataset IDs as scoped resources, not arbitrary host filesystem access.
+- [x] Prevent MCP clients from selecting secret values or unrestricted commands through spec fields.
 
 #### Contract and parity testing
 
-- [ ] Snapshot tool names, descriptions, JSON schemas, result versions, and error codes.
-- [ ] Run the same service fixtures through CLI and MCP and compare analytical payloads.
-- [ ] Test empty database, missing model, unavailable provider, invalid session, insufficient endpoints, cancelled run, and corrupt artifact behavior.
-- [ ] Test paginated/bounded retrieval for large rankings and packet samples.
-- [ ] Verify every returned finding can be passed to inspection through a structured evidence pointer.
+- [x] Snapshot tool names, descriptions, JSON schemas, result versions, and error codes.
+- [x] Run the same service fixtures through CLI and MCP and compare analytical payloads.
+- [x] Test empty database, missing model, unavailable provider, invalid session, insufficient endpoints, cancelled run, and corrupt artifact behavior.
+- [x] Test paginated/bounded retrieval for large rankings and packet samples.
+- [x] Verify every returned finding can be passed to inspection through a structured evidence pointer.
 
 ### Completion gate
 
@@ -1017,6 +1017,14 @@ Expose typed research operations over the deterministic services with no detecto
 - Asynchronous run/status/cancel interface where needed.
 - CLI/MCP parity and safety tests.
 - Client configuration and migration documentation.
+
+### Completion evidence
+
+- Commit `0b74c8e` replaces the pipeline-oriented MCP module with 13 versioned research tools over `ResearchApplication`; the adapter contains no subprocess, Cypher, detector, feature, score, or plotting implementation.
+- CLI and MCP call the same deterministic exploratory function and return byte-equivalent analytical primitives. The asynchronous lifecycle returns job and canonical experiment IDs immediately, persists canonical run journals/bundles, supports cooperative cancellation, and checksum-verifies every bundle again before retrieval.
+- The `research-v2` contract artifact snapshots tool schemas, read/mutation policy, result versions, and seven stable error codes. Capture and administration tools are absent; registered import/enrichment/profile handlers accept catalog IDs only, while secrets, commands, host paths, oversized requests/pages, excessive cost, and out-of-scope artifacts fail closed.
+- Contract tests cover empty catalogs, missing components/models, unavailable providers, invalid jobs, insufficient endpoints, cancellation, corruption, finding/packet pagination, and evidence-pointer inspection. The real MCP 2.0 image starts both stdio and Streamable HTTP as a non-root, read-only, capability-free process.
+- Strict lint, format, and type gates pass. The non-Neo4j/non-recall suite reports 344 passed, 24 deselected.
 
 ## Milestone 9 — Optional agent laboratory
 
