@@ -64,6 +64,8 @@ class ProvenanceCollector:
                 model_version=self._optional_parameter(
                     specification.ranker.parameters, "model_version"
                 ),
+                model_digest=self._optional_digest(specification.ranker.parameters, "model_digest")
+                or self._environment_digest("JAWS_MODEL_DIGEST"),
                 prompt_digest=self._optional_digest(
                     specification.ranker.parameters, "prompt_digest"
                 ),
@@ -155,6 +157,11 @@ class ProvenanceCollector:
     def _optional_digest(parameters: Mapping[str, object], key: str) -> CanonicalDigest | None:
         value = parameters.get(key)
         return CanonicalDigest(str(value)) if value is not None else None
+
+    @staticmethod
+    def _environment_digest(name: str) -> CanonicalDigest | None:
+        value = os.environ.get(name)
+        return CanonicalDigest(value) if value else None
 
 
 def interpreter_identity() -> str:

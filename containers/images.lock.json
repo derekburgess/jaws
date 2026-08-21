@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "images": {
+    "python_cpu": {
+      "reference": "python:3.12.4-slim-bookworm",
+      "digest": "sha256:a3e58f9399353be051735f09be0316bfdeab571a5c6a24fd78b92df85bcb2d85",
+      "platforms": ["linux/amd64", "linux/arm64"]
+    },
+    "neo4j": {
+      "reference": "neo4j:5.26.28-community-ubi10",
+      "digest": "sha256:f0a9509090d06027749f647314bae5a549f95192b4ac7080104226e448fd7793",
+      "platforms": ["linux/amd64", "linux/arm64"]
+    },
+    "nvidia_cuda": {
+      "reference": "nvidia/cuda:12.8.1-runtime-ubuntu24.04",
+      "digest": "sha256:ebef3c171eeef0298e4eb2e4be843105edf3b8b0ac45e0b43acee358e8046867",
+      "platforms": ["linux/amd64", "linux/arm64"]
+    }
+  },
+  "reviewed_at": "2026-08-20",
+  "source": "Registry OCI indexes queried with docker buildx imagetools inspect"
+}

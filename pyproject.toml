@@ -101,6 +101,7 @@ jaws-evidence = "jaws.evidence_cli:main"
 jaws-admin = "jaws.administration_cli:main"
 jaws-research = "jaws.research_cli:main"
 jaws-benchmark = "jaws.benchmark_cli:main"
+jaws-runtime = "jaws.runtime_cli:main"
 jaws-mcp = "jaws_mcp.server:main"
 
 [tool.setuptools]
@@ -120,6 +121,7 @@ testpaths = ["tests"]
 # conftest helpers are imported by name from the test modules.
 pythonpath = ["tests"]
 markers = [
+    "container: requires a local Docker daemon (deselected by default)",
     "neo4j: requires a live Neo4j instance (deselected by default)",
     "recall: detector-quality benchmark (deselected by default)",
 ]
@@ -151,10 +153,12 @@ files = [
     "jaws/administration_cli.py",
     "jaws/research_cli.py",
     "jaws/research_codec.py",
+    "jaws/runtime_cli.py",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",
     "scripts/check_install_profiles.py",
+    "scripts/container_smoke.py",
 ]
 strict = true
 warn_unused_configs = true

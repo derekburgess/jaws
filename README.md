@@ -247,26 +247,24 @@ future run provenance with every secret redacted — see
 
 OpenAI embeddings are the CLI default. To run locally, pass `--api transformers`; public models in `jaws.settings.DEFAULT_PACKET_MODELS` do not require a Hugging Face key. The MCP server defaults to local transformers.
 
-### 4. Start Neo4j
+### 4. Start the reproducible development profile
 
-The repository includes a Neo4j development image in `harbor/`:
+The supported container profile builds the checked-out revision, pins every base image by
+digest, passes credentials only at runtime, and migrates Neo4j before dependent services
+start:
 
 ```bash
-cd harbor
-docker build \
-  --build-arg NEO4J_USERNAME="$NEO4J_USERNAME" \
-  --build-arg NEO4J_PASSWORD="$NEO4J_PASSWORD" \
-  --build-arg DEFAULT_DATABASE=captures \
-  -t jaws-neodbms .
-
-docker run --name captures \
-  -p 7474:7474 \
-  -p 7687:7687 \
-  --detach jaws-neodbms
-cd ..
+export JAWS_SOURCE_REVISION="$(git rev-parse HEAD)"
+export JAWS_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+docker compose -f compose.dev.yml up --build --detach --wait
 ```
 
-The legacy `harbor/` and `ocean/` images use unpinned base images, and the compute image accepts credentials as build arguments. Treat these images as development aids rather than reproducible or hardened deployments. A local Python installation plus a separately managed Neo4j instance is the recommended setup when using this branch.
+The CPU analyzer and MCP services are non-root, read-only, capability-free processes on an
+internal network. Optional GPU and edge overlays are in `compose.gpu.yml` and
+`compose.edge.yml`; only the edge sensor receives packet-capture capabilities. See
+[runtime operations](docs/runtime-operations.md) for smoke tests, persistence, backup,
+restore, model-cache, and egress procedures. The `harbor/` and `ocean/` Dockerfiles remain
+only as pinned compatibility markers for old automation.
 
 ### 5. Run the pipeline
 

@@ -1,0 +1,45 @@
+services:
+  sensor:
+    build:
+      context: .
+      dockerfile: containers/Dockerfile
+      target: sensor
+      args:
+        SOURCE_REVISION: ${JAWS_SOURCE_REVISION:-unknown}
+        PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-2.0.0}
+        BUILD_DATE: ${JAWS_BUILD_DATE:-unknown}
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_RAW, NET_ADMIN]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    command: [serve-health, --role, sensor, --host, 0.0.0.0, --port, "8081"]
+    environment:
+      JAWS_CAPTURE_INTERFACE: ${JAWS_CAPTURE_INTERFACE:?export JAWS_CAPTURE_INTERFACE}
+      JAWS_EVIDENCE_ROOT: /var/lib/jaws/evidence
+      JAWS_CONTAINER_DIGEST: ${JAWS_SENSOR_IMAGE_DIGEST:-}
+    volumes:
+      - raw-evidence:/var/lib/jaws/evidence
+    networks: [jaws-core]
+    healthcheck:
+      test: [CMD, jaws-runtime, health, --role, sensor]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  analyzer:
+    environment:
+      JAWS_EVIDENCE_ROOT: /var/lib/jaws/evidence
+      JAWS_EDGE_MODE: ${JAWS_EDGE_MODE:-local}
+      JAWS_REMOTE_EVIDENCE_URI: ${JAWS_REMOTE_EVIDENCE_URI:-}
+    volumes:
+      - artifacts:/var/lib/jaws/artifacts
+      - raw-evidence:/var/lib/jaws/evidence:ro
+
+volumes:
+  raw-evidence:

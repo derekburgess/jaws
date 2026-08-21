@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1.7
+ARG CUDA_IMAGE=nvidia/cuda:12.8.1-runtime-ubuntu24.04@sha256:ebef3c171eeef0298e4eb2e4be843105edf3b8b0ac45e0b43acee358e8046867
+FROM ${CUDA_IMAGE} AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends python3.12 python3-pip python3.12-venv \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY constraints/py312-direct.txt constraints/py312-direct.txt
+COPY jaws ./jaws
+COPY jaws_mcp ./jaws_mcp
+RUN python3.12 -m pip wheel --break-system-packages --no-cache-dir --wheel-dir /wheels \
+    --constraint constraints/py312-direct.txt ".[neo4j,local-embeddings]"
+
+FROM ${CUDA_IMAGE} AS gpu-analyzer
+ARG SOURCE_REVISION=unknown
+ARG PACKAGE_VERSION=2.0.0
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.title="JAWS GPU research analyzer" \
+      org.opencontainers.image.source="https://github.com/derekburgess/jaws" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.version="${PACKAGE_VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.licenses="GPL-2.0-only"
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    JAWS_ARTIFACT_ROOT=/var/lib/jaws/artifacts \
+    JAWS_MODEL_CACHE=/var/cache/jaws/models
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends python3.12 python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 jaws \
+    && useradd --uid 10001 --gid jaws --create-home --shell /usr/sbin/nologin jaws \
+    && install -d -o jaws -g jaws -m 0750 /var/lib/jaws/artifacts /var/cache/jaws/models
+COPY --from=builder /wheels /wheels
+RUN python3.12 -m pip install --break-system-packages --no-cache-dir /wheels/* && rm -r /wheels
+WORKDIR /workspace
+COPY --chown=10001:10001 benchmarks/v1 /workspace/benchmarks/v1
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["jaws-runtime"]
+CMD ["serve-health", "--role", "gpu", "--host", "0.0.0.0", "--port", "8080"]

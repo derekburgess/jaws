@@ -71,6 +71,7 @@ class StrategyProvenance:
     schema_version: SchemaVersion = SchemaVersion("1.0.0")
     model: str | None = None
     model_version: str | None = None
+    model_digest: CanonicalDigest | None = None
     prompt_digest: CanonicalDigest | None = None
     template_version: str | None = None
     provider: str | None = None

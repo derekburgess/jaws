@@ -1,0 +1,50 @@
+services:
+  gpu-analyzer:
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.gpu
+      target: gpu-analyzer
+      args:
+        SOURCE_REVISION: ${JAWS_SOURCE_REVISION:-unknown}
+        PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-2.0.0}
+        BUILD_DATE: ${JAWS_BUILD_DATE:-unknown}
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    command: [serve-health, --role, gpu, --host, 0.0.0.0, --port, "8080"]
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?export NEO4J_PASSWORD}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:-captures}
+      JAWS_ARTIFACT_ROOT: /var/lib/jaws/artifacts
+      JAWS_MODEL_CACHE: /var/cache/jaws/models
+      JAWS_CONTAINER_DIGEST: ${JAWS_GPU_IMAGE_DIGEST:-}
+      JAWS_MODEL_DIGEST: ${JAWS_MODEL_DIGEST:-}
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - artifacts:/var/lib/jaws/artifacts
+      - model-cache:/var/cache/jaws/models
+    networks: [jaws-core]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: [CMD, jaws-runtime, health, --role, gpu]
+      interval: 15s
+      timeout: 10s
+      retries: 5

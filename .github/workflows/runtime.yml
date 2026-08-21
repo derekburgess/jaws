@@ -1,0 +1,45 @@
+name: Runtime profile smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 7 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-sensor-neo4j:
+    name: CPU, safe PCAP, and persistence smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build and exercise pinned runtime profiles
+        run: python scripts/container_smoke.py --include-neo4j --output-dir runtime-smoke
+      - name: Upload runtime inventories and smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: runtime-smoke-${{ github.sha }}
+          path: runtime-smoke/
+          if-no-files-found: error
+          retention-days: 30
+
+  gpu-contract:
+    name: GPU profile contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate additive GPU Compose profile
+        env:
+          NEO4J_PASSWORD: contract-only
+        run: docker compose -f compose.dev.yml -f compose.gpu.yml config --quiet
+      - name: Confirm pinned CUDA target
+        run: docker buildx build --file containers/Dockerfile.gpu --target builder --check .
