@@ -54,7 +54,7 @@ The `artifacts` volume stores active and completed experiment bundles. Analyzer 
 
 ```bash
 docker compose -f compose.dev.yml run --rm --entrypoint jaws-research analyzer \
-  verify-bundle /var/lib/jaws/artifacts/experiments/EXPERIMENT/runs/RUN
+  verify /var/lib/jaws/artifacts/experiments/EXPERIMENT/runs/RUN --json
 docker run --rm -v jaws-dev_artifacts:/source:ro -v "$PWD/exports:/target" \
   python:3.12.4-slim-bookworm@sha256:a3e58f9399353be051735f09be0316bfdeab571a5c6a24fd78b92df85bcb2d85 \
   sh -c 'cp -a /source/. /target/'

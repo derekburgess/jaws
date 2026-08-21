@@ -13,6 +13,7 @@ from typing import Any, Mapping
 from .enums import (
     EntityType,
     MeasurementUnit,
+    MetricObjective,
     MissingValuePolicy,
     NumericAnalysisTransformation,
     NumericFeatureFamily,
@@ -482,14 +483,18 @@ class ComponentSpec(VersionedSpec):
 class HypothesisSpec(VersionedSpec):
     """A falsifiable control/treatment claim with declared decision criteria."""
 
+    schema_version: SchemaVersion = SchemaVersion("2.0.0")
     claim: str = ""
     control: str = ""
     treatments: tuple[str, ...] = ()
     metrics: tuple[str, ...] = ()
+    metric_objectives: Parameters = field(default_factory=dict)
     regression_budgets: Parameters = field(default_factory=dict)
     motivated_by_observation_id: str | None = None
 
     def __post_init__(self) -> None:
+        if self.schema_version != SchemaVersion("2.0.0"):
+            raise ValueError(f"unsupported hypothesis schema {self.schema_version}; expected 2.0.0")
         claim = self.claim.strip()
         control = self.control.strip()
         treatments = tuple(item.strip() for item in self.treatments)
@@ -502,13 +507,35 @@ class HypothesisSpec(VersionedSpec):
             raise ValueError("hypothesis control and treatments must be distinct")
         if not metrics or any(not item for item in metrics) or len(set(metrics)) != len(metrics):
             raise ValueError("hypothesis metrics must be nonempty and unique")
-        budgets = _immutable_mapping(self.regression_budgets)
-        if any(not str(metric).strip() for metric in budgets):
+        if any(not str(metric).strip() for metric in self.regression_budgets):
             raise ValueError("regression budget metric names cannot be empty")
+        budgets = _immutable_mapping(
+            {str(metric).strip(): budget for metric, budget in self.regression_budgets.items()}
+        )
+        objectives: dict[str, MetricObjective] = {}
+        for raw_metric, raw_objective in self.metric_objectives.items():
+            metric = str(raw_metric).strip()
+            if not metric:
+                raise ValueError("metric objective names cannot be empty")
+            try:
+                objectives[metric] = MetricObjective(str(raw_objective))
+            except ValueError as error:
+                raise ValueError(
+                    f"metric objective for {metric!r} must be 'maximize' or 'minimize'"
+                ) from error
+        decision_metrics = set(metrics) | {str(metric).strip() for metric in budgets}
+        missing = decision_metrics - set(objectives)
+        unused = set(objectives) - decision_metrics
+        if missing or unused:
+            raise ValueError(
+                "metric objectives must exactly cover primary and regression metrics; "
+                f"missing={sorted(missing)}, unused={sorted(unused)}"
+            )
         object.__setattr__(self, "claim", claim)
         object.__setattr__(self, "control", control)
         object.__setattr__(self, "treatments", treatments)
         object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "metric_objectives", MappingProxyType(objectives))
         object.__setattr__(self, "regression_budgets", budgets)
 
 

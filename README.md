@@ -25,6 +25,10 @@ JAWS separates four ideas that anomaly systems often blur together:
 
 The primary unit of reproducibility is the **experiment**. Each experiment binds an observation window, entity definition, representation, reference population, ranker, parameters, software version, results, and evaluation artifacts into one immutable record. An **endpoint profile**—one IP address viewed during one capture session, with its inbound and outbound behavior aggregated into numeric features and a textual representation—is one analytical entity an experiment can rank.
 
+Each hypothesis declares whether every decision metric is maximized or minimized. Reports
+retain raw `treatment - control` deltas, while support decisions and regression budgets are
+evaluated in the declared direction; lower benign burden is therefore an improvement.
+
 ### Orient → Hypothesize → Experiment → Observe
 
 JAWS follows a repeatable research loop:

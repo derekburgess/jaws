@@ -40,10 +40,12 @@ def _document() -> dict:
     return {
         "schema_version": "1.0.0",
         "hypothesis": {
+            "schema_version": "2.0.0",
             "claim": "treatment improves recall without increasing benign burden",
             "control": "control",
             "treatments": ["treatment"],
             "metrics": ["recall_at_2"],
+            "metric_objectives": {"recall_at_2": "maximize", "benign_burden": "minimize"},
             "regression_budgets": {"benign_burden": 0.0},
         },
         "observation": {"capture_ids": ["capture-1"]},

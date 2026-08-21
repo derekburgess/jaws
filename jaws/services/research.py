@@ -23,6 +23,7 @@ from jaws.domain import (
     ExperimentSpec,
     HypothesisOutcome,
     HypothesisSpec,
+    MetricObjective,
     ObservationReport,
     ProvenanceRecord,
     RankedFinding,
@@ -621,20 +622,27 @@ class ObserveService:
         if not isinstance(specification.hypothesis, HypothesisSpec):
             raise ValueError("control/treatment observation requires a structured hypothesis")
         metrics = sorted(set(control.metrics) | set(treatment.metrics))
-        deltas = {
+        all_deltas = {
             metric: treatment.metrics.get(metric, 0.0) - control.metrics.get(metric, 0.0)
             for metric in metrics
-            if metric not in self.COST_METRICS
+        }
+        deltas = {
+            metric: delta for metric, delta in all_deltas.items() if metric not in self.COST_METRICS
         }
         costs = {
-            metric: treatment.metrics.get(metric, 0.0) - control.metrics.get(metric, 0.0)
-            for metric in metrics
-            if metric in self.COST_METRICS
+            metric: delta for metric, delta in all_deltas.items() if metric in self.COST_METRICS
         }
+        objectives = specification.hypothesis.metric_objectives
+
+        def objective_delta(metric: str) -> float:
+            raw_delta = all_deltas.get(metric, 0.0)
+            objective = objectives[metric]
+            return raw_delta if objective is MetricObjective.MAXIMIZE else -raw_delta
+
         regressions = tuple(
             metric
             for metric, budget in specification.hypothesis.regression_budgets.items()
-            if deltas.get(metric, 0.0) < -float(budget)
+            if objective_delta(metric) < -float(budget)
         )
         control_ranks = {entity: rank for rank, entity in enumerate(control.ranked_entity_ids, 1)}
         treatment_ranks = {
@@ -645,7 +653,7 @@ class ObserveService:
             RankMovement(entity, control_ranks.get(entity), treatment_ranks.get(entity))
             for entity in entities
         )
-        primary = tuple(deltas.get(metric, 0.0) for metric in specification.hypothesis.metrics)
+        primary = tuple(objective_delta(metric) for metric in specification.hypothesis.metrics)
         if regressions:
             outcome = HypothesisOutcome.REFUTED
         elif primary and all(delta > 0 for delta in primary):

@@ -33,7 +33,7 @@ PascalCase names where applicable; prose may use the lower-case form.
 | Representation (`RepresentationSpec`) | The declared features and transformations used to describe an entity, including missing-value, text-template, and embedding provenance where applicable. |
 | Reference (`ReferenceSpec`) | The declared population and eligibility rules against which represented entities are compared. |
 | Ranker (`RankerSpec`) | A versioned method and parameters that assign scores and a deterministic order to eligible entities. |
-| Hypothesis (`HypothesisSpec`) | A falsifiable claim with a control, treatment, target scenarios, success metric, regression budget, and required evidence. |
+| Hypothesis (`HypothesisSpec`) | A falsifiable claim with a control, treatment, target scenarios, explicit metric objectives, regression budget, and required evidence. |
 | Experiment (`ExperimentSpec`) | The immutable, canonical declaration of a study. It says what is to be tested; it is not an execution or mutable folder of results. |
 | Run (`ExperimentRun`) | One lifecycle-tracked execution attempt of an experiment specification in a recorded software and hardware environment. |
 | Finding (`RankedFinding`) | One ranked entity record containing rank, scores, flags, contributions, explanation data, and evidence pointers. A finding is not a threat verdict. |

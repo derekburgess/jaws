@@ -99,6 +99,11 @@ class ScoreDirection(StrEnum):
     LOWER_IS_MORE_ANOMALOUS = "lower_is_more_anomalous"
 
 
+class MetricObjective(StrEnum):
+    MAXIMIZE = "maximize"
+    MINIMIZE = "minimize"
+
+
 class OutlierStatus(StrEnum):
     OUTLIER = "outlier"
     INLIER = "inlier"

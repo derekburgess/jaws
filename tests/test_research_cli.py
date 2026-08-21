@@ -49,6 +49,10 @@ def test_research_cli_runs_inspects_compares_and_reports_status(
     assert isinstance(runs, list) and len(runs) == 2
     assert len(result["observations"]) == 1  # type: ignore[arg-type]
     assert len(result["report_bundles"]) == 1  # type: ignore[arg-type]
+    observation = result["observations"][0]  # type: ignore[index]
+    assert observation["metric_deltas"] == {"benign_burden": -1.0, "recall_at_3": 0.5}
+    assert observation["regressions"] == []
+    assert observation["outcome"] == "supported"
 
     control_bundle = Path(runs[0]["bundle"])
     treatment_bundle = Path(runs[1]["bundle"])

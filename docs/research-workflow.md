@@ -12,9 +12,11 @@ datasets, captures, versioned components, earlier experiments, and retained find
 
 ```console
 jaws-research components --catalog examples/research/catalog.json --json
-jaws-research operation research_orient \
-  --catalog examples/research/catalog.json --json
 ```
+
+MCP clients use `research_orient` for the complete catalog-and-prior-run view. The CLI's
+`components` command provides the governed catalog snapshot; `jaws-research operation` is
+reserved for one declared experiment variant and analytical stage.
 
 The catalog is an authority boundary. It declares stable IDs and bounded evidence; the
 experiment specification refers to those IDs. Raw host paths, credentials, Cypher, shell
@@ -22,8 +24,9 @@ commands, and packet contents are not experiment parameters.
 
 ## 2. Hypothesize
 
-A useful hypothesis names a treatment, a control, a target metric, and an acceptable
-regression. For example:
+A useful hypothesis names a treatment, a control, each metric's `maximize` or `minimize`
+objective, and an acceptable regression. A regression budget is the maximum permitted
+movement opposite that declared objective. For example:
 
 > Adding host-relative upload/download asymmetry improves exfiltration Recall@3 over the
 > `legacy_2_0` control without increasing benign burden@3 by more than one observation.
@@ -63,30 +66,27 @@ determinism and stochastic stability can be measured rather than hidden.
 Verify bundles before interpreting them, then compare the retained control and treatment:
 
 ```console
-jaws-research verify --root .jaws-research
-jaws-research inspect RUN_ID --root .jaws-research --json
-jaws-research compare CONTROL_RUN_ID TREATMENT_RUN_ID \
-  --root .jaws-research --json
+CONTROL_BUNDLE=.jaws-research/bundles/experiments/EXPERIMENT_ID/runs/CONTROL_RUN_ID
+TREATMENT_BUNDLE=.jaws-research/bundles/experiments/EXPERIMENT_ID/runs/TREATMENT_RUN_ID
+jaws-research verify "$CONTROL_BUNDLE" --json
+jaws-research inspect "$CONTROL_BUNDLE" --json
+jaws-research compare "$CONTROL_BUNDLE" "$TREATMENT_BUNDLE" --json
 ```
+
+The JSON returned by `run` provides the exact `bundle` paths; callers do not reconstruct
+them from display labels. Raw metric deltas remain `treatment - control`, while support,
+refutation, and regression budgets follow each hypothesis metric's declared objective.
 
 Read the reward as a vector. Recall@k describes target coverage; reciprocal rank describes
 how quickly the target appears; benign burden counts non-target attention; stability shows
 whether ranks survive seeds/windows; runtime, memory, and provider cost expose operational
 tradeoffs. A new ranker is not better merely because one scalar rose.
 
-Every ranked finding carries one or more `EvidencePointer` records. Use the pointer rather
-than a display label to drill down:
-
-```console
-jaws-research operation inspect_evidence \
-  --catalog examples/research/catalog.json \
-  --input '{"schema_version":"1.0.0","capture_id":"CAPTURE_ID","entity_id":"ENTITY_ID"}' \
-  --json
-```
-
-MCP exposes the equivalent `inspect_evidence` tool. Inspection returns bounded metadata or
-artifact evidence from the catalog; it does not grant a client an arbitrary graph query or
-raw filesystem read.
+Every ranked finding carries one or more `EvidencePointer` records. Pass a returned pointer
+to MCP's `inspect_evidence` tool rather than reconstructing one from a display label. That
+operation returns bounded catalog metadata or artifact evidence; it does not grant a client
+an arbitrary graph query or raw filesystem read. `jaws-research inspect` inspects a retained
+bundle and its checksums; it is not a generic evidence query.
 
 ## Benchmark interpretation
 

@@ -29,8 +29,9 @@
     "claim": "the treatment improves recall without increasing benign burden",
     "control": "control",
     "metrics": ["recall_at_3"],
+    "metric_objectives": {"benign_burden": "minimize", "recall_at_3": "maximize"},
     "regression_budgets": {"benign_burden": 0},
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "treatments": ["treatment"]
   },
   "label_source_versions": {"sample-labels": "1"},

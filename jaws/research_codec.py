@@ -67,6 +67,7 @@ def decode_experiment_spec(document: Mapping[str, Any]) -> ExperimentSpec:
             control=_string(hypothesis_data, "control"),
             treatments=_strings(hypothesis_data.get("treatments"), "hypothesis.treatments"),
             metrics=_strings(hypothesis_data.get("metrics"), "hypothesis.metrics"),
+            metric_objectives=_mapping(hypothesis_data.get("metric_objectives", {})),
             regression_budgets=_mapping(hypothesis_data.get("regression_budgets", {})),
             motivated_by_observation_id=_optional_string(
                 hypothesis_data.get("motivated_by_observation_id")

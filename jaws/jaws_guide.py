@@ -71,7 +71,7 @@ embedding provider.
         --catalog examples/research/catalog.json
   [bold green]CLI[/] jaws-research run examples/research/control-treatment.json \\
         --catalog examples/research/catalog.json --root .jaws-research --json
-  [bold green]CLI[/] jaws-research verify --root .jaws-research
+  [bold green]CLI[/] jaws-research verify PATH_FROM_RUN_RESULT --json
 
 [bold]6. Evaluate JAWS or exercise the optional agent laboratory[/]
 

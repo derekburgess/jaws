@@ -263,6 +263,7 @@ class ResearchApplication:
                 control=self._text(document, "control"),
                 treatments=self._texts(document, "treatments"),
                 metrics=self._texts(document, "metrics"),
+                metric_objectives=self._mapping(document.get("metric_objectives", {})),
                 regression_budgets=self._mapping(document.get("regression_budgets", {})),
                 motivated_by_observation_id=self._optional_text(
                     document.get("motivated_by_observation_id")

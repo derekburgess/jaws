@@ -54,6 +54,7 @@ def _spec() -> ExperimentSpec:
             control="control",
             treatments=("treatment",),
             metrics=("recall_at_3",),
+            metric_objectives={"recall_at_3": "maximize", "benign_burden": "minimize"},
             regression_budgets={"benign_burden": 0.0},
         ),
         observation=ObservationWindow(capture_ids=(CaptureId("capture-1"),)),
@@ -161,6 +162,8 @@ def test_versioned_identity_and_secret_free_serialization() -> None:
     assert "must-not-leak" not in serialized
     assert '"api_token":"***redacted***"' in serialized
     assert '"schema_version":"1.0.0"' in serialized
+    assert '"metric_objectives":{"benign_burden":"minimize","recall_at_3":"maximize"}' in serialized
+    assert '"schema_version":"2.0.0"' in serialized
 
     first = ExperimentRun.planned(specification.experiment_id, specification.digest, NOW)
     second = ExperimentRun.planned(specification.experiment_id, specification.digest, NOW)
@@ -231,6 +234,59 @@ def test_matrix_replay_cache_observation_and_offline_bundle(tmp_path: Path) -> N
         specification, control, treatment, human_interpretation="promising"
     )
     assert observation.deterministic_digest == with_interpretation.deterministic_digest
+
+
+def test_observation_orients_primary_metrics_and_regression_budgets() -> None:
+    specification = _spec()
+    control = EvaluationResult(
+        run_id=RunId("control"),
+        evaluator_id="metrics",
+        evaluator_version="5",
+        metrics={"recall_at_3": 0.5, "benign_burden": 1.0, "runtime_seconds": 1.0},
+    )
+    improved = EvaluationResult(
+        run_id=RunId("improved"),
+        evaluator_id="metrics",
+        evaluator_version="5",
+        metrics={"recall_at_3": 1.0, "benign_burden": 0.0, "runtime_seconds": 1.2},
+    )
+    supported = ObserveService().observe(specification, control, improved)
+    assert supported.metric_deltas == {"benign_burden": -1.0, "recall_at_3": 0.5}
+    assert supported.cost_deltas == {"runtime_seconds": pytest.approx(0.2)}
+    assert supported.regressions == ()
+    assert supported.outcome is HypothesisOutcome.SUPPORTED
+
+    regressed = EvaluationResult(
+        run_id=RunId("regressed"),
+        evaluator_id="metrics",
+        evaluator_version="5",
+        metrics={"recall_at_3": 1.0, "benign_burden": 2.0, "runtime_seconds": 0.8},
+    )
+    refuted = ObserveService().observe(specification, control, regressed)
+    assert refuted.regressions == ("benign_burden",)
+    assert refuted.outcome is HypothesisOutcome.REFUTED
+
+
+def test_hypothesis_requires_objectives_for_every_decision_metric() -> None:
+    with pytest.raises(ValueError, match="missing=.*benign_burden"):
+        HypothesisSpec(
+            claim="treatment improves recall without increasing burden",
+            control="control",
+            treatments=("treatment",),
+            metrics=("recall_at_3",),
+            metric_objectives={"recall_at_3": "maximize"},
+            regression_budgets={"benign_burden": 0.0},
+        )
+
+    with pytest.raises(ValueError, match="unsupported hypothesis schema"):
+        HypothesisSpec(
+            schema_version="1.0.0",
+            claim="treatment improves recall",
+            control="control",
+            treatments=("treatment",),
+            metrics=("recall_at_3",),
+            metric_objectives={"recall_at_3": "maximize"},
+        )
 
 
 def test_cancellation_failure_and_corruption_never_look_complete(tmp_path: Path) -> None:

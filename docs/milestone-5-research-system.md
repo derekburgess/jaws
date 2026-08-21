@@ -70,14 +70,16 @@ The service layer implements the Orient → Hypothesize → Experiment → Obser
 
 - Orient lists evidence, labels, versioned components, earlier experiments, and benchmark
   summaries.
-- Hypothesize validates a falsifiable control/treatment claim, primary metrics, and
-  predeclared regression budgets.
+- Hypothesize validates a falsifiable control/treatment claim, primary metrics, explicit
+  `maximize`/`minimize` objectives, and predeclared regression budgets. A budget limits
+  movement opposite the declared objective rather than assuming every metric is maximized.
 - Experiment executes bounded representation, reference, ranking, and evaluation stages,
   checking cancellation between stages and recording computed versus cached/reused
   artifacts.
-- Observe deterministically calculates metric/cost deltas, rank movement, regressions, and
-  support/refutation status. Optional human interpretation is excluded from its
-  deterministic digest. Follow-up hypotheses can retain the motivating observation ID.
+- Observe deterministically calculates raw treatment-minus-control metric/cost deltas,
+  direction-aware regressions, rank movement, and support/refutation status. Optional human
+  interpretation is excluded from its deterministic digest. Follow-up hypotheses retain
+  metric objectives and can retain the motivating observation ID.
 
 The installed `jaws-research` entry point exposes `validate`, `run`, `status`, `cancel`,
 `inspect`, `compare`, `verify`, `components`, `operation`, `export`, and `import`. Add

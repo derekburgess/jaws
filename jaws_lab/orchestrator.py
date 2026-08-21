@@ -357,6 +357,7 @@ class InHouseOHEO:
             control=str(hypothesis["control"]),
             treatments=tuple(str(item) for item in hypothesis["treatments"]),
             metrics=tuple(str(item) for item in hypothesis["metrics"]),
+            metric_objectives=dict(hypothesis.get("metric_objectives", {})),
             regression_budgets=dict(hypothesis.get("regression_budgets", {})),
             motivated_by_observation_id=motivation,
         )
@@ -429,6 +430,7 @@ class InHouseOHEO:
             control=str(value["control"]),
             treatments=tuple(str(item) for item in value["treatments"]),
             metrics=tuple(str(item) for item in value["metrics"]),
+            metric_objectives=dict(value.get("metric_objectives", {})),
             regression_budgets=dict(value.get("regression_budgets", {})),
             motivated_by_observation_id=(
                 str(item) if (item := value.get("motivated_by_observation_id")) else None

@@ -152,7 +152,7 @@ The implementation must use explicit, versioned records for the concepts below. 
 | `RepresentationSpec` | Declares feature families and transformations | Feature-set ID/version, missing-value policy, text-template version, embedding backend/model/revision |
 | `ReferenceSpec` | Declares the comparison population | Peer, historical, hybrid, or researcher-defined strategy plus eligibility rules |
 | `RankerSpec` | Declares how observations receive scores and ranks | Ranker ID/version, parameters, random seed, score direction, deterministic tie-break |
-| `HypothesisSpec` | States a falsifiable claim and its planned test | Control, treatment, target scenarios, success metric, regression budget, required evidence |
+| `HypothesisSpec` | States a falsifiable claim and its planned test | Control, treatment, target scenarios, metric objectives, regression budget, required evidence |
 | `ExperimentSpec` | Immutable declaration of a study | Canonical serialization and digest-derived experiment ID |
 | `ExperimentRun` | One execution of an experiment specification | Run ID, experiment digest, code revision, environment, lifecycle state, timestamps |
 | `RankedFinding` | One ranked entity and its explanation | Stable entity reference, rank, scores, flags, feature contributions, evidence pointers |
@@ -1304,6 +1304,20 @@ dependency-ordered Milestones 4–9 are also complete. Milestone 10 qualificatio
 only publication review, the `main` merge, final image rebuild, and release tag remain.
 
 ## Change log
+
+### 2026-08-21 — Direction-aware hypothesis decisions
+
+- Manual OHEO testing exposed that a lower benign burden was retained correctly as a
+  negative raw delta but incorrectly treated as a regression by the generic observation
+  service.
+- Versioned `HypothesisSpec` 2.0 now requires an explicit `maximize` or `minimize`
+  objective for every primary and regression metric. Raw report deltas remain
+  `treatment - control`; support/refutation and budgets use objective-oriented changes.
+- Added maximize/minimize, missing-objective, CLI, MCP, and lab coverage. The canonical
+  control/treatment sample now reports improved recall, reduced burden, no regression,
+  and a supported outcome.
+- Corrected research workflow, runtime, and `jaws-guide` examples to pass actual bundle
+  paths to `verify`, `inspect`, and `compare`, and removed nonexistent CLI operations.
 
 ### 2026-08-21 — Release cleanup and interface clarification
 
