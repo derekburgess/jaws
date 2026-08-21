@@ -125,7 +125,7 @@ An anomaly may be malicious, benign, novel, misconfigured, or simply worth under
 
 ## Research architecture
 
-JAWS 2.0 is beta research software organized around seven composable operations:
+JAWS 3.0 is beta research software organized around seven composable operations:
 
 | Operation | Responsibility |
 | --- | --- |
@@ -387,6 +387,11 @@ contracts as a bounded OHEO collaborator. Its shipped reference is a dependency-
 model in a separate no-network container; it requires exact experiment approval and never
 participates in scoring or ground truth.
 
+The end-to-end [research workflow](docs/research-workflow.md) shows how to orient,
+hypothesize, execute a control/treatment study, interpret Benchmark v1, and drill a finding
+back into evidence. Existing 2.0 users should review the [3.0 migration guide](docs/migration-2-to-3.md)
+and all researchers should retain the documented [limitations](docs/limitations.md).
+
 ### 7. Run tests
 
 ```bash
@@ -420,6 +425,15 @@ The [quality-automation policy](docs/quality.md) documents CI jobs, the type-che
 ratchet, report-only benchmark artifacts, optional integrations, and cache provenance.
 
 ## History
+
+### 2026 — Reproducible research workbench
+
+JAWS 3.0 separated deterministic analytical services from CLI, MCP, benchmark, storage,
+and optional-agent adapters. It added ordered database migrations, portable evidence and
+experiment bundles, governed Benchmark v1, pinned capability-separated containers, MCP v2
+run lifecycle, and an experimental isolated OHEO laboratory. The `legacy_2_0` ranker and
+Benchmark 0 remain the analytical compatibility control. See the
+[3.0.0-rc1 release notes](docs/release-notes-3.0.0-rc1.md).
 
 ### 2026 — MCP and historical behavior
 

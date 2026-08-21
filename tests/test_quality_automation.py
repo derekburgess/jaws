@@ -92,6 +92,8 @@ def test_lint_and_type_boundaries_are_explicit_ratchets():
         "scripts/benchmark_smoke.py",
         "scripts/check_install_profiles.py",
         "scripts/container_smoke.py",
+        "scripts/generate_reference.py",
+        "scripts/release_qualify.py",
     }
     assert all((REPO_ROOT / path).exists() for path in mypy["files"])
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "JAWS"
-version = "2.0.0"
+version = "3.0.0"
 description = "Open research workbench for reproducible network-behavior anomaly experiments"
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
@@ -167,6 +167,8 @@ files = [
     "scripts/benchmark_smoke.py",
     "scripts/check_install_profiles.py",
     "scripts/container_smoke.py",
+    "scripts/generate_reference.py",
+    "scripts/release_qualify.py",
 ]
 strict = true
 warn_unused_configs = true

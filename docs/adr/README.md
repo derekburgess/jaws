@@ -29,6 +29,10 @@ the research-workbench rollout.
 | [0015](0015-declared-retention-plan-before-apply.md) | Accepted | Require a declared retention plan before apply |
 | [0016](0016-portable-evidence-bundles-and-empty-target-import.md) | Accepted | Use checksummed evidence bundles and empty-target import |
 | [0017](0017-guarded-administration-and-payload-free-audit.md) | Accepted | Require exact destructive plans and payload-free audit records |
+| [0018](0018-pinned-runtime-profiles-and-capability-boundaries.md) | Accepted | Pin runtime profiles and separate capture, analysis, and agent capabilities |
+| [0019](0019-mcp-v2-lifecycle-and-streamable-http.md) | Accepted | Use MCP v2 lifecycle operations and Streamable HTTP |
+| [0020](0020-optional-in-house-oheo-orchestrator.md) | Accepted | Keep the OHEO agent laboratory optional and framework-independent |
+| [0021](0021-major-release-and-experimental-agent-lab.md) | Accepted | Release the workbench as 3.0 with an experimental agent-lab extra |
 
 Milestone-specific choices that are not yet due remain in the implementation
 plan's [decision queue](../../IMPLEMENTATION_PLAN.md#decision-queue). In

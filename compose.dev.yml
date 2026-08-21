@@ -2,7 +2,7 @@ name: jaws-dev
 
 x-build-args: &build-args
   SOURCE_REVISION: ${JAWS_SOURCE_REVISION:-unknown}
-  PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-2.0.0}
+  PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-3.0.0}
   BUILD_DATE: ${JAWS_BUILD_DATE:-unknown}
 
 x-python-service: &python-service

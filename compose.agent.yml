@@ -8,7 +8,7 @@ services:
       target: agent
       args:
         SOURCE_REVISION: ${JAWS_SOURCE_REVISION:-unknown}
-        PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-2.0.0}
+        PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-3.0.0}
         BUILD_DATE: ${JAWS_BUILD_DATE:-unknown}
     user: "10002:10002"
     read_only: true

@@ -10,12 +10,13 @@ COPY pyproject.toml README.md ./
 COPY constraints/py312-direct.txt constraints/py312-direct.txt
 COPY jaws ./jaws
 COPY jaws_mcp ./jaws_mcp
+COPY jaws_lab ./jaws_lab
 RUN python3.12 -m pip wheel --break-system-packages --no-cache-dir --wheel-dir /wheels \
     --constraint constraints/py312-direct.txt ".[neo4j,local-embeddings]"
 
 FROM ${CUDA_IMAGE} AS gpu-analyzer
 ARG SOURCE_REVISION=unknown
-ARG PACKAGE_VERSION=2.0.0
+ARG PACKAGE_VERSION=3.0.0
 ARG BUILD_DATE=unknown
 LABEL org.opencontainers.image.title="JAWS GPU research analyzer" \
       org.opencontainers.image.source="https://github.com/derekburgess/jaws" \

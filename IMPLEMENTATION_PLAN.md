@@ -35,14 +35,14 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | 0 | Research contract and Benchmark 0 | Complete | — |
 | 1 | Project foundation and typed contracts | Complete | 0 |
 | 2 | Versioned evidence storage and migrations | Complete | 1 |
-| 3 | Ingest, enrichment, and profiling services | In progress | 2 |
-| 4 | Comparison, ranking, explanation, and inspection services | Not started | 3 |
-| 5 | Experiment, run, provenance, and artifact system | Not started | 4 |
-| 6 | Benchmark v1 and ranker research platform | Not started | 5 |
-| 7 | Reproducible runtime and container profiles | Not started | 6 |
-| 8 | MCP v2 research interface | Not started | 5, 7 |
-| 9 | Optional agent laboratory | Not started | 6, 8 |
-| 10 | Integrated rollout and release qualification | Not started | 0–8; 9 only if included in the release |
+| 3 | Ingest, enrichment, and profiling services | Complete | 2 |
+| 4 | Comparison, ranking, explanation, and inspection services | Complete | 3 |
+| 5 | Experiment, run, provenance, and artifact system | Complete | 4 |
+| 6 | Benchmark v1 and ranker research platform | Complete | 5 |
+| 7 | Reproducible runtime and container profiles | Complete | 6 |
+| 8 | MCP v2 research interface | Complete | 5, 7 |
+| 9 | Optional agent laboratory | Complete (experimental extra) | 6, 8 |
+| 10 | Integrated rollout and release qualification | In progress (review gate) | 0–9 |
 
 Milestone 9 is architecturally optional: the core research workbench can ship without an agent. If it is excluded from the first rollout, Milestone 10 must explicitly record that decision rather than leaving the status ambiguous.
 

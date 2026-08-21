@@ -13,7 +13,7 @@ RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels \
 
 FROM ${PYTHON_IMAGE} AS agent
 ARG SOURCE_REVISION=unknown
-ARG PACKAGE_VERSION=2.0.0
+ARG PACKAGE_VERSION=3.0.0
 ARG BUILD_DATE=unknown
 LABEL org.opencontainers.image.title="JAWS optional agent laboratory" \
       org.opencontainers.image.source="https://github.com/derekburgess/jaws" \

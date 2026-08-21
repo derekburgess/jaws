@@ -7,6 +7,7 @@ COPY pyproject.toml README.md ./
 COPY constraints/py312-direct.txt constraints/py312-direct.txt
 COPY jaws ./jaws
 COPY jaws_mcp ./jaws_mcp
+COPY jaws_lab ./jaws_lab
 
 FROM source AS analyzer-wheels
 RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels \
@@ -22,7 +23,7 @@ RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels \
 
 FROM ${PYTHON_IMAGE} AS runtime
 ARG SOURCE_REVISION=unknown
-ARG PACKAGE_VERSION=2.0.0
+ARG PACKAGE_VERSION=3.0.0
 ARG BUILD_DATE=unknown
 LABEL org.opencontainers.image.title="JAWS research workbench" \
       org.opencontainers.image.source="https://github.com/derekburgess/jaws" \
