@@ -88,6 +88,7 @@ def test_lint_and_type_boundaries_are_explicit_ratchets():
         "jaws/research_codec.py",
         "jaws/runtime_cli.py",
         "jaws_mcp/",
+        "jaws_lab/",
         "scripts/benchmark_smoke.py",
         "scripts/check_install_profiles.py",
         "scripts/container_smoke.py",

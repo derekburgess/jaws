@@ -58,8 +58,8 @@ plotting = [
 mcp = [
     "mcp>=2,<3",
 ]
-# Milestone 9 owns agent-framework selection. Declaring the boundary now prevents
-# an orchestration framework from becoming an accidental core dependency.
+# The accepted Milestone 9 spike uses only standard-library protocols/state. This
+# empty extra keeps the removable capability boundary without adding a framework.
 agent-lab = []
 # Compatibility convenience profile. New deployments should select only the
 # capability extras they use; requirements.txt installs this complete runtime set.
@@ -103,6 +103,7 @@ jaws-research = "jaws.research_cli:main"
 jaws-benchmark = "jaws.benchmark_cli:main"
 jaws-runtime = "jaws.runtime_cli:main"
 jaws-mcp = "jaws_mcp.server:main"
+jaws-lab = "jaws_lab.cli:main"
 
 [tool.setuptools]
 packages = [
@@ -114,10 +115,12 @@ packages = [
     "jaws.storage",
     "jaws.storage.migrations",
     "jaws_mcp",
+    "jaws_lab",
 ]
 
 [tool.setuptools.package-data]
 jaws_mcp = ["contracts/v2/*.json"]
+jaws_lab = ["policies/*.json", "prompts/v1/*.md", "reference/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -158,6 +161,7 @@ files = [
     "jaws/research_codec.py",
     "jaws/runtime_cli.py",
     "jaws_mcp/",
+    "jaws_lab/",
     "jaws/settings.py",
     "jaws/optional_dependencies.py",
     "scripts/benchmark_smoke.py",

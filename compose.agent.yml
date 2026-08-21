@@ -1,0 +1,29 @@
+name: jaws-agent-lab
+
+services:
+  agent-lab:
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.agent
+      target: agent
+      args:
+        SOURCE_REVISION: ${JAWS_SOURCE_REVISION:-unknown}
+        PACKAGE_VERSION: ${JAWS_PACKAGE_VERSION:-2.0.0}
+        BUILD_DATE: ${JAWS_BUILD_DATE:-unknown}
+    user: "10002:10002"
+    read_only: true
+    init: true
+    network_mode: none
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 1.0
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    volumes:
+      - agent-lab-artifacts:/var/lib/jaws-lab
+
+volumes:
+  agent-lab-artifacts:

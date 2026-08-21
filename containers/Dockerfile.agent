@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1.7
+ARG PYTHON_IMAGE=python:3.12.4-slim-bookworm@sha256:a3e58f9399353be051735f09be0316bfdeab571a5c6a24fd78b92df85bcb2d85
+
+FROM ${PYTHON_IMAGE} AS source
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY constraints/py312-direct.txt constraints/py312-direct.txt
+COPY jaws ./jaws
+COPY jaws_mcp ./jaws_mcp
+COPY jaws_lab ./jaws_lab
+RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels \
+    --constraint constraints/py312-direct.txt ".[agent-lab]"
+
+FROM ${PYTHON_IMAGE} AS agent
+ARG SOURCE_REVISION=unknown
+ARG PACKAGE_VERSION=2.0.0
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.title="JAWS optional agent laboratory" \
+      org.opencontainers.image.source="https://github.com/derekburgess/jaws" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.version="${PACKAGE_VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.licenses="GPL-2.0-only"
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+RUN groupadd --gid 10002 jaws-lab \
+    && useradd --uid 10002 --gid jaws-lab --create-home --shell /usr/sbin/nologin jaws-lab \
+    && install -d -o jaws-lab -g jaws-lab -m 0750 /var/lib/jaws-lab /workspace/examples
+COPY --from=source /wheels /wheels
+RUN python -m pip install --no-cache-dir /wheels/* && rm -r /wheels
+COPY --chown=10002:10002 examples/research /workspace/examples/research
+WORKDIR /workspace
+USER 10002:10002
+ENTRYPOINT ["jaws-lab"]
+CMD ["--help"]

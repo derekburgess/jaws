@@ -20,7 +20,7 @@ plotting library, or MCP SDK.
 | `local-embeddings` | Torch, sentence-transformers | Local CPU/GPU embeddings |
 | `plotting` | Matplotlib, Plotille | File, interactive, and terminal plots |
 | `mcp` | MCP SDK | MCP interface adapter |
-| `agent-lab` | None yet | Reserved boundary; Milestone 9 owns framework selection |
+| `agent-lab` | No third-party packages | Optional scripted OHEO laboratory behind standard-library protocols |
 | `dev` | pytest, jsonschema, packaging, psutil, Ruff, mypy, PyYAML | Lightweight correctness, quality automation, and artifact-contract development |
 | `all` | Every runtime extra | Backward-compatible complete runtime installation |
 
@@ -60,6 +60,17 @@ complete runtime remains:
 ```bash
 .venv/bin/python -m pip install --requirement requirements.txt
 ```
+
+The removable agent-laboratory spike adds no framework or model dependency:
+
+```bash
+.venv/bin/python -m pip install \
+  --constraint constraints/py312-direct.txt \
+  --editable ".[agent-lab]"
+```
+
+It uses the human-authored scripted model unless an operator implements the provider-neutral
+laboratory protocol in a separately reviewed sandbox.
 
 The lightweight development/correctness environment is:
 

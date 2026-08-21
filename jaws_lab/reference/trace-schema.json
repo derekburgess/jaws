@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jaws.invalid/schemas/agent-lab-trace-1.0.0.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "identity", "started_at", "completed_at", "tool_calls", "approvals", "usage", "produced_hypothesis", "produced_experiment", "observation"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "identity": {"type": "object"},
+    "started_at": {"type": "string"},
+    "completed_at": {"type": "string"},
+    "tool_calls": {"type": "array"},
+    "approvals": {"type": "array"},
+    "usage": {"type": "object"},
+    "produced_hypothesis": {"type": "object"},
+    "produced_experiment": {"type": "object"},
+    "observation": {"type": "object"}
+  }
+}

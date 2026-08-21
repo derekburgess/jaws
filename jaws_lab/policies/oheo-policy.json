@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "workflow": ["orient", "hypothesize", "experiment", "observe"],
+  "default_denied": [
+    "shell",
+    "generated_python",
+    "neo4j_credentials",
+    "cypher",
+    "database_deletion",
+    "host_filesystem",
+    "docker_socket",
+    "packet_capture",
+    "held_out_labels",
+    "ranker_self_modification",
+    "threat_ground_truth"
+  ],
+  "approval_required": ["experiment_start", "external_cost", "live_capture", "dataset_acquisition", "mutation"],
+  "untrusted_context": ["dataset_metadata", "benchmark_metadata", "provider_text"]
+}

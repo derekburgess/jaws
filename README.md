@@ -382,6 +382,11 @@ catalog; clients cannot submit host paths, credentials, shell commands, or arbit
 See [the MCP v2 guide](docs/mcp-v2.md) for tool contracts and migration from the original
 pipeline-oriented tool names.
 
+The optional [agent laboratory](docs/agent-laboratory.md) exercises the same research
+contracts as a bounded OHEO collaborator. Its shipped reference is a dependency-free scripted
+model in a separate no-network container; it requires exact experiment approval and never
+participates in scoring or ground truth.
+
 ### 7. Run tests
 
 ```bash
