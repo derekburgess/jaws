@@ -1,0 +1,22 @@
+{
+  "agent_trace_schema_version": "1.0.0",
+  "benchmark_schema_version": "1.0.0",
+  "capability_version": "research-v2",
+  "cli": {
+    "legacy_entry_points_retained": true,
+    "legacy_json_envelopes_frozen": true,
+    "research_cli_schema_version": "1.0.0"
+  },
+  "container_package_version": "3.0.0",
+  "evidence_bundle_schema_version": "1.0.0",
+  "experiment_bundle_schema_version": "1.0.0",
+  "managed_neo4j_schema_version": 7,
+  "mcp_api_schema_version": "2.0.0",
+  "mcp_tool_count": 13,
+  "mcp_tool_schema_version": "2.0.0",
+  "package_version": "3.0.0",
+  "python": ">=3.12,<3.13",
+  "release_candidate": "3.0.0-rc1",
+  "runtime_schema_version": "1.0.0",
+  "schema_version": "1.0.0"
+}

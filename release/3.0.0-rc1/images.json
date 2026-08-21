@@ -1,0 +1,30 @@
+{
+  "images": {
+    "agent_lab": {
+      "digest": "sha256:abc89b70b006e35fdafd4778a1f476f5e7aab7e8c0624b6ad6e84f554dae2f6f",
+      "package_version": "3.0.0",
+      "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b"
+    },
+    "analyzer": {
+      "digest": "sha256:2b8a15fb4a25226a4339668f983cd7551dbc0ac4626859a22e2d8492418b788a",
+      "package_version": "3.0.0",
+      "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b"
+    },
+    "mcp": {
+      "digest": "sha256:b2d94a1bded0ed80195c0200ab8e268b05a9208ca789f0078524691880b61eb5",
+      "package_version": "3.0.0",
+      "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b"
+    },
+    "neo4j": {
+      "digest": "sha256:f0a9509090d06027749f647314bae5a549f95192b4ac7080104226e448fd7793",
+      "image_id": "sha256:a12807d4eb48e13b0e1b41855477a2be9a0ac2c339d2fbe781a56e925fd121ba",
+      "version": "5.26.28-community-ubi10"
+    },
+    "sensor": {
+      "digest": "sha256:226f7e8fcab5b98705d6fbff7edb1abc2f28dc43c1182f8ed3887d9487194a69",
+      "package_version": "3.0.0",
+      "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b"
+    }
+  },
+  "schema_version": "1.0.0"
+}

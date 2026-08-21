@@ -1,0 +1,49 @@
+{
+  "accepted_regressions": [],
+  "deferred_risks": [
+    {
+      "id": "external-dataset-field-quality",
+      "mitigation": "Keep external manifests metadata-only until licensing, acquisition, hashing, labeling, and safety review are complete.",
+      "status": "deferred"
+    },
+    {
+      "id": "experimental-agent-interpretation",
+      "mitigation": "Ship as an optional no-network extra; require exact experiment approval and deterministic scoring.",
+      "status": "accepted-experimental"
+    },
+    {
+      "id": "gpu-runtime-variance",
+      "mitigation": "Retain the pinned GPU definition and require execution on matching NVIDIA hardware before publishing a GPU image.",
+      "status": "environment-unavailable"
+    },
+    {
+      "id": "live-capture-privilege",
+      "mitigation": "Qualify edge import with a payload-free fixture; require an operator-specific permission review for live interfaces.",
+      "status": "environment-specific"
+    }
+  ],
+  "known_quality_failures": [
+    {
+      "id": "BF0-KF-001",
+      "observation": "The legacy detector ranks the benign TCP keepalive scenario first.",
+      "status": "retained-control-failure"
+    },
+    {
+      "id": "BF0-KF-002",
+      "observation": "The legacy host-outbound detector ranks the benign bulk-download scenario second.",
+      "status": "retained-control-failure"
+    },
+    {
+      "id": "BF0-KF-003",
+      "observation": "The legacy detector ranks the stable-heavy historical scenario third.",
+      "status": "retained-control-failure"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "unavailable_resources": [
+    "NVIDIA GPU/driver",
+    "reviewed external PCAP datasets and labels",
+    "real IPinfo/OpenAI/model credentials",
+    "operator-approved live capture interface"
+  ]
+}

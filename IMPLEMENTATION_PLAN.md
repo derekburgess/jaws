@@ -42,7 +42,7 @@ This is a research-program plan rather than a feature backlog. Its ordering prot
 | 7 | Reproducible runtime and container profiles | Complete | 6 |
 | 8 | MCP v2 research interface | Complete | 5, 7 |
 | 9 | Optional agent laboratory | Complete (experimental extra) | 6, 8 |
-| 10 | Integrated rollout and release qualification | In progress (review gate) | 0–9 |
+| 10 | Integrated rollout and release qualification | Qualification complete (publication review gate) | 0–9 |
 
 Milestone 9 is architecturally optional: the core research workbench can ship without an agent. If it is excluded from the first rollout, Milestone 10 must explicitly record that decision rather than leaving the status ambiguous.
 
@@ -1105,38 +1105,38 @@ Qualify the complete research-workbench redesign as one coherent rollout while p
 
 #### Integration
 
-- [ ] Rebase/merge all completed milestone work into the integration branch in dependency order.
-- [ ] Resolve temporary compatibility layers and remove only those with tested replacements and migration notes.
-- [ ] Ensure no interface bypasses service contracts to reach Neo4j or analytical internals.
-- [ ] Run a clean architecture/import dependency audit.
-- [ ] Verify version/schema compatibility across CLI, MCP, artifact bundles, database, and containers.
+- [x] Rebase/merge all completed milestone work into the integration branch in dependency order.
+- [x] Resolve temporary compatibility layers and remove only those with tested replacements and migration notes.
+- [x] Ensure no interface bypasses service contracts to reach Neo4j or analytical internals.
+- [x] Run a clean architecture/import dependency audit.
+- [x] Verify version/schema compatibility across CLI, MCP, artifact bundles, database, and containers.
 
 #### Full verification
 
-- [ ] Run formatting, lint, types, correctness, contract, integration, migration, CLI, MCP, container, security, and end-to-end suites.
-- [ ] Run Benchmark 0 parity comparison for the `legacy_2_0` configuration.
-- [ ] Run Benchmark v1 for all required rankers/datasets and retain the release artifact.
-- [ ] Execute repeated-run determinism and declared stochastic-stability checks.
-- [ ] Run CPU and applicable GPU/edge smoke tests from clean environments.
-- [ ] Test starting-revision database upgrade, bundle verification, export/import, backup/restore, and failure recovery.
-- [ ] Inspect artifacts and logs for secrets, absolute private paths, or restricted capture content.
+- [x] Run formatting, lint, types, correctness, contract, integration, migration, CLI, MCP, container, security, and end-to-end suites.
+- [x] Run Benchmark 0 parity comparison for the `legacy_2_0` configuration.
+- [x] Run Benchmark v1 for all required rankers/datasets and retain the release artifact.
+- [x] Execute repeated-run determinism and declared stochastic-stability checks.
+- [x] Run CPU and applicable GPU/edge smoke tests from clean environments.
+- [x] Test starting-revision database upgrade, bundle verification, export/import, backup/restore, and failure recovery.
+- [x] Inspect artifacts and logs for secrets, absolute private paths, or restricted capture content.
 
 #### Documentation
 
-- [ ] Revalidate the README against shipped behavior without adding roadmap/status prose.
-- [ ] Replace legacy setup commands with supported native and compose workflows.
-- [ ] Document the OHEO workflow, experiment-spec examples, benchmark interpretation, and evidence drill-down.
-- [ ] Document migration from the 2.0 CLI/MCP/database/artifact behavior.
-- [ ] Document limitations: anomaly vs threat, IP identity, dataset bias, enrichment ambiguity, ranker uncertainty, and agent boundaries.
-- [ ] Generate CLI/MCP reference material from versioned schemas where possible.
-- [ ] Update the history section and release notes with evidence-backed changes.
+- [x] Revalidate the README against shipped behavior without adding roadmap/status prose.
+- [x] Replace legacy setup commands with supported native and compose workflows.
+- [x] Document the OHEO workflow, experiment-spec examples, benchmark interpretation, and evidence drill-down.
+- [x] Document migration from the 2.0 CLI/MCP/database/artifact behavior.
+- [x] Document limitations: anomaly vs threat, IP identity, dataset bias, enrichment ambiguity, ranker uncertainty, and agent boundaries.
+- [x] Generate CLI/MCP reference material from versioned schemas where possible.
+- [x] Update the history section and release notes with evidence-backed changes.
 
 #### Release decision
 
-- [ ] Decide release version through an ADR based on compatibility and schema changes.
-- [ ] Decide whether Milestone 9 ships in the initial rollout or remains an experimental extra.
-- [ ] Publish the release benchmark bundle and checksums alongside the code revision.
-- [ ] Record all known quality failures, accepted regressions, unavailable datasets, and deferred risks.
+- [x] Decide release version through an ADR based on compatibility and schema changes.
+- [x] Decide whether Milestone 9 ships in the initial rollout or remains an experimental extra.
+- [x] Publish the release benchmark bundle and checksums alongside the code revision.
+- [x] Record all known quality failures, accepted regressions, unavailable datasets, and deferred risks.
 - [ ] Merge to `main` only after the complete rollout gate is reviewed.
 - [ ] Tag the exact release commit and retain container/image digests.
 
@@ -1299,10 +1299,34 @@ endpoint-IP and host-relative destination definitions. A provider-neutral repres
 service validates local/remote embedding output and persists complete vector lineage while
 also supporting numeric-only profiles. The three legacy commands now retain their flags,
 Rich/agent surfaces, and frozen outputs as adapters over the ingest, enrichment, profiling,
-and representation services. Milestone 3 is complete (37 of 37 checklist items); the next
-active work begins Milestone 4 reference strategies.
+and representation services. Milestone 3 is complete (37 of 37 checklist items), and the
+dependency-ordered Milestones 4–9 are also complete. Milestone 10 qualification is complete;
+only publication review, the `main` merge, final image rebuild, and release tag remain.
 
 ## Change log
+
+### 2026-08-21 — Milestone 10 release qualification
+
+- Accepted [ADR-0021](docs/adr/0021-major-release-and-experimental-agent-lab.md): the
+  research workbench is package version 3.0.0, with independently versioned MCP, database,
+  and artifact contracts and the agent laboratory shipping only as an experimental extra.
+- Added generated CLI/MCP references, the OHEO/evidence workflow, 2.0 migration guide,
+  limitations, release notes, compatibility matrix, known-risk record, image provenance,
+  and a self-verifying candidate evidence command.
+- The clean-container gate found and fixed the missing `jaws_lab` wheel-build context in
+  the CPU/GPU Dockerfiles. Exact-revision CPU, sensor, MCP, and no-network agent images then
+  passed their applicable smokes; GPU execution is explicitly unavailable on this host.
+- Revalidated 357 offline tests, 15 pinned Neo4j integration cases, Benchmark 0 and
+  `legacy_2_0` parity, two semantically identical repeated Benchmark v1 smokes, and the full
+  2,340-cell Benchmark v1 matrix across twelve rankers, thirteen scenarios, five seeds, and
+  three windows.
+- Published the full report plus all 2,340 run bundles as the checksummed
+  `release/3.0.0-rc1/jaws-3.0.0-rc1-benchmark.tar.gz` candidate asset. The record retains
+  the three frozen benign-control quality failures and names unavailable external datasets,
+  provider credentials/models, GPU execution, and live capture rather than hiding skips.
+- Completed every local qualification item. Merge to `main`, public release upload, final
+  image rebuild at the reviewed evidence commit, and tagging remain intentionally unchecked
+  until the complete rollout gate is reviewed.
 
 ### 2026-08-20 — Milestone 3 CLI compatibility completion
 

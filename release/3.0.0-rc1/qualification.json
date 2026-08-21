@@ -1,0 +1,52 @@
+{
+  "benchmark": {
+    "benchmark_0_bundle": "benchmarks/baseline-0",
+    "benchmark_0_control": "legacy_2_0",
+    "benchmark_v1_completed_cells": 2340,
+    "benchmark_v1_failed_cells": 0,
+    "benchmark_v1_rankers": 12,
+    "benchmark_v1_scenarios": 13,
+    "benchmark_v1_seeds": 5,
+    "benchmark_v1_windows": 3
+  },
+  "generated_at": "2026-08-21T04:15:00Z",
+  "gates": {
+    "agent_container": "passed",
+    "architecture_and_imports": "passed",
+    "benchmark_0_parity": "passed",
+    "benchmark_v1_full": "passed",
+    "cpu_container": "passed",
+    "edge_pcap_import": "passed",
+    "external_provider_integrations": "unavailable",
+    "external_release_publication": "review-gated",
+    "final_release_tag": "review-gated",
+    "format_lint_types": "passed",
+    "gpu_execution": "unavailable",
+    "live_capture": "unavailable",
+    "main_merge": "review-gated",
+    "mcp_container": "passed",
+    "neo4j_integration": "passed",
+    "offline_correctness_contracts": "passed",
+    "real_pcap_quality": "unavailable",
+    "repeated_run_determinism": "passed",
+    "restricted_content_and_secret_scan": "passed"
+  },
+  "package_version": "3.0.0",
+  "release_candidate": "3.0.0-rc1",
+  "schema_version": "1.0.0",
+  "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b",
+  "tests": {
+    "neo4j_integration": {
+      "deselected": 360,
+      "passed": 15
+    },
+    "offline": {
+      "deselected": 24,
+      "passed": 357
+    },
+    "synthetic_recall": {
+      "known_failures": 3,
+      "passed": 6
+    }
+  }
+}

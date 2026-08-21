@@ -1,0 +1,28 @@
+{
+  "archive": {
+    "expanded_file_count": 21063,
+    "name": "jaws-3.0.0-rc1-benchmark.tar.gz",
+    "sha256": "5de3c23bbce0136fec79c565aaf59ed3b5a36d31de5f3d1940639c8ca29c5ddf"
+  },
+  "artifact_checksum_count": 2340,
+  "benchmark_id": "benchmark-fa65f94463315da503b3e8df55042f8f4d830a0fcf3801d88f189714f735d473",
+  "coverage": {
+    "abstained": 0,
+    "completed": 2340,
+    "failed": 0,
+    "missing": 0,
+    "skipped": 0,
+    "total": 2340
+  },
+  "dataset_manifest_version": "1.0.0",
+  "dirty_tree": false,
+  "held_out_labels_enabled": false,
+  "policy_digest": "1b081d66e8bfc8fab8136bf6c4df2ce20ce89f081051e33b3a31ff02ae40e6ab",
+  "report_checksums": {
+    "benchmark-v1.html": "6d7d623074d09b06a527bcb3e8734235b0fde534f3045fa668a119ba979eabc3",
+    "benchmark-v1.json": "bf36e28d3737a2febcba7a57aa529cabeaf63d26218921480617572a7177c676",
+    "benchmark-v1.md": "6e2b6ed14780e257798a0af94e1bd623e520c21963ceb9612621e610b9163065"
+  },
+  "schema_version": "1.0.0",
+  "source_revision": "f0252f83753326e8b21265a2d712b58a3c946f6b"
+}

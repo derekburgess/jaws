@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import subprocess
 import sys
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -112,3 +114,52 @@ def test_release_documentation_names_workflow_migration_limits_and_review_gate()
     assert "docs/research-workflow.md" in readme
     assert "docs/migration-2-to-3.md" in readme
     assert "docs/limitations.md" in readme
+
+
+def test_release_candidate_record_and_benchmark_asset_are_self_verifying() -> None:
+    release = ROOT / "release" / "3.0.0-rc1"
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "release_qualify.py"), str(release)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["verified_files"] == 6
+
+    qualification = json.loads((release / "qualification.json").read_text(encoding="utf-8"))
+    revision = qualification["source_revision"]
+    assert len(revision) == 40
+    assert qualification["gates"]["main_merge"] == "review-gated"
+    assert qualification["gates"]["final_release_tag"] == "review-gated"
+    assert qualification["tests"]["synthetic_recall"]["known_failures"] == 3
+
+    images = json.loads((release / "images.json").read_text(encoding="utf-8"))["images"]
+    for name in ("analyzer", "sensor", "mcp", "agent_lab"):
+        assert images[name]["package_version"] == PACKAGE_VERSION
+        assert images[name]["source_revision"] == revision
+        assert images[name]["digest"].startswith("sha256:")
+
+    risks = json.loads((release / "known-risks.json").read_text(encoding="utf-8"))
+    assert risks["accepted_regressions"] == []
+    assert {item["id"] for item in risks["known_quality_failures"]} == {
+        "BF0-KF-001",
+        "BF0-KF-002",
+        "BF0-KF-003",
+    }
+
+    manifest = json.loads((release / "benchmark-manifest.json").read_text(encoding="utf-8"))
+    archive = release / manifest["archive"]["name"]
+    assert hashlib.sha256(archive.read_bytes()).hexdigest() == manifest["archive"]["sha256"]
+    with tarfile.open(archive, "r:gz") as bundle:
+        members = bundle.getmembers()
+        files = [member for member in members if member.isfile()]
+        assert len(files) == manifest["archive"]["expanded_file_count"]
+        assert all(not Path(member.name).is_absolute() for member in members)
+        assert all(".." not in Path(member.name).parts for member in members)
+        assert all(not member.name.endswith((".pcap", ".pcapng")) for member in members)
+        for name, digest in manifest["report_checksums"].items():
+            member = bundle.extractfile(f"jaws-3.0.0-rc1-benchmark/{name}")
+            assert member is not None
+            assert hashlib.sha256(member.read()).hexdigest() == digest
