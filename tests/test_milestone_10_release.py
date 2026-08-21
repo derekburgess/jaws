@@ -115,6 +115,19 @@ def test_release_documentation_names_workflow_migration_limits_and_review_gate()
     assert "docs/migration-2-to-3.md" in readme
     assert "docs/limitations.md" in readme
 
+    guide = (ROOT / "jaws" / "jaws_guide.py").read_text(encoding="utf-8")
+    assert f'PACKAGE_VERSION = "{PACKAGE_VERSION}"' in guide
+    for obsolete in (
+        "cd harbor",
+        "cd ocean",
+        "--build-arg NEO4J_PASSWORD",
+        "SSE MCP server",
+        "version 2.0.0",
+    ):
+        assert obsolete not in guide
+    assert "compose.dev.yml" in guide
+    assert "Streamable HTTP" in guide
+
 
 def test_release_candidate_record_and_benchmark_asset_are_self_verifying() -> None:
     release = ROOT / "release" / "3.0.0-rc1"

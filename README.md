@@ -40,13 +40,17 @@ An example hypothesis might be:
 
 ## How JAWS works
 
-The current pipeline exposes five core operations through both command-line tools and an MCP server:
+The current workflow comprises five core operations:
 
 1. **Capture or import** packets into Neo4j as a timestamped capture session.
 2. **Enrich** observed IP addresses with organization and ASN information.
 3. **Profile** each endpoint's behavior and create an OpenAI or local sentence-transformer embedding.
 4. **Rank** endpoint anomalies using behavioral scores and PCA/DBSCAN clustering.
 5. **Inspect** a ranked endpoint by tracing it back to peers, session history, and raw packet samples.
+
+The CLI drives the complete graph-backed pipeline. After evidence is available, the CLI and
+MCP server expose the same bounded research, experiment, and inspection services. MCP does not
+grant live-capture or destructive-administration authority.
 
 Two complementary views are produced:
 
@@ -59,10 +63,20 @@ Every ranked result includes human-readable reasons in the original units and id
 
 ## Interfaces
 
-JAWS can be used in two ways:
+JAWS remains a CLI-first tool. Its interfaces serve different users without duplicating the
+analytical core:
 
-- The **CLI** is the direct interface for researchers, scripts, and benchmarks.
-- The **MCP server** exposes the same pipeline to any compatible research client or agent.
+| Surface | Use it for |
+| --- | --- |
+| Pipeline CLI | Capture/import, enrichment, profiling, ranking, and evidence management with `jaws-*` commands |
+| Research CLI | Validating, running, comparing, inspecting, and verifying reproducible studies with `jaws-research` |
+| MCP v2 | Giving a compatible client bounded access to the research and inspection services |
+| Benchmark v1 | Comparing rankers across governed scenarios, seeds, windows, costs, and simple baselines |
+| Agent laboratory | Exercising an optional approval-gated OHEO collaborator against the same research contracts |
+| Operations CLI | Schema migration, retention, runtime checks, and guarded human administration |
+
+JAWS does not currently ship a web dashboard or admin UI. Benchmark HTML is a static report,
+and the browser on port 7474 is Neo4j Browser rather than a JAWS application.
 
 MCP is an interface boundary, not the analytical core. Agents are optional research collaborators: they orient to prior results, propose falsifiable hypotheses, configure bounded experiments, and interpret deterministic observations. Scoring and rewards remain deterministic, inspectable, and reproducible. Agents operate in a separate sandbox and do not receive unrestricted capture privileges, destructive database access, or shell execution merely because they can call the research interface.
 
@@ -78,7 +92,11 @@ Detector quality is separate from software correctness. JAWS evaluates both thro
 
 Useful evaluation outputs include Recall@k, mean reciprocal rank, benign observations ranked above the target, rank stability, parameter sensitivity, explanation fidelity, runtime, memory use, and embedding cost. A more complex method should earn its place by outperforming simple sorts on held-out scenarios.
 
-The recall harness provides the command-line benchmark entry point:
+Most operators do not need the benchmarks for an ordinary capture investigation. They are
+the research and release workflow for deciding whether a ranking change actually improves
+where investigator attention is spent.
+
+The legacy recall harness provides a focused detector-quality entry point:
 
 ```bash
 pytest -m recall -s
@@ -107,6 +125,34 @@ environment provenance, known failures, generated reports, and checksums. The co
 [`benchmarks/baseline-0/`](benchmarks/baseline-0/) bundle is the canonical observational
 freeze of the pre-refactor detector. The separate `benchmarks/examples/baseline-0/`
 bundle remains a noncanonical contract-validation fixture.
+
+A typical ranker-development loop is: implement a versioned component, run the smoke tier,
+inspect scenario-level rankings and benign burden in the HTML/JSON report, run the full tier,
+and retain the checksummed report and experiment bundles for review. Benchmark 0 is never a
+tuning target; it is the immutable record used to detect accidental drift from JAWS 2.0.
+
+## Optional agent laboratory
+
+`jaws-lab` is an experimental orchestration and safety harness, not an autonomous detector.
+The shipped reference uses a dependency-free scripted model to exercise
+**Orient → Hypothesize → Experiment → Observe**. A human must approve the exact experiment
+identity before deterministic JAWS services execute or score it:
+
+```bash
+jaws-lab identity examples/research/control-treatment.json
+jaws-lab run \
+  --catalog examples/research/catalog.json \
+  --experiment examples/research/control-treatment.json \
+  --root .jaws-lab \
+  --confirmation approve:experiment_start:EXACT_EXPERIMENT_ID
+```
+
+The retained trace records proposals, bounded calls, approvals, citations, costs, limits,
+and follow-up reasoning while redacting credential-shaped content. The isolated
+`compose.agent.yml` profile has no network, database credentials, raw evidence, capture
+device, Docker socket, provider secret, or destructive authority. Connecting a real model
+provider would require a separately reviewed network/cost policy; it is not part of the
+reference laboratory.
 
 ## Evidence, provenance, and non-goals
 
@@ -259,12 +305,20 @@ export JAWS_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 docker compose -f compose.dev.yml up --build --detach --wait
 ```
 
+The runtime definitions are separated by capability and privilege:
+
+| File | Purpose |
+| --- | --- |
+| `compose.dev.yml` | Base pinned Neo4j, migration, CPU analyzer, and MCP development stack |
+| `compose.gpu.yml` | Additive NVIDIA GPU analyzer overlay |
+| `compose.edge.yml` | Additive privileged sensor/raw-evidence boundary |
+| `compose.agent.yml` | Standalone no-network experimental laboratory sandbox |
+
 The CPU analyzer and MCP services are non-root, read-only, capability-free processes on an
-internal network. Optional GPU and edge overlays are in `compose.gpu.yml` and
-`compose.edge.yml`; only the edge sensor receives packet-capture capabilities. See
-[runtime operations](docs/runtime-operations.md) for smoke tests, persistence, backup,
-restore, model-cache, and egress procedures. The `harbor/` and `ocean/` Dockerfiles remain
-only as pinned compatibility markers for old automation.
+internal network; only the edge sensor receives packet-capture capabilities. The legacy
+`harbor/` and `ocean/` build directories were removed in 3.0. See
+[runtime operations](docs/runtime-operations.md) for overlay commands, smoke tests,
+persistence, backup, restore, model-cache, and egress procedures.
 
 ### 5. Run the pipeline
 
@@ -305,7 +359,7 @@ For a dependency-light numeric representation with no embedding provider:
 jaws-compute --api numeric --session latest
 ```
 
-Do not erase the database between ordinary captures: earlier profile sets provide the endpoint history used by the baseline. When a human operator intentionally needs a fresh research dataset, run `jaws-admin plan --database captures`, inspect the exact counts, then pass its full confirmation string to `jaws-admin erase --database captures --confirm 'ERASE captures …'`. Destructive administration has no default database and is not exposed through MCP.
+Do not erase the database between ordinary captures: earlier profile sets provide the endpoint history used by the baseline. When a human operator intentionally needs a fresh research dataset, run `jaws-admin plan --database captures`, inspect the exact counts, then pass its full confirmation string to `jaws-admin erase --database captures --confirm 'ERASE captures …'`. `jaws-admin audit --database captures` returns the retained administrative audit records. Destructive administration has no default database, no web UI, and is not exposed through MCP or the agent laboratory.
 
 Inspect retention before applying it explicitly:
 

@@ -1,115 +1,106 @@
+"""Print the supported JAWS 3.0 command-line workflows."""
+
+from __future__ import annotations
+
 from rich import print
 
-from jaws.config import DATABASE, DEFAULT_PACKET_MODEL
+from jaws.settings import DEFAULT_DATABASE, DEFAULT_PACKET_MODEL
+
+PACKAGE_VERSION = "3.0.0"
 
 
-def main():
-    print(r"""[turquoise2]
+def main() -> None:
+    print(
+        r"""[turquoise2]
         o   O   o       o  o-o
         |  / \  |       | |
         | o---o o   o   o  o-o
     \   o |   |  \ / \ /      |
      o-o  o   o   o   o   o--o
-    [/]""")
+        [/]
 
-    print("""[gray100]
-    JAWS is a Python based shell pipeline for analyzing the shape and activity of networks for
-    the purpose of identifying outliers. It gathers and stores packets/osint in a graph database (Neo4j).
-    It also provides a set of commands to transform and process packets into plots and reports using:
-    PCA, DBSCAN, OpenAI, and local transformers.
-    [/]""")
+[bold]JAWS is a command-line research workbench for network-behavior analysis.[/]
+It captures or imports traffic, enriches and profiles endpoints, ranks unusual behavior,
+and preserves reproducible experiments whose findings can be traced back to evidence.
+An anomaly is an invitation to investigate, not an automatic threat verdict.
+"""
+    )
 
-    print(f"""[gray100]
-    JAWS is set to run against the OpenAI API by default and does not require a specific GPU. JAWS can also
-    be configured to run on device using local transformers. If you create the default '{DATABASE}' database,
-    and use OpenAI,you can in theory simply run the commands with no additional options.
-    [/]""")
+    print(
+        f"""[bold]1. Configure the services you use[/]
 
-    print(f"""[gray100]
-    [grey85]JAWS stores data in Neo4j. The 'harbor' Dockerfile deploys a headless Neo4j instance, so you can 
-    skip installing the Neo4j Desktop app:[/]
-    [turquoise2][DOCKER][/] cd harbor && docker build -t jaws-neodbms
-          --build-arg NEO4J_USERNAME
-          --build-arg NEO4J_PASSWORD
-          --build-arg DEFAULT_DATABASE='{DATABASE}' .
-    [turquoise2][DOCKER][/] docker run --name '{DATABASE}' -p 7474:7474 -p 7687:7687 --detach jaws-neodbms
-    [grey85]This creates the default '{DATABASE}' database for you. The graph is still browsable at http://localhost:7474 if you want the GUI.[/]
-    [/]""")
+  [bold green]ENV[/] NEO4J_URI=bolt://localhost:7687
+  [bold green]ENV[/] NEO4J_USERNAME=neo4j
+  [bold green]ENV[/] NEO4J_PASSWORD=choose-a-password
+  [dim]Optional: IPINFO_API_KEY for enrichment; OPENAI_API_KEY for OpenAI embeddings.[/]
 
-    print("""[gray100]
-    [grey85]The 'ocean' Dockerfile deploys the JAWS model container, a CUDA image with JAWS and its dependencies installed, 
-    for running local transformers on a GPU:[/]
-    [turquoise2][DOCKER][/] cd ocean && docker build -t jaws-image
-          --build-arg NEO4J_URI
-          --build-arg NEO4J_USERNAME
-          --build-arg NEO4J_PASSWORD
-          --build-arg IPINFO_API_KEY
-          --build-arg OPENAI_API_KEY
-          --build-arg HUGGINGFACE_API_KEY .
-    [turquoise2][DOCKER][/] docker run --gpus 1 --network host --name jaws-container --detach jaws-image
-    [grey85]Once running, the jaws-container commands below (docker exec -it jaws-container ...) operate against this container.[/]
-    [/]""")
+[bold]2. Start the reproducible runtime, if desired[/]
 
-    print(f"""[gray100]
-    [grey85]If you plan to run transformers on device, it is recommended that you download them first:[/]
-    [green1][green1][CLI][/][/] jaws-utils --model '{DEFAULT_PACKET_MODEL}' 
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-utils --model '{DEFAULT_PACKET_MODEL}'
-    [orange1][WARNING][/] This will download a large amount of data and may take some time.
-    [/]""")
+  [bold cyan]DOCKER[/] docker compose -f compose.dev.yml up --build --detach --wait
 
-    print(f"""[gray100]
-    [grey85]To drop the database:[/]
-    [green1][CLI][/] jaws-admin plan --database '{DATABASE}' [grey50]HUMAN ADMIN ONLY[/]
-    [orange1][WARNING][/] This will erase all data!
-    [/]""")
+The base profile starts pinned Neo4j, schema migration, CPU analysis, and MCP services.
+Use compose.gpu.yml only for NVIDIA analysis and compose.edge.yml only for the privileged
+capture sensor. Run the CLI directly from the installed Python environment. Neo4j Browser
+is available at http://127.0.0.1:7474; JAWS does not ship a web admin dashboard.
 
-    print(f"""[gray100]
-    [grey85]To capture or import packets:[/]
-    [green1][CLI][/] jaws-capture [grey50]OPTIONAL[/] --interface 'eth0' OR --file PATH --duration 10 --database '{DATABASE}'
-    [grey85]You can use jaws-capture --list to list available interfaces. When --interface is omitted, the first active interface is used.[/]
-    [grey85]Each run has an opaque capture_id plus a timestamp legacy_capture_id; sessions accumulate — no need to drop the database between captures.[/]
-    [/]""")
+[bold]3. Capture, profile, and rank[/]
 
-    print(f"""[gray100]
-    [grey85]To investigate IP addresses and build organization nodes:[/]
-    [green1][CLI][/] jaws-ipinfo [grey50]OPTIONAL[/] --database '{DATABASE}'
-    [/]""")
+  [bold green]CLI[/] jaws-capture --list
+  [bold green]CLI[/] jaws-capture --interface eth0 --duration 60
+  [dim]or: jaws-capture --file /path/to/capture.pcap --local-ip 192.0.2.10[/]
+  [bold green]CLI[/] jaws-ipinfo
+  [bold green]CLI[/] jaws-compute --api openai --session latest
+  [bold green]CLI[/] jaws-finder --session latest
 
-    print(f"""[gray100]
-    [grey85]To compute embeddings:[/]
-    [green1][CLI][/] jaws-compute [grey50]OPTIONAL[/] --api 'openai', 'transformers' --model '{DEFAULT_PACKET_MODEL}' --database '{DATABASE}' --session 'latest'
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-compute --api 'transformers'
-    [grey85]--model selects a local transformers model when --api transformers (see config.PACKET_MODELS).[/]
-    [grey85]--session selects which capture session to profile: 'latest' (default), 'all', or a capture_id.[/]
-    [grey85]Each run stores a profile set for that session and keeps earlier ones, so every IP builds a per-session history for jaws-finder to baseline against.[/]
-    [grey85]--retain-profiles caps how many profile sets are kept (default 20, 0 = unlimited). Raw packets are never pruned.[/]
-    [/]""")
+Captures accumulate. Do not erase the database between ordinary sessions: endpoint history
+is the reference used to distinguish persistent oddness from meaningful change. The default
+database is {DEFAULT_DATABASE!r}.
 
-    print(f"""[gray100]
-    [grey85]To cluster embeddings and surface outliers (PCA + DBSCAN, with a scored host-outbound view):[/]
-    [green1][CLI][/] jaws-finder [grey50]OPTIONAL[/] --database '{DATABASE}' --components 2 --whiten --eps 0.5 --feature-weight 1.0 --include-local --session 'latest' --no-baseline --ablate
-    [turquoise2][DOCKER][/] docker exec -it jaws-container jaws-finder
-    [grey85]Endpoints profiled in 2+ earlier sessions are scored against their OWN history instead of only their current peers, so what surfaces is change, not the endpoints that are always busy. Cadence (interval_mean/interval_cv) is never baselined — a beacon looks the same every session.[/]
-    [grey85]--session picks which stored profile set to analyze: 'latest' (default) or a capture_id.[/]
-    [grey85]--no-baseline scores every endpoint purely against its current peers.[/]
-    [grey85]--components sets the number of PCA dimensions to retain for clustering (min 2, default 2).[/]
-    [grey85]--whiten scales each PCA component to unit variance (default: off).[/]
-    [grey85]--eps overrides the DBSCAN epsilon; omit it to accept the auto-recommended knee value.[/]
-    [grey85]--feature-weight sets the influence of the behavioral numeric features on clustering (0 = embedding-only, default 1.0).[/]
-    [grey85]--include-local keeps the capture host in the clustered set (off by default — it is a structural hub).[/]
-    [grey85]--ablate compares text-only vs numeric-only vs blended clustering (silhouette + Jaccard) without writing to the database.[/]
-    [/]""")
+[bold]4. Use local or numeric representations[/]
 
-    print("""[gray100]
-    [grey85]MCP server:[/]
-    [green1][CLI][/] jaws-mcp [grey50]OPTIONAL[/] --host '0.0.0.0' --port 8765 [grey50]OR[/] --stdio
-    [grey85]Runs an SSE MCP server (default) so agents such as Claude Code can use JAWS. Pass --stdio for spawn-based clients.[/]
-    [/]""")
+  [bold green]CLI[/] jaws-utils --model {DEFAULT_PACKET_MODEL}
+  [bold green]CLI[/] jaws-compute --api transformers --model {DEFAULT_PACKET_MODEL} --session latest
+  [bold green]CLI[/] jaws-compute --api numeric --session latest
 
-    print("""[grey50]
-    version 2.0.0 BETA, 2026
-    https://github.com/derekburgess/jaws
-    [/]""")
+Public local models require no provider key. Downloads may be large. Numeric mode needs no
+embedding provider.
+
+[bold]5. Run a reproducible research study[/]
+
+  [bold green]CLI[/] jaws-research validate examples/research/control-treatment.json \\
+        --catalog examples/research/catalog.json
+  [bold green]CLI[/] jaws-research run examples/research/control-treatment.json \\
+        --catalog examples/research/catalog.json --root .jaws-research --json
+  [bold green]CLI[/] jaws-research verify --root .jaws-research
+
+[bold]6. Evaluate JAWS or exercise the optional agent laboratory[/]
+
+  [bold green]CLI[/] jaws-benchmark --tier smoke --output-dir benchmark-v1-smoke
+  [bold green]CLI[/] jaws-benchmark --tier full --output-dir benchmark-v1-full
+  [bold green]CLI[/] jaws-lab identity examples/research/control-treatment.json
+
+Benchmarks compare rankers and emit JSON, Markdown, static HTML, and checksummed bundles.
+The lab is an experimental, approval-gated OHEO collaborator; it is not a detector or UI.
+
+[bold]7. Perform guarded human administration[/]
+
+  [bold green]CLI[/] jaws-admin plan --database {DEFAULT_DATABASE}
+  [bold green]CLI[/] jaws-admin erase --database {DEFAULT_DATABASE} --confirm 'EXACT STRING FROM PLAN'
+  [bold green]CLI[/] jaws-admin audit --database {DEFAULT_DATABASE}
+
+Destructive administration has no default target and is not available to MCP or the lab.
+
+[bold]8. Expose the research services through MCP[/]
+
+  [bold green]CLI[/] jaws-mcp --stdio
+  [bold green]CLI[/] jaws-mcp --http --host 127.0.0.1 --port 8765
+
+The default network transport is Streamable HTTP. MCP exposes bounded research operations,
+not live capture, arbitrary shell/Cypher, host paths, credentials, or database erasure.
+
+[dim]JAWS {PACKAGE_VERSION} · https://github.com/derekburgess/jaws[/]
+"""
+    )
 
 
 if __name__ == "__main__":

@@ -51,9 +51,10 @@ def test_image_lock_and_dockerfiles_are_pinned_source_builds_without_secrets() -
     paths = (
         ROOT / "containers" / "Dockerfile",
         ROOT / "containers" / "Dockerfile.gpu",
-        ROOT / "harbor" / "Dockerfile",
-        ROOT / "ocean" / "Dockerfile",
+        ROOT / "containers" / "Dockerfile.agent",
     )
+    assert not (ROOT / "harbor" / "Dockerfile").exists()
+    assert not (ROOT / "ocean" / "Dockerfile").exists()
     combined = "\n".join(path.read_text() for path in paths)
     lowered = combined.lower()
     assert "git clone" not in lowered
@@ -62,7 +63,7 @@ def test_image_lock_and_dockerfiles_are_pinned_source_builds_without_secrets() -
     assert "arg openai_api_key" not in lowered
     assert "arg ipinfo_api_key" not in lowered
     assert "docker.sock" not in lowered
-    assert combined.count("@sha256:") >= 4
+    assert combined.count("@sha256:") >= 3
     assert "COPY jaws ./jaws" in combined
     assert "JAWS_BENCHMARK_ROOT=/workspace/benchmarks/v1" in combined
     assert "org.opencontainers.image.revision" in combined

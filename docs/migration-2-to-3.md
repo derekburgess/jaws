@@ -92,8 +92,8 @@ ranker and Benchmark 0 when an analytical comparison with the old detector is re
 
 ## Containers
 
-Replace `harbor/` and `ocean/` automation with `compose.dev.yml`. The compatibility
-Dockerfiles remain markers only. Build from the checked-out revision, provide the source
+Replace `harbor/` and `ocean/` automation with `compose.dev.yml`; those legacy build
+directories were removed in 3.0. Build from the checked-out revision, provide the source
 revision/build date, and pass credentials at runtime. CPU analysis is the default; GPU and
 edge overlays are explicit. Only the edge sensor receives capture capabilities, and the
 experimental agent laboratory has no network.

@@ -1182,8 +1182,8 @@ Qualify the complete research-workbench redesign as one coherent rollout while p
 | `jaws/jaws_utils.py` | Reporting adapter, schema migrations, admin service, model-management adapter | Schema/admin/output callers use dedicated contracts |
 | `jaws/jaws_guide.py` | Generated/static research CLI guidance | Supported CLI docs and `--help` cover the workflow |
 | `jaws_mcp/server.py` | Thin typed MCP adapter | MCP parity, schema, async lifecycle, and safety tests pass |
-| `harbor/Dockerfile` | Pinned Neo4j compose service/migration job | Backup/restore and migration smoke tests pass |
-| `ocean/Dockerfile` | Versioned CPU/GPU analyzer images | CPU/GPU smoke and provenance tests pass |
+| `harbor/Dockerfile` (removed) | Pinned Neo4j compose service/migration job | Backup/restore and migration smoke tests passed |
+| `ocean/Dockerfile` (removed) | Versioned CPU/GPU analyzer images | CPU/GPU smoke and provenance tests passed |
 | `tests/test_baseline.py` | Focused unit/invariant suites by reference/ranker concern | No invariant is weakened or lost in the move |
 | `tests/harness/*` | Versioned benchmark package/manifests/runner | Benchmark 0 comparison proves scenario equivalence |
 
@@ -1304,6 +1304,18 @@ dependency-ordered Milestones 4–9 are also complete. Milestone 10 qualificatio
 only publication review, the `main` merge, final image rebuild, and release tag remain.
 
 ## Change log
+
+### 2026-08-21 — Release cleanup and interface clarification
+
+- Removed the obsolete `harbor/` and `ocean/` compatibility Dockerfiles after their
+  pinned Compose/container replacements passed Milestone 7 qualification.
+- Kept Benchmark 0 reproducible without live compatibility files by reading its original
+  container definitions from the frozen detector subject revision.
+- Replaced the stale 2.0 `jaws-guide` deployment instructions and clarified the README's
+  CLI, MCP, benchmark, agent-laboratory, administration, and browser/UI boundaries.
+- Revalidated strict lint, formatting, types, 357 offline tests, runtime/release/benchmark
+  contracts, and synthetic Recall@3 parity. The Neo4j tier remained unavailable to this
+  process because `NEO4J_PASSWORD` was not exported.
 
 ### 2026-08-21 — Milestone 10 release qualification
 

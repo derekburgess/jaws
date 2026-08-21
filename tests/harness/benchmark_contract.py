@@ -1270,22 +1270,22 @@ def _tool_version(command: str) -> str | None:
     return first_line[0].strip() if first_line else None
 
 
-def _dockerfile_record(relative: str) -> dict[str, Any]:
-    path = REPO_ROOT / relative
+def _dockerfile_record(relative: str, subject_revision: str) -> dict[str, Any]:
+    source = _git_file(subject_revision, relative)
     bases = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in source.decode("utf-8").splitlines():
         match = re.match(r"^\s*FROM\s+([^\s]+)", line, flags=re.IGNORECASE)
         if match:
             bases.append(match.group(1))
     return {
         "definition": relative,
         "state": "not_used",
-        "sha256": sha256_file(path),
+        "sha256": sha256_bytes(source),
         "base_images": bases,
     }
 
 
-def _environment_record() -> dict[str, Any]:
+def _environment_record(subject_revision: str) -> dict[str, Any]:
     tshark_version = _tool_version("tshark")
     gpu_version = _tool_version("nvidia-smi")
     executable = Path(sys.executable).resolve()
@@ -1342,8 +1342,8 @@ def _environment_record() -> dict[str, Any]:
             }
         ],
         "containers": [
-            _dockerfile_record("harbor/Dockerfile"),
-            _dockerfile_record("ocean/Dockerfile"),
+            _dockerfile_record("harbor/Dockerfile", subject_revision),
+            _dockerfile_record("ocean/Dockerfile", subject_revision),
         ],
         "environment_variables": [
             {
@@ -1845,7 +1845,7 @@ def _collect_bundle(
     _write_json(output / "datasets.json", datasets_document)
     _write_json(output / "scenarios.json", scenarios_document)
     _write_json(output / "run.json", run_document)
-    _write_json(output / "environment.json", _environment_record())
+    _write_json(output / "environment.json", _environment_record(subject_revision))
     _write_jsonl(output / "rankings.jsonl", rankings)
     _write_json(output / "evaluation.json", evaluation_document)
     _write_json(output / "known-failures.json", known_document)
